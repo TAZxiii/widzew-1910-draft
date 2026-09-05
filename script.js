@@ -1,4 +1,23 @@
 document.addEventListener("DOMContentLoaded", () => {
+
+function calculateTotalSquadValue(players) {
+    return players.reduce((sum, player) => {
+        const value = parseFloat(
+            String(player["Wartość"] || "0")
+                .replace(/\s/g, "")
+                .replace(",", ".")
+        );
+        return sum + (Number.isFinite(value) ? value : 0);
+    }, 0);
+}
+
+function formatSquadValue(value) {
+    return new Intl.NumberFormat("pl-PL", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+    }).format(value / 1000) + " mln €";
+}
+
     const startScreen = document.querySelector(".start-screen");
     const modeScreen = document.getElementById("modeScreen");
     const coachScreen = document.getElementById("coachScreen");
@@ -641,6 +660,9 @@ document.addEventListener("DOMContentLoaded", () => {
         grid.innerHTML = `
             <div class="team-score-box">
                 <div class="team-score-label">OCENA TWOJEGO SKŁADU</div>
+            <div class="summary-value">
+                ŁĄCZNA WARTOŚĆ SKŁADU: <strong>${formatSquadValue(calculateTotalSquadValue(selectedPlayers))}</strong>
+            </div>
                 <div class="team-score-main">${roundScore(scores.overall)}</div>
                 <div class="team-score-breakdown">
                     <div><span>BR</span><strong>${roundScore(scores.br)}</strong></div>
