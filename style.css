@@ -517,3 +517,60 @@ h1 span {
 @media (max-width: 520px) {
     .coach-grid { grid-template-columns: 1fr; }
 }
+
+.coach-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+}
+.coach-first,
+.coach-last {
+    display: block;
+    line-height: 1.15;
+}
+.formation-status {
+    margin-bottom: 22px;
+    color: #aaa;
+    font-size: 15px;
+}
+.formation-status.error {
+    color: #ff7777;
+}
+.formation-grid {
+    width: min(1000px, 92vw);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+}
+.formation-card {
+    min-height: 150px;
+    padding: 20px 10px;
+    border: 1px solid #3d3d3d;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #191919, #0d0d0d);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    transition: transform .2s ease, border-color .2s ease;
+}
+.formation-card:hover {
+    transform: translateY(-5px);
+    border-color: #e30613;
+}
+.formation-name {
+    font-size: clamp(20px, 2.4vw, 28px);
+    font-weight: 900;
+}
+@media (max-width: 900px) {
+    .formation-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+@media (max-width: 520px) {
+    .formation-grid {
+        grid-template-columns: 1fr;
+    }
+}
