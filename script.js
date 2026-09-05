@@ -648,6 +648,7 @@ function formatSquadValue(value) {
 
         const starters = draft.selected.filter(p => !String(p.role).startsWith("bench-"));
         const bench = draft.selected.filter(p => String(p.role).startsWith("bench-"));
+
         const roleNames = {
             br: "BR", loPo: "LO/PO", so: "ŚO", pomoc: "ŚPD/ŚP/OP",
             skrzydlowi: "LS/LP/PS/PP", napastnicy: "N",
@@ -655,32 +656,108 @@ function formatSquadValue(value) {
             "bench-mid": "POMOCNIK / SKRZYDŁOWY", "bench-n": "N"
         };
 
-        const playerCard = (p, i) => `
-            <div class="selected-mini-card">
-                <span>${i + 1}</span>
-                <strong>${p.row["Imię"]} ${p.row["Nazwisko"]}</strong>
-                <small>${p.row["Sezon"]} · ${roleNames[p.role] || ""}${draft.difficulty === "easy" ? ` · Ocena ${roundScore(p.row["Ogólna"])}` : ""}</small>
-            </div>
-        `;
+        const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+        }[c]));
+
+        const playerName = p => `${safe(p.row["Imię"])} ${safe(p.row["Nazwisko"])}`;
+
+        const pitchRows = [
+            { key: "napastnicy", label: "N", players: starters.filter(p => p.role === "napastnicy") },
+            { key: "skrzydlowi", label: "LS / LP / PS / PP", players: starters.filter(p => p.role === "skrzydlowi") },
+            { key: "pomoc", label: "ŚPD / ŚP / OP", players: starters.filter(p => p.role === "pomoc") },
+            { key: "defense", label: "OBRONA", players: starters.filter(p => p.role === "loPo" || p.role === "so") },
+            { key: "br", label: "BR", players: starters.filter(p => p.role === "br") }
+        ];
+
+        const pitchPlayer = p => `
+            <div class="pitch-player" title="${playerName(p)}">
+                <span class="pitch-shirt">${safe(p.row["#"])}</span>
+                <span class="pitch-name">${playerName(p)}</span>
+            </div>`;
+
+        const pitchRow = row => row.players.length ? `
+            <div class="pitch-row pitch-row-${row.key}" style="--players:${row.players.length}">
+                ${row.players.map(pitchPlayer).join("")}
+            </div>` : "";
+
+        const benchItem = (p, i) => `
+            <div class="bench-player">
+                <span class="bench-number">${i + 1}</span>
+                <div class="bench-info">
+                    <strong>${playerName(p)}</strong>
+                    <small>${roleNames[p.role] || ""}</small>
+                </div>
+                <strong class="bench-rating">${roundScore(p.row["Ogólna"])}</strong>
+            </div>`;
+
+        const starterItem = (p, i) => `
+            <div class="squad-list-player">
+                <span class="squad-number">${i + 1}</span>
+                <div class="squad-player-info">
+                    <strong>${playerName(p)}</strong>
+                    <small>${roleNames[p.role] || ""}</small>
+                </div>
+                <strong class="squad-rating">${roundScore(p.row["Ogólna"])}</strong>
+            </div>`;
+
+        const formation = safe(
+            selectedFormation ||
+            (selectedTrainer && selectedTrainer.formation) ||
+            (typeof draft.formation === "string" ? draft.formation : "")
+        );
 
         grid.innerHTML = `
-            <div class="team-score-box">
-                <div class="team-score-label">OCENA TWOJEGO SKŁADU</div>
-            <div class="summary-value">
-                ŁĄCZNA WARTOŚĆ SKŁADU: <strong>${formatSquadValue(calculateTotalSquadValue(draft.selected))}</strong>
+            <div class="final-layout">
+                <section class="final-pitch-panel">
+                    <div class="final-panel-heading">
+                        <div>
+                            <span>TWÓJ SKŁAD</span>
+                            <h3>${formation}</h3>
+                        </div>
+                        <div class="final-score-small">${roundScore(scores.overall)}</div>
+                    </div>
+
+                    <div class="football-pitch">
+                        <div class="pitch-lines"></div>
+                        <div class="pitch-center-circle"></div>
+                        <div class="pitch-center-dot"></div>
+                        ${pitchRows.map(pitchRow).join("")}
+                    </div>
+                </section>
+
+                <section class="final-list-panel">
+                    <div class="final-list-heading">
+                        <span>SKŁAD</span>
+                        <h3>Jedenastka</h3>
+                    </div>
+                    <div class="squad-list">
+                        ${starters.map(starterItem).join("")}
+                    </div>
+
+                    <div class="final-divider"></div>
+
+                    <div class="final-list-heading bench-heading">
+                        <span>REZERWOWI</span>
+                        <h3>Ławka rezerwowych</h3>
+                    </div>
+                    <div class="bench-list">
+                        ${bench.map(benchItem).join("")}
+                    </div>
+
+                    <div class="final-value">
+                        <span>ŁĄCZNA WARTOŚĆ</span>
+                        <strong>${formatSquadValue(calculateTotalSquadValue(draft.selected))}</strong>
+                    </div>
+                </section>
             </div>
-                <div class="team-score-main">${roundScore(scores.overall)}</div>
-                <div class="team-score-breakdown">
-                    <div><span>BR</span><strong>${roundScore(scores.br)}</strong></div>
-                    <div><span>OBRONA</span><strong>${roundScore(scores.defense)}</strong></div>
-                    <div><span>POMOC</span><strong>${roundScore(scores.midfield)}</strong></div>
-                    <div><span>ATAK</span><strong>${roundScore(scores.attack)}</strong></div>
-                </div>
+
+            <div class="final-score-breakdown">
+                <div><span>BR</span><strong>${roundScore(scores.br)}</strong></div>
+                <div><span>OBRONA</span><strong>${roundScore(scores.defense)}</strong></div>
+                <div><span>POMOC</span><strong>${roundScore(scores.midfield)}</strong></div>
+                <div><span>ATAK</span><strong>${roundScore(scores.attack)}</strong></div>
             </div>
-            <div class="team-section-title">JEDENASTKA</div>
-            <div class="selected-team-grid">${starters.map(playerCard).join("")}</div>
-            <div class="team-section-title">ŁAWKA REZERWOWYCH</div>
-            <div class="selected-team-grid">${bench.map((p, i) => playerCard(p, i)).join("")}</div>
         `;
         action.innerHTML = `<div class="draft-finished">DRAFT ZAKOŃCZONY</div>`;
     }
