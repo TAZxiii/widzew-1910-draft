@@ -395,6 +395,79 @@ function formatSquadValue(value) {
         napastnicy: "N"
     };
 
+
+    // Indywidualny układ pozycji dla każdej z 12 formacji.
+    // x/y są procentami szerokości/wysokości boiska; y rośnie w dół (nasza bramka jest na dole).
+    const FORMATION_LAYOUTS = {
+        "3-1-4-2": [
+            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
+            ["skrzydlowi",9,52],["pomoc",50,57],["pomoc",35,43],["pomoc",65,43],["skrzydlowi",91,52],
+            ["napastnicy",35,20],["napastnicy",65,20]
+        ],
+        "3-4-1-2": [
+            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
+            ["skrzydlowi",9,52],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",91,52],
+            ["napastnicy",35,20],["napastnicy",65,20]
+        ],
+        "3-4-2-1": [
+            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
+            ["skrzydlowi",9,52],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",91,52],
+            ["skrzydlowi",35,25],["skrzydlowi",65,25],["napastnicy",50,13]
+        ],
+        "3-4-3": [
+            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
+            ["skrzydlowi",9,52],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",91,52],
+            ["skrzydlowi",12,20],["skrzydlowi",88,20],["napastnicy",50,13]
+        ],
+        "4-1-4-1": [
+            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
+            ["pomoc",50,57],["skrzydlowi",10,43],["pomoc",38,43],["pomoc",62,43],["skrzydlowi",90,43],
+            ["napastnicy",50,16]
+        ],
+        "4-1-3-2": [
+            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
+            ["pomoc",50,57],["skrzydlowi",10,43],["pomoc",50,43],["skrzydlowi",90,43],
+            ["napastnicy",35,19],["napastnicy",65,19]
+        ],
+        "4-2-1-3": [
+            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
+            ["pomoc",38,57],["pomoc",62,57],["pomoc",50,42],
+            ["skrzydlowi",12,23],["skrzydlowi",88,23],["napastnicy",50,14]
+        ],
+        "4-3-3": [
+            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
+            ["pomoc",38,52],["pomoc",50,52],["pomoc",62,52],
+            ["skrzydlowi",12,22],["skrzydlowi",88,22],["napastnicy",50,14]
+        ],
+        "4-4-1-1": [
+            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
+            ["skrzydlowi",10,52],["pomoc",38,52],["pomoc",62,52],["skrzydlowi",90,52],
+            ["pomoc",50,60],["napastnicy",50,20]
+        ],
+        "4-4-2": [
+            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
+            ["skrzydlowi",10,52],["pomoc",38,52],["pomoc",62,52],["skrzydlowi",90,52],
+            ["napastnicy",35,20],["napastnicy",65,20]
+        ],
+        "5-4-1": [
+            ["br",50,88],["loPo",8,72],["so",30,72],["so",50,72],["so",70,72],["loPo",92,72],
+            ["skrzydlowi",10,52],["pomoc",38,52],["pomoc",62,52],["skrzydlowi",90,52],
+            ["napastnicy",50,17]
+        ],
+        "5-3-2": [
+            ["br",50,88],["loPo",8,72],["so",30,72],["so",50,72],["so",70,72],["loPo",92,72],
+            ["pomoc",38,52],["pomoc",50,60],["pomoc",62,52],
+            ["napastnicy",35,20],["napastnicy",65,20]
+        ]
+    };
+
+    function pitchCoordinates(formationName, role, occurrence) {
+        const layout = FORMATION_LAYOUTS[String(formationName || "").trim()] || [];
+        const matches = layout.filter(item => item[0] === role);
+        const point = matches[occurrence - 1] || matches[0];
+        return point ? { x: point[1], y: point[2] } : null;
+    }
+
     function playerKey(row) {
         return `${row["Imię"]}|${row["Nazwisko"]}`.trim().toLowerCase();
     }
@@ -677,24 +750,26 @@ function formatSquadValue(value) {
 
         const playerName = p => `${safe(p.row["Imię"])} ${safe(p.row["Nazwisko"])}`;
 
-        const pitchRows = [
-            { key: "napastnicy", label: "N", players: starters.filter(p => p.role === "napastnicy") },
-            { key: "skrzydlowi", label: "LS / LP / PS / PP", players: starters.filter(p => p.role === "skrzydlowi") },
-            { key: "pomoc", label: "ŚPD / ŚP / OP", players: starters.filter(p => p.role === "pomoc") },
-            { key: "defense", label: "OBRONA", players: starters.filter(p => p.role === "loPo" || p.role === "so") },
-            { key: "br", label: "BR", players: starters.filter(p => p.role === "br") }
-        ];
+        const formationName = String(
+            selectedFormation ||
+            (selectedTrainer && selectedTrainer.formation) ||
+            (typeof draft.formation === "string" ? draft.formation : "")
+        ).trim();
 
-        const pitchPlayer = p => `
-            <div class="pitch-player ${positionColorClass(p.position || p["Pozycja"], p.role)}" title="${playerName(p)}">
+        const pitchPlayer = (p, occurrence) => {
+            const point = pitchCoordinates(formationName, p.role, occurrence);
+            const positionStyle = point ? `left:${point.x}%; top:${point.y}%;` : "";
+            return `
+            <div class="pitch-player ${positionColorClass(p.position || p["Pozycja"], p.role)}" style="${positionStyle}" title="${playerName(p)}">
                 <span class="pitch-shirt ${positionColorClass(p.position || p["Pozycja"], p.role)}">${safe(p.row["#"])}</span>
                 <span class="pitch-name">${playerName(p)}</span>
             </div>`;
+        };
 
-        const pitchRow = row => row.players.length ? `
-            <div class="pitch-row pitch-row-${row.key}" style="--players:${row.players.length}">
-                ${row.players.map(pitchPlayer).join("")}
-            </div>` : "";
+        const pitchPlayers = starters.map(p => {
+            const occurrence = starters.slice(0, starters.indexOf(p) + 1).filter(x => x.role === p.role).length;
+            return pitchPlayer(p, occurrence);
+        }).join("");
 
         const benchItem = (p, i) => `
             <div class="bench-player">
@@ -747,7 +822,7 @@ function formatSquadValue(value) {
                         <div class="pitch-goal-area pitch-goal-bottom"></div>
                         <div class="pitch-center-circle"></div>
                         <div class="pitch-center-dot"></div>
-                        ${pitchRows.map(pitchRow).join("")}
+                        ${pitchPlayers}
                     </div>
                 </section>
 
