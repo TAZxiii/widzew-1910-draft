@@ -661,7 +661,7 @@ function formatSquadValue(value) {
             <div class="team-score-box">
                 <div class="team-score-label">OCENA TWOJEGO SKŁADU</div>
             <div class="summary-value">
-                ŁĄCZNA WARTOŚĆ SKŁADU: <strong>${formatSquadValue(calculateTotalSquadValue(selectedPlayers))}</strong>
+                ŁĄCZNA WARTOŚĆ SKŁADU: <strong>${formatSquadValue(calculateTotalSquadValue(draft.selected))}</strong>
             </div>
                 <div class="team-score-main">${roundScore(scores.overall)}</div>
                 <div class="team-score-breakdown">
