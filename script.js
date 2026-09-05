@@ -577,23 +577,83 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function roundScore(value) {
+        return Math.round(Number(value) || 0);
+    }
+
+    function weightedGroupScore(players) {
+        if (!players.length) return 0;
+        let weightedSum = 0;
+        let weightSum = 0;
+        players.forEach(p => {
+            const isBench = String(p.role).startsWith("bench-");
+            const weight = isBench ? 0.25 : 0.75;
+            weightedSum += (Number(p.row["Ogólna"]) || 0) * weight;
+            weightSum += weight;
+        });
+        return weightSum ? weightedSum / weightSum : 0;
+    }
+
+    function getTeamScores() {
+        const goalkeepers = draft.selected.filter(p => p.role === "br" || p.role === "bench-br");
+        const defenders = draft.selected.filter(p => ["loPo", "so", "bench-def"].includes(p.role));
+        const midfielders = draft.selected.filter(p => ["pomoc", "skrzydlowi", "bench-mid"].includes(p.role));
+        const forwards = draft.selected.filter(p => ["napastnicy", "bench-n"].includes(p.role));
+
+        const br = weightedGroupScore(goalkeepers);
+        const defense = weightedGroupScore(defenders);
+        const midfield = weightedGroupScore(midfielders);
+        const attack = weightedGroupScore(forwards);
+        const overall = (br + defense + midfield + attack) / 4;
+
+        return { br, defense, midfield, attack, overall };
+    }
+
     function finishDraft() {
         const grid = document.getElementById("candidateGrid");
         const position = document.getElementById("draftPosition");
         const instruction = document.getElementById("draftInstruction");
         const progress = document.getElementById("draftProgress");
         const action = document.getElementById("draftAction");
+        const scores = getTeamScores();
 
         position.textContent = "SKŁAD GOTOWY";
-        instruction.textContent = "Wybrano 20 zawodników. W kolejnym etapie dodamy podsumowanie i ocenę zespołu.";
+        instruction.textContent = "Twój 20-osobowy skład Widzewa.";
         progress.textContent = "Cały skład: 20/20";
-        grid.innerHTML = draft.selected.map((p, i) => `
+
+        const starters = draft.selected.filter(p => !String(p.role).startsWith("bench-"));
+        const bench = draft.selected.filter(p => String(p.role).startsWith("bench-"));
+        const roleNames = {
+            br: "BR", loPo: "LO/PO", so: "ŚO", pomoc: "ŚPD/ŚP/OP",
+            skrzydlowi: "LS/LP/PS/PP", napastnicy: "N",
+            "bench-br": "BR", "bench-def": "OBROŃCA",
+            "bench-mid": "POMOCNIK / SKRZYDŁOWY", "bench-n": "N"
+        };
+
+        const playerCard = (p, i) => `
             <div class="selected-mini-card">
                 <span>${i + 1}</span>
                 <strong>${p.row["Imię"]} ${p.row["Nazwisko"]}</strong>
-                <small>${p.row["Sezon"]}${draft.difficulty === "easy" ? ` · ${p.row["Ogólna"]}` : ""}</small>
+                <small>${p.row["Sezon"]} · ${roleNames[p.role] || ""}${draft.difficulty === "easy" ? ` · Ocena ${roundScore(p.row["Ogólna"])}` : ""}</small>
             </div>
-        `).join("");
+        `;
+
+        grid.innerHTML = `
+            <div class="team-score-box">
+                <div class="team-score-label">OCENA TWOJEGO SKŁADU</div>
+                <div class="team-score-main">${roundScore(scores.overall)}</div>
+                <div class="team-score-breakdown">
+                    <div><span>BR</span><strong>${roundScore(scores.br)}</strong></div>
+                    <div><span>OBRONA</span><strong>${roundScore(scores.defense)}</strong></div>
+                    <div><span>POMOC</span><strong>${roundScore(scores.midfield)}</strong></div>
+                    <div><span>ATAK</span><strong>${roundScore(scores.attack)}</strong></div>
+                </div>
+            </div>
+            <div class="team-section-title">JEDENASTKA</div>
+            <div class="selected-team-grid">${starters.map(playerCard).join("")}</div>
+            <div class="team-section-title">ŁAWKA REZERWOWYCH</div>
+            <div class="selected-team-grid">${bench.map((p, i) => playerCard(p, i)).join("")}</div>
+        `;
         action.innerHTML = `<div class="draft-finished">DRAFT ZAKOŃCZONY</div>`;
     }
 
