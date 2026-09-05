@@ -662,3 +662,62 @@ h1 span {
         grid-template-columns: 1fr;
     }
 }
+
+.selected-context {
+    margin: -4px auto 28px;
+    color: #aaa;
+    font-size: 16px;
+}
+.difficulty-grid {
+    width: min(900px, 92vw);
+    margin: 20px auto 24px;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24px;
+}
+.difficulty-card {
+    min-height: 230px;
+    padding: 30px;
+    border: 1px solid #3d3d3d;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #191919, #0d0d0d);
+    color: #fff;
+    cursor: pointer;
+    font: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    transition: transform .2s ease, border-color .2s ease, background .2s ease;
+}
+.difficulty-card:hover,
+.difficulty-card.selected {
+    transform: translateY(-5px);
+    border-color: #e30613;
+}
+.difficulty-title {
+    font-size: 32px;
+    font-weight: 900;
+}
+.difficulty-description {
+    max-width: 330px;
+    color: #aaa;
+    line-height: 1.5;
+    font-size: 16px;
+}
+.difficulty-selection {
+    min-height: 24px;
+    margin: 8px auto 22px;
+    color: #aaa;
+}
+.next-button:disabled {
+    opacity: .35;
+    cursor: not-allowed;
+    transform: none;
+}
+@media (max-width: 700px) {
+    .difficulty-grid {
+        grid-template-columns: 1fr;
+    }
+}

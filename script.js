@@ -7,6 +7,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let trainerRows = [];
     let selectedTrainer = null;
     let selectedFormation = null;
+    let selectedDifficulty = null;
 
     function showScreen(screen) {
         [startScreen, modeScreen, coachScreen, playerScreen].forEach(s => {
@@ -162,7 +163,7 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
 
         document.getElementById("trainerContinue").addEventListener("click", () => {
-            alert("Następny etap: wybór poziomu trudności.");
+            showDifficultyScreen();
         });
     }
 
@@ -215,6 +216,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     status.textContent =
                         `Wybrano formację: ${selectedFormation}`;
+
+                    let continueButton = document.getElementById("formationContinue");
+                    if (!continueButton) {
+                        continueButton = document.createElement("button");
+                        continueButton.id = "formationContinue";
+                        continueButton.className = "next-button";
+                        continueButton.textContent = "DALEJ";
+                        content.appendChild(continueButton);
+
+                        continueButton.addEventListener("click", () => {
+                            showDifficultyScreen();
+                        });
+                    }
                 });
             });
         } catch (error) {
@@ -225,4 +239,74 @@ document.addEventListener("DOMContentLoaded", () => {
             console.error("Błąd wczytywania formacje.csv:", error);
         }
     }
+    function showDifficultyScreen() {
+        const content = playerScreen.querySelector(".player-content");
+
+        const context = selectedTrainer
+            ? `<p class="selected-context">Trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong> · ${selectedTrainer.season} · ${selectedTrainer.formation}</p>`
+            : `<p class="selected-context">Formacja: <strong>${selectedFormation || "—"}</strong></p>`;
+
+        content.innerHTML = `
+            <h2>WYBIERZ POZIOM TRUDNOŚCI</h2>
+            <p class="screen-intro">
+                ${context}
+            </p>
+
+            <div class="difficulty-grid">
+                <button class="difficulty-card" data-difficulty="easy">
+                    <span class="difficulty-title">ŁATWY</span>
+                    <span class="difficulty-description">
+                        Przy każdym zawodniku widzisz jego ocenę ogólną.
+                    </span>
+                </button>
+
+                <button class="difficulty-card" data-difficulty="hard">
+                    <span class="difficulty-title">TRUDNY</span>
+                    <span class="difficulty-description">
+                        Nie widzisz ocen. Otrzymujesz tylko nazwisko zawodnika i sezon.
+                    </span>
+                </button>
+            </div>
+
+            <div id="difficultySelection" class="difficulty-selection">
+                Wybierz poziom trudności, aby przejść dalej.
+            </div>
+
+            <button id="difficultyContinue" class="next-button" disabled>
+                ROZPOCZNIJ DRAFT
+            </button>
+        `;
+
+        const selection = document.getElementById("difficultySelection");
+        const continueButton = document.getElementById("difficultyContinue");
+        const cards = document.querySelectorAll(".difficulty-card");
+
+        cards.forEach(card => {
+            card.addEventListener("click", () => {
+                selectedDifficulty = card.dataset.difficulty;
+
+                cards.forEach(c => c.classList.remove("selected"));
+                card.classList.add("selected");
+
+                if (selectedDifficulty === "easy") {
+                    selection.textContent =
+                        "Wybrano tryb ŁATWY — oceny zawodników będą widoczne.";
+                } else {
+                    selection.textContent =
+                        "Wybrano tryb TRUDNY — oceny zawodników będą ukryte.";
+                }
+
+                continueButton.disabled = false;
+            });
+        });
+
+        continueButton.addEventListener("click", () => {
+            // Draft screen will be implemented in the next step.
+            alert(
+                `Tryb: ${selectedDifficulty === "easy" ? "Łatwy" : "Trudny"}\n` +
+                `Przechodzimy do draftu.`
+            );
+        });
+    }
+
 });
