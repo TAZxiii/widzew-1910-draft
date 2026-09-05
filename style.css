@@ -1155,8 +1155,9 @@ h1 span {
     background:#fff;
 }
 .pitch-player {
-    position:relative;
+    position:absolute;
     width:100px;
+    transform:translate(-50%, -50%);
     display:flex;
     flex-direction:column;
     align-items:center;
@@ -1500,7 +1501,7 @@ h1 span {
     position:relative;
     width:min(100%, 570px);
     margin:0 auto;
-    aspect-ratio:.76 / 1;
+    aspect-ratio:.68 / 1;
     min-height:0;
     border:2px solid rgba(255,255,255,.76);
     border-radius:8px;
@@ -1639,4 +1640,17 @@ h1 span {
     max-width:125px;
     white-space:nowrap;
     text-align:center;
+}
+
+/* Ostateczne ustawienie środka boiska: okrąg i punkt są dokładnie w centrum. */
+#candidateGrid .pitch-center-circle {
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    box-sizing:border-box;
+}
+#candidateGrid .pitch-center-dot {
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
 }

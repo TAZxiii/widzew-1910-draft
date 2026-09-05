@@ -400,66 +400,66 @@ function formatSquadValue(value) {
     // x/y są procentami szerokości/wysokości boiska; y rośnie w dół (nasza bramka jest na dole).
     const FORMATION_LAYOUTS = {
         "3-1-4-2": [
-            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
-            ["skrzydlowi",9,52],["pomoc",50,57],["pomoc",35,43],["pomoc",65,43],["skrzydlowi",91,52],
-            ["napastnicy",35,20],["napastnicy",65,20]
+            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,44],["pomoc",50,45],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",92,44],
+            ["napastnicy",35,25],["napastnicy",65,25]
         ],
         "3-4-1-2": [
-            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
-            ["skrzydlowi",9,52],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",91,52],
-            ["napastnicy",35,20],["napastnicy",65,20]
+            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,44],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,44],
+            ["napastnicy",35,25],["napastnicy",65,25]
         ],
         "3-4-2-1": [
-            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
-            ["skrzydlowi",9,52],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",91,52],
-            ["skrzydlowi",35,25],["skrzydlowi",65,25],["napastnicy",50,13]
+            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,44],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,44],
+            ["skrzydlowi",34,27],["skrzydlowi",66,27],["napastnicy",50,14]
         ],
         "3-4-3": [
-            ["br",50,88],["so",27,72],["so",50,72],["so",73,72],
-            ["skrzydlowi",9,52],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",91,52],
-            ["skrzydlowi",12,20],["skrzydlowi",88,20],["napastnicy",50,13]
+            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,46],["pomoc",32,50],["pomoc",68,50],["pomoc",50,50],["skrzydlowi",92,46],
+            ["skrzydlowi",14,27],["skrzydlowi",86,27],["napastnicy",50,15]
         ],
         "4-1-4-1": [
-            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
-            ["pomoc",50,57],["skrzydlowi",10,43],["pomoc",38,43],["pomoc",62,43],["skrzydlowi",90,43],
-            ["napastnicy",50,16]
+            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["pomoc",50,45],["skrzydlowi",9,50],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",91,50],
+            ["napastnicy",50,15]
         ],
         "4-1-3-2": [
-            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
-            ["pomoc",50,57],["skrzydlowi",10,43],["pomoc",50,43],["skrzydlowi",90,43],
-            ["napastnicy",35,19],["napastnicy",65,19]
+            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["pomoc",29,57],["pomoc",50,45],["pomoc",50,62],["pomoc",71,57],
+            ["napastnicy",35,24],["napastnicy",65,24]
         ],
         "4-2-1-3": [
-            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
-            ["pomoc",38,57],["pomoc",62,57],["pomoc",50,42],
-            ["skrzydlowi",12,23],["skrzydlowi",88,23],["napastnicy",50,14]
+            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["pomoc",35,45],["pomoc",65,45],["pomoc",50,58],
+            ["skrzydlowi",14,25],["skrzydlowi",86,25],["napastnicy",50,14]
         ],
         "4-3-3": [
-            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
-            ["pomoc",38,52],["pomoc",50,52],["pomoc",62,52],
-            ["skrzydlowi",12,22],["skrzydlowi",88,22],["napastnicy",50,14]
+            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["pomoc",33,50],["pomoc",67,50],["pomoc",50,50],
+            ["skrzydlowi",14,27],["skrzydlowi",86,27],["napastnicy",50,15]
         ],
         "4-4-1-1": [
-            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
-            ["skrzydlowi",10,52],["pomoc",38,52],["pomoc",62,52],["skrzydlowi",90,52],
-            ["pomoc",50,60],["napastnicy",50,20]
+            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["skrzydlowi",8,44],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,44],
+            ["pomoc",50,64],["napastnicy",50,27]
         ],
         "4-4-2": [
-            ["br",50,88],["loPo",10,72],["so",38,72],["so",62,72],["loPo",90,72],
-            ["skrzydlowi",10,52],["pomoc",38,52],["pomoc",62,52],["skrzydlowi",90,52],
-            ["napastnicy",35,20],["napastnicy",65,20]
+            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["skrzydlowi",9,50],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",91,50],
+            ["napastnicy",35,25],["napastnicy",65,25]
         ],
         "5-4-1": [
-            ["br",50,88],["loPo",8,72],["so",30,72],["so",50,72],["so",70,72],["loPo",92,72],
-            ["skrzydlowi",10,52],["pomoc",38,52],["pomoc",62,52],["skrzydlowi",90,52],
-            ["napastnicy",50,17]
+            ["br",50,90],["loPo",7,69],["so",29,74],["so",50,74],["so",71,74],["loPo",93,69],
+            ["skrzydlowi",8,44],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,44],
+            ["napastnicy",50,15]
         ],
         "5-3-2": [
-            ["br",50,88],["loPo",8,72],["so",30,72],["so",50,72],["so",70,72],["loPo",92,72],
-            ["pomoc",38,52],["pomoc",50,60],["pomoc",62,52],
-            ["napastnicy",35,20],["napastnicy",65,20]
+            ["br",50,90],["loPo",9,74],["so",29,74],["so",50,74],["so",71,74],["loPo",91,74],
+            ["pomoc",33,50],["pomoc",67,50],["pomoc",50,50],
+            ["napastnicy",35,25],["napastnicy",65,25]
         ]
-    };
+    };;
 
     function pitchCoordinates(formationName, role, occurrence) {
         const layout = FORMATION_LAYOUTS[String(formationName || "").trim()] || [];
