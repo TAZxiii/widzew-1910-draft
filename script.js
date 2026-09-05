@@ -100,7 +100,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             status.textContent =
-                `Wczytano ${trainerRows.length} rekordów sezonowych.`;
+                ``;
 
             renderCoaches();
         } catch (error) {
