@@ -1012,3 +1012,27 @@ h1 span {
         margin: 0 auto !important;
     }
 }
+
+/* Draft screen */
+.draft-screen { min-height: 100vh; }
+.draft-content { width: min(1200px, 94vw); margin: 0 auto; padding: 45px 0 80px; text-align: center; }
+.draft-header { display:flex; justify-content:center; align-items:center; gap:18px; flex-wrap:wrap; font-size:18px; color:#aaa; }
+.draft-header strong { color:#fff; font-size:28px; }
+.draft-progress { margin-top:12px; color:#999; font-size:14px; }
+.draft-position { margin-top:35px; font-size:34px; font-weight:900; }
+.draft-instruction { margin-top:8px; color:#aaa; }
+.candidate-grid { width:100%; margin:30px auto 0; display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:18px; align-items:stretch; }
+.candidate-card { position:relative; min-height:260px; border:1px solid #3d3d3d; border-radius:18px; background:linear-gradient(145deg,#191919,#0d0d0d); color:#fff; padding:24px 15px; cursor:pointer; font:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; transition:.2s ease; }
+.candidate-card:hover { transform:translateY(-6px); border-color:#e30613; }
+.candidate-number { position:absolute; top:12px; left:14px; color:#777; font-size:12px; }
+.candidate-name { display:flex; flex-direction:column; font-size:23px; font-weight:900; line-height:1.1; }
+.candidate-season { color:#aaa; font-size:14px; }
+.candidate-rating { font-size:42px; font-weight:900; line-height:1; }
+.candidate-value { color:#777; font-size:12px; }
+.draft-action { margin-top:30px; }
+.selected-mini-card { padding:16px; border:1px solid #333; border-radius:12px; background:#121212; display:flex; flex-direction:column; gap:5px; }
+.selected-mini-card span { color:#777; font-size:12px; }
+.selected-mini-card small { color:#888; }
+.draft-finished { font-size:28px; font-weight:900; }
+@media(max-width:900px){ .candidate-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media(max-width:520px){ .candidate-grid{grid-template-columns:1fr;} .draft-position{font-size:27px;} }

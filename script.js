@@ -4,10 +4,13 @@ document.addEventListener("DOMContentLoaded", () => {
     const coachScreen = document.getElementById("coachScreen");
     const playerScreen = document.getElementById("playerScreen");
     const difficultyScreen = document.getElementById("difficultyScreen");
+    const draftScreen = document.getElementById("draftScreen");
 
     let trainerRows = [];
     let selectedTrainer = null;
     let selectedFormation = null;
+    let selectedFormationRow = null;
+    let formationRows = [];
     let selectedDifficulty = null;
     let playerDatabase = {
         br: [],
@@ -19,7 +22,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     function showScreen(screen) {
-        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen]
+        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen, draftScreen]
             .forEach(s => {
                 if (s) s.classList.add("hidden");
             });
@@ -214,6 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const rows = await getCSV("data/formacje.csv");
+            formationRows = rows;
 
             if (rows.length < 5) {
                 throw new Error(`Znaleziono tylko ${rows.length} formacji.`);
@@ -237,8 +241,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
             grid.querySelectorAll(".formation-card").forEach(card => {
                 card.addEventListener("click", () => {
-                    selectedFormation =
-                        selected[Number(card.dataset.index)]["Formacje"];
+                    selectedFormationRow = selected[Number(card.dataset.index)];
+                    selectedFormation = selectedFormationRow["Formacje"];
 
                     grid.querySelectorAll(".formation-card").forEach(c =>
                         c.classList.remove("selected")
@@ -331,28 +335,271 @@ document.addEventListener("DOMContentLoaded", () => {
         return playerDatabase;
     }
 
+    // =========================
+    // WŁAŚCIWY DRAFT
+    // =========================
+    let draft = {
+        mode: null,
+        formation: null,
+        difficulty: null,
+        available: [],
+        selected: [],
+        stage: "starting",
+        positionIndex: 0,
+        positions: [],
+        candidates: [],
+        bench: [],
+        benchIndex: 0
+    };
+
+    const positionLabels = {
+        br: "BR",
+        loPo: "LO/PO",
+        so: "ŚO",
+        pomoc: "ŚPD/ŚP/OP",
+        skrzydlowi: "LS/LP/PS/PP",
+        napastnicy: "N"
+    };
+
+    function playerKey(row) {
+        return `${row["Imię"]}|${row["Nazwisko"]}`.trim().toLowerCase();
+    }
+
+    function allPlayerRows() {
+        return Object.values(playerDatabase).flat();
+    }
+
+    function createPositionSequence() {
+        const f = draft.formation;
+        const result = [];
+
+        const add = (key, count) => {
+            for (let i = 0; i < Number(count || 0); i++) result.push(key);
+        };
+
+        add("br", f["BR"]);
+        add("loPo", f["LO/PO"]);
+        add("so", f["ŚO"]);
+        add("pomoc", f["ŚPD/śP/OP"]);
+        add("skrzydlowi", f["LS/SP/PS/PP"]);
+        add("napastnicy", f["N"]);
+
+        return result;
+    }
+
+    function uniqueAvailablePlayers(rows) {
+        const map = new Map();
+        rows.forEach(row => {
+            const key = playerKey(row);
+            if (!draft.available.includes(key)) return;
+            if (!map.has(key)) map.set(key, []);
+            map.get(key).push(row);
+        });
+        return [...map.entries()];
+    }
+
+    function randomFiveForPosition(positionKey) {
+        let rows;
+
+        if (positionKey === "loPo") rows = playerDatabase.loPo;
+        else if (positionKey === "so") rows = playerDatabase.so;
+        else if (positionKey === "pomoc") rows = playerDatabase.pomoc;
+        else if (positionKey === "skrzydlowi") rows = playerDatabase.skrzydlowi;
+        else if (positionKey === "br") rows = playerDatabase.br;
+        else rows = playerDatabase.napastnicy;
+
+        const unique = uniqueAvailablePlayers(rows);
+        const shuffled = unique.sort(() => Math.random() - 0.5).slice(0, 5);
+
+        return shuffled.map(([key, records]) => {
+            // Season is selected only after the player identity has been drawn.
+            const record = records[Math.floor(Math.random() * records.length)];
+            return { key, row: record };
+        });
+    }
+
+    function randomFiveForBench(type) {
+        let rows = [];
+        if (type === "def") rows = [...playerDatabase.loPo, ...playerDatabase.so];
+        if (type === "mid") rows = [...playerDatabase.pomoc, ...playerDatabase.skrzydlowi];
+        if (type === "br") rows = playerDatabase.br;
+        if (type === "n") rows = playerDatabase.napastnicy;
+
+        const unique = uniqueAvailablePlayers(rows);
+        return unique.sort(() => Math.random() - 0.5).slice(0, 5).map(([key, records]) => ({
+            key,
+            row: records[Math.floor(Math.random() * records.length)]
+        }));
+    }
+
+    function displayName(row) {
+        return `<span>${row["Imię"]}</span><span>${row["Nazwisko"]}</span>`;
+    }
+
+    function displayCandidate(card, index) {
+        const row = card.row;
+        const rating = row["Ogólna"];
+        const value = row["Wartość"];
+
+        return `
+            <button class="candidate-card" data-index="${index}">
+                <div class="candidate-number">${index + 1}</div>
+                <div class="candidate-name">${displayName(row)}</div>
+                <div class="candidate-season">${row["Sezon"]}</div>
+                ${draft.difficulty === "easy"
+                    ? `<div class="candidate-rating">${rating}</div>`
+                    : ""}
+                <div class="candidate-value">${value} tys. €</div>
+            </button>
+        `;
+    }
+
+    async function startDraft() {
+        draft.mode = selectedTrainer ? "trainer" : "player";
+        if (selectedTrainer && !formationRows.length) {
+            formationRows = await getCSV("data/formacje.csv");
+        }
+        draft.formation = selectedTrainer
+            ? (formationRows.find(row => row["Formacje"] === selectedTrainer.formation) || findFormationByName(selectedTrainer.formation))
+            : (selectedFormationRow || findFormationByName(selectedFormation));
+        draft.difficulty = selectedDifficulty;
+        draft.available = [...new Set(allPlayerRows().map(playerKey))];
+        draft.selected = [];
+        draft.positions = createPositionSequence();
+        draft.positionIndex = 0;
+        draft.stage = "starting";
+        draft.bench = [];
+        draft.benchIndex = 0;
+
+        showScreen(draftScreen);
+        renderDraftPosition();
+    }
+
+    function findFormationByName(name) {
+        // Formation counts are already represented by the currently selected row
+        // when the player chose it. For trainer mode, load the row matching the
+        // selected formation from the database.
+        return { "Formacje": name, "BR": 1, "LO/PO": 2, "ŚO": 2, "ŚPD/śP/OP": 3, "LS/SP/PS/PP": 2, "N": 1 };
+    }
+
+    // Keep exact formation row selected by player, including its position counts.
+    const originalLoadFormationDatabase = loadFormationDatabase;
+
+    function renderDraftPosition() {
+        const header = document.getElementById("draftHeader");
+        const progress = document.getElementById("draftProgress");
+        const position = document.getElementById("draftPosition");
+        const instruction = document.getElementById("draftInstruction");
+        const grid = document.getElementById("candidateGrid");
+        const action = document.getElementById("draftAction");
+
+        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span><strong>${draft.formation["Formacje"]}</strong>`;
+        progress.textContent = `Jedenastka: ${draft.selected.length}/11`;
+
+        const key = draft.positions[draft.positionIndex];
+        const occurrence = draft.positions.slice(0, draft.positionIndex + 1)
+            .filter(x => x === key).length;
+        const total = draft.positions.filter(x => x === key).length;
+
+        position.textContent = `WYBIERZ ${positionLabels[key]}${total > 1 ? ` · ${occurrence}/${total}` : ""}`;
+        instruction.textContent = "Wybierz 1 z 5 wylosowanych zawodników.";
+        action.innerHTML = "";
+
+        draft.candidates = randomFiveForPosition(key);
+        grid.innerHTML = draft.candidates.map(displayCandidate).join("");
+
+        grid.querySelectorAll(".candidate-card").forEach(card => {
+            card.addEventListener("click", () => selectStartingPlayer(Number(card.dataset.index)));
+        });
+    }
+
+    function selectStartingPlayer(index) {
+        const candidate = draft.candidates[index];
+        if (!candidate) return;
+
+        draft.selected.push({ ...candidate, role: draft.positions[draft.positionIndex] });
+        draft.available = draft.available.filter(key => key !== candidate.key);
+        draft.positionIndex++;
+
+        if (draft.positionIndex >= draft.positions.length) {
+            startBenchDraft();
+        } else {
+            renderDraftPosition();
+        }
+    }
+
+    function startBenchDraft() {
+        draft.stage = "bench";
+        draft.bench = ["br", "def", "def", "def", "mid", "mid", "mid", "n", "n"];
+        draft.benchIndex = 0;
+        renderBenchPosition();
+    }
+
+    function renderBenchPosition() {
+        const labels = { br: "BR", def: "OBROŃCA", mid: "POMOCNIK / SKRZYDŁOWY", n: "N" };
+        const type = draft.bench[draft.benchIndex];
+        const grid = document.getElementById("candidateGrid");
+        const position = document.getElementById("draftPosition");
+        const instruction = document.getElementById("draftInstruction");
+        const progress = document.getElementById("draftProgress");
+        const header = document.getElementById("draftHeader");
+        const action = document.getElementById("draftAction");
+
+        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span><strong>${draft.formation["Formacje"]}</strong>`;
+        progress.textContent = `Ławka: ${draft.benchIndex}/9 · Cały skład: ${draft.selected.length}/20`;
+        position.textContent = `WYBIERZ ${labels[type]}`;
+        instruction.textContent = "Wybierz 1 z 5 wylosowanych zawodników.";
+        action.innerHTML = "";
+
+        draft.candidates = randomFiveForBench(type);
+        grid.innerHTML = draft.candidates.map(displayCandidate).join("");
+        grid.querySelectorAll(".candidate-card").forEach(card => {
+            card.addEventListener("click", () => selectBenchPlayer(Number(card.dataset.index)));
+        });
+    }
+
+    function selectBenchPlayer(index) {
+        const candidate = draft.candidates[index];
+        if (!candidate) return;
+
+        draft.selected.push({ ...candidate, role: `bench-${draft.bench[draft.benchIndex]}` });
+        draft.available = draft.available.filter(key => key !== candidate.key);
+        draft.benchIndex++;
+
+        if (draft.benchIndex >= draft.bench.length) {
+            finishDraft();
+        } else {
+            renderBenchPosition();
+        }
+    }
+
+    function finishDraft() {
+        const grid = document.getElementById("candidateGrid");
+        const position = document.getElementById("draftPosition");
+        const instruction = document.getElementById("draftInstruction");
+        const progress = document.getElementById("draftProgress");
+        const action = document.getElementById("draftAction");
+
+        position.textContent = "SKŁAD GOTOWY";
+        instruction.textContent = "Wybrano 20 zawodników. W kolejnym etapie dodamy podsumowanie i ocenę zespołu.";
+        progress.textContent = "Cały skład: 20/20";
+        grid.innerHTML = draft.selected.map((p, i) => `
+            <div class="selected-mini-card">
+                <span>${i + 1}</span>
+                <strong>${p.row["Imię"]} ${p.row["Nazwisko"]}</strong>
+                <small>${p.row["Sezon"]}${draft.difficulty === "easy" ? ` · ${p.row["Ogólna"]}` : ""}</small>
+            </div>
+        `).join("");
+        action.innerHTML = `<div class="draft-finished">DRAFT ZAKOŃCZONY</div>`;
+    }
+
     document.getElementById("difficultyContinue").addEventListener("click", async () => {
         const button = document.getElementById("difficultyContinue");
         button.disabled = true;
         button.textContent = "WCZYTYWANIE BAZY...";
-
         try {
             await loadPlayerDatabase();
-
-            const total = Object.values(playerDatabase)
-                .reduce((sum, rows) => sum + rows.length, 0);
-
-            alert(
-                `Baza zawodników została poprawnie wczytana!\n\n` +
-                `Łącznie rekordów sezonowych: ${total}\n` +
-                `BR: ${playerDatabase.br.length}\n` +
-                `LO/PO: ${playerDatabase.loPo.length}\n` +
-                `ŚO: ${playerDatabase.so.length}\n` +
-                `Pomocnicy: ${playerDatabase.pomoc.length}\n` +
-                `Skrzydłowi: ${playerDatabase.skrzydlowi.length}\n` +
-                `Napastnicy: ${playerDatabase.napastnicy.length}\n\n` +
-                `Następny etap: właściwy draft.`
-            );
+            await startDraft();
         } catch (error) {
             console.error(error);
             alert("Nie udało się wczytać bazy zawodników. Sprawdź folder data.");
@@ -361,4 +608,6 @@ document.addEventListener("DOMContentLoaded", () => {
             button.textContent = "ROZPOCZNIJ DRAFT";
         }
     });
+
+
 });
