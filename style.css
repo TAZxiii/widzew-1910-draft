@@ -978,3 +978,37 @@ h1 span {
         width: 100% !important;
     }
 }
+
+/* Ostatecznie mniejsze kafelki formacji */
+.formation-grid {
+    width: fit-content !important;
+    max-width: 92vw !important;
+    margin: 30px auto 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, 210px) !important;
+    justify-content: center !important;
+    gap: 16px !important;
+}
+.formation-card {
+    width: 210px !important;
+    min-width: 210px !important;
+    height: 145px !important;
+    min-height: 145px !important;
+    padding: 15px !important;
+    box-sizing: border-box !important;
+}
+@media (max-width: 760px) {
+    .formation-grid {
+        grid-template-columns: repeat(2, 210px) !important;
+    }
+}
+@media (max-width: 480px) {
+    .formation-grid {
+        grid-template-columns: 1fr !important;
+    }
+    .formation-card {
+        width: min(210px, 85vw) !important;
+        min-width: 0 !important;
+        margin: 0 auto !important;
+    }
+}
