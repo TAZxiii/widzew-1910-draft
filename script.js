@@ -1,5 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
 
+
+function positionColorClass(position) {
+    const p = String(position || "").toUpperCase().replace(/\s/g, "");
+    if (p === "BR") return "position-gk";
+    if (p === "LO/PO" || p === "ŚO" || p === "SO") return "position-def";
+    if (p.includes("ŚPD") || p.includes("ŚP") || p.includes("OP") ||
+        p.includes("LS") || p.includes("LP") || p.includes("PS") || p.includes("PP")) return "position-mid";
+    if (p === "N") return "position-att";
+    return "";
+}
+
 function calculateTotalSquadValue(players) {
     return players.reduce((sum, player) => {
         const value = parseFloat(
@@ -671,7 +682,7 @@ function formatSquadValue(value) {
         ];
 
         const pitchPlayer = p => `
-            <div class="pitch-player" title="${playerName(p)}">
+            <div class="pitch-player ${positionColorClass(player.position || player["Pozycja"])}" title="${playerName(p)}">
                 <span class="pitch-shirt">${safe(p.row["#"])}</span>
                 <span class="pitch-name">${playerName(p)}</span>
             </div>`;

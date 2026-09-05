@@ -1281,3 +1281,72 @@ h1 span {
     .pitch-name { font-size:9px; max-width:75px; }
     .final-score-breakdown { grid-template-columns:repeat(2,1fr); width:96vw; }
 }
+
+/* ===== Boisko - symetryczny wygląd ===== */
+.pitch {
+    position: relative;
+    overflow: hidden;
+}
+.pitch::before,
+.pitch::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 34%;
+    height: 15%;
+    border: 2px solid rgba(255,255,255,.78);
+    background: transparent;
+    pointer-events: none;
+    box-sizing: border-box;
+}
+.pitch::before { top: 0; }
+.pitch::after { bottom: 0; }
+
+.pitch .penalty-area,
+.pitch .goal-area {
+    box-sizing: border-box;
+}
+
+/* ===== Kolory pozycji ===== */
+.player-marker.position-gk,
+.pitch-player.position-gk {
+    border-color: #e53935 !important;
+}
+.player-marker.position-def,
+.pitch-player.position-def {
+    border-color: #f2c94c !important;
+}
+.player-marker.position-mid,
+.pitch-player.position-mid {
+    border-color: #39b86a !important;
+}
+.player-marker.position-att,
+.pitch-player.position-att {
+    border-color: #3f82f7 !important;
+}
+
+/* Okrąg wokół oceny na liście */
+.player-rating.position-gk,
+.rating-circle.position-gk {
+    border: 2px solid #e53935 !important;
+}
+.player-rating.position-def,
+.rating-circle.position-def {
+    border: 2px solid #f2c94c !important;
+}
+.player-rating.position-mid,
+.rating-circle.position-mid {
+    border: 2px solid #39b86a !important;
+}
+.player-rating.position-att,
+.rating-circle.position-att {
+    border: 2px solid #3f82f7 !important;
+}
+
+/* Zachowanie okrągłego kształtu oceny */
+.player-rating,
+.rating-circle {
+    border-radius: 50%;
+    box-sizing: border-box;
+}
