@@ -1578,3 +1578,37 @@ h1 span {
     .final-formation strong { font-size:20px; }
     #candidateGrid .football-pitch { width:100%; }
 }
+
+/* FIX: ekran końcowy — tylko właściwe pole karne i pole bramkowe po obu stronach.
+   Usuwamy stare prostokąty generowane przez pseudo-elementy .pitch::before/after. */
+#candidateGrid .football-pitch::before,
+#candidateGrid .football-pitch::after {
+    display:none !important;
+}
+
+#candidateGrid .pitch-penalty-area {
+    width:38%;
+    height:18%;
+    border:2px solid rgba(255,255,255,.72);
+}
+#candidateGrid .pitch-penalty-top {
+    top:0;
+    border-top:0;
+}
+#candidateGrid .pitch-penalty-bottom {
+    bottom:0;
+    border-bottom:0;
+}
+#candidateGrid .pitch-goal-area {
+    width:18%;
+    height:7%;
+    border:2px solid rgba(255,255,255,.72);
+}
+#candidateGrid .pitch-goal-top {
+    top:0;
+    border-top:0;
+}
+#candidateGrid .pitch-goal-bottom {
+    bottom:0;
+    border-bottom:0;
+}
