@@ -71,5 +71,38 @@
     </div>
 
     <script src="script.js"></script>
+
+<section id="difficultyScreen" class="difficulty-screen hidden">
+    <div class="difficulty-content">
+        <h2>WYBIERZ POZIOM TRUDNOŚCI</h2>
+        <p id="difficultyContext" class="screen-intro"></p>
+
+        <div class="difficulty-grid">
+            <button class="difficulty-card" data-difficulty="easy">
+                <span class="difficulty-title">ŁATWY</span>
+                <span class="difficulty-description">
+                    Widzisz ocenę ogólną każdego zawodnika.
+                </span>
+            </button>
+
+            <button class="difficulty-card" data-difficulty="hard">
+                <span class="difficulty-title">TRUDNY</span>
+                <span class="difficulty-description">
+                    Nie widzisz ocen. Widzisz tylko imię, nazwisko i sezon.
+                </span>
+            </button>
+        </div>
+
+        <div id="difficultySelection" class="difficulty-selection">
+            Wybierz poziom trudności.
+        </div>
+
+        <button id="difficultyContinue" class="next-button" disabled>
+            ROZPOCZNIJ DRAFT
+        </button>
+    </div>
+    <div class="credits">Stworzono przez: <strong>Alan WTM</strong></div>
+</section>
+
 </body>
 </html>

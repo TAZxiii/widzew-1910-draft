@@ -3,6 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const modeScreen = document.getElementById("modeScreen");
     const coachScreen = document.getElementById("coachScreen");
     const playerScreen = document.getElementById("playerScreen");
+    const difficultyScreen = document.getElementById("difficultyScreen");
 
     let trainerRows = [];
     let selectedTrainer = null;
@@ -10,17 +11,20 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedDifficulty = null;
 
     function showScreen(screen) {
-        [startScreen, modeScreen, coachScreen, playerScreen].forEach(s => {
-            if (s) s.classList.add("hidden");
-        });
+        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen]
+            .forEach(s => {
+                if (s) s.classList.add("hidden");
+            });
+
         if (screen) screen.classList.remove("hidden");
         window.scrollTo(0, 0);
     }
 
     function parseCSV(text) {
-        const lines = text.replace(/^\uFEFF/, "").trim().split(/\r?\n/);
-        if (!lines.length) return [];
+        const clean = text.replace(/^\uFEFF/, "").trim();
+        if (!clean) return [];
 
+        const lines = clean.split(/\r?\n/);
         const headers = lines.shift().split(";").map(h => h.trim());
 
         return lines.filter(line => line.trim()).map(line => {
@@ -32,31 +36,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     async function getCSV(path) {
-        // Cache-busting is useful while testing a GitHub Pages deployment.
-        const separator = path.includes("?") ? "&" : "?";
-        const response = await fetch(`${path}${separator}v=2`, {
+        const response = await fetch(`${path}?v=${Date.now()}`, {
             cache: "no-store"
         });
+
         if (!response.ok) {
             throw new Error(`${path}: HTTP ${response.status}`);
         }
+
         return parseCSV(await response.text());
     }
 
+    // START
     document.getElementById("startGame").addEventListener("click", () => {
         showScreen(modeScreen);
     });
 
+    // MODE: TRAINER
     document.getElementById("coachMode").addEventListener("click", () => {
         showScreen(coachScreen);
         loadTrainerDatabase();
     });
 
+    // MODE: PLAYER
     document.getElementById("playerMode").addEventListener("click", () => {
         showScreen(playerScreen);
         loadFormationDatabase();
     });
 
+    // HOW TO PLAY
     const modal = document.getElementById("howToPlayModal");
     document.getElementById("howToPlay").addEventListener("click", () => {
         modal.classList.remove("hidden");
@@ -68,6 +76,7 @@ document.addEventListener("DOMContentLoaded", () => {
         modal.classList.add("hidden");
     });
 
+    // TRAINER DATABASE
     async function loadTrainerDatabase() {
         const status = document.getElementById("coachStatus");
         const grid = document.getElementById("coachGrid");
@@ -79,13 +88,16 @@ document.addEventListener("DOMContentLoaded", () => {
             trainerRows = await getCSV("data/trener.csv");
 
             if (!trainerRows.length) {
-                throw new Error("Baza trenerów jest pusta.");
+                throw new Error("Pusta baza trenerów.");
             }
 
-            status.textContent = `Wczytano ${trainerRows.length} rekordów sezonowych.`;
+            status.textContent =
+                `Wczytano ${trainerRows.length} rekordów sezonowych.`;
+
             renderCoaches();
         } catch (error) {
-            status.textContent = "Nie udało się wczytać bazy trenerów.";
+            status.textContent =
+                "Nie udało się wczytać bazy trenerów.";
             status.classList.add("error");
             grid.innerHTML = "";
             console.error(error);
@@ -127,46 +139,26 @@ document.addEventListener("DOMContentLoaded", () => {
             card.addEventListener("click", () => {
                 const coach = coaches[Number(card.dataset.index)];
 
-                // If a coach has multiple seasons, select one at random.
-                const selected = coach.seasons[
-                    Math.floor(Math.random() * coach.seasons.length)
-                ];
+                // Multiple seasons = random season.
+                const season =
+                    coach.seasons[Math.floor(Math.random() * coach.seasons.length)];
 
                 selectedTrainer = {
                     first: coach.first,
                     last: coach.last,
-                    season: selected["Sezon"],
-                    formation: selected["Taktyka"]
+                    season: season["Sezon"],
+                    formation: season["Taktyka"]
                 };
 
-                // For now show the result in the existing player screen.
-                // The next development step will replace this with the
-                // difficulty-selection screen.
-                showSelectedTrainer();
+                showDifficultyScreen(
+                    `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
+                     Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
+                );
             });
         });
     }
 
-    function showSelectedTrainer() {
-        const content = playerScreen.querySelector(".player-content");
-
-        content.innerHTML = `
-            <h2>WYBRANY TRENER</h2>
-            <p class="screen-intro">
-                ${selectedTrainer.first} ${selectedTrainer.last}
-            </p>
-            <div class="selection-card">
-                <div><strong>Sezon</strong><span>${selectedTrainer.season}</span></div>
-                <div><strong>Formacja</strong><span>${selectedTrainer.formation}</span></div>
-            </div>
-            <button class="next-button" id="trainerContinue">DALEJ</button>
-        `;
-
-        document.getElementById("trainerContinue").addEventListener("click", () => {
-            showDifficultyScreen();
-        });
-    }
-
+    // FORMATIONS DATABASE
     async function loadFormationDatabase() {
         const content = playerScreen.querySelector(".player-content");
 
@@ -217,16 +209,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     status.textContent =
                         `Wybrano formację: ${selectedFormation}`;
 
-                    let continueButton = document.getElementById("formationContinue");
-                    if (!continueButton) {
-                        continueButton = document.createElement("button");
-                        continueButton.id = "formationContinue";
-                        continueButton.className = "next-button";
-                        continueButton.textContent = "DALEJ";
-                        content.appendChild(continueButton);
+                    let button = document.getElementById("formationContinue");
 
-                        continueButton.addEventListener("click", () => {
-                            showDifficultyScreen();
+                    if (!button) {
+                        button = document.createElement("button");
+                        button.id = "formationContinue";
+                        button.className = "next-button";
+                        button.textContent = "DALEJ";
+                        content.appendChild(button);
+
+                        button.addEventListener("click", () => {
+                            showDifficultyScreen(
+                                `Wybrana formacja: <strong>${selectedFormation}</strong>`
+                            );
                         });
                     }
                 });
@@ -234,79 +229,54 @@ document.addEventListener("DOMContentLoaded", () => {
         } catch (error) {
             const status = document.getElementById("formationStatus");
             status.textContent =
-                "Nie udało się wczytać bazy formacji. Sprawdź, czy data/formacje.csv znajduje się w repozytorium.";
+                "Nie udało się wczytać bazy formacji. Sprawdź folder data.";
             status.classList.add("error");
-            console.error("Błąd wczytywania formacje.csv:", error);
+            console.error(error);
         }
     }
-    function showDifficultyScreen() {
-        const content = playerScreen.querySelector(".player-content");
 
-        const context = selectedTrainer
-            ? `<p class="selected-context">Trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong> · ${selectedTrainer.season} · ${selectedTrainer.formation}</p>`
-            : `<p class="selected-context">Formacja: <strong>${selectedFormation || "—"}</strong></p>`;
+    // DEDICATED DIFFICULTY SCREEN
+    function showDifficultyScreen(context) {
+        selectedDifficulty = null;
 
-        content.innerHTML = `
-            <h2>WYBIERZ POZIOM TRUDNOŚCI</h2>
-            <p class="screen-intro">
-                ${context}
-            </p>
-
-            <div class="difficulty-grid">
-                <button class="difficulty-card" data-difficulty="easy">
-                    <span class="difficulty-title">ŁATWY</span>
-                    <span class="difficulty-description">
-                        Przy każdym zawodniku widzisz jego ocenę ogólną.
-                    </span>
-                </button>
-
-                <button class="difficulty-card" data-difficulty="hard">
-                    <span class="difficulty-title">TRUDNY</span>
-                    <span class="difficulty-description">
-                        Nie widzisz ocen. Otrzymujesz tylko nazwisko zawodnika i sezon.
-                    </span>
-                </button>
-            </div>
-
-            <div id="difficultySelection" class="difficulty-selection">
-                Wybierz poziom trudności, aby przejść dalej.
-            </div>
-
-            <button id="difficultyContinue" class="next-button" disabled>
-                ROZPOCZNIJ DRAFT
-            </button>
-        `;
-
+        const contextElement = document.getElementById("difficultyContext");
         const selection = document.getElementById("difficultySelection");
         const continueButton = document.getElementById("difficultyContinue");
-        const cards = document.querySelectorAll(".difficulty-card");
 
-        cards.forEach(card => {
-            card.addEventListener("click", () => {
-                selectedDifficulty = card.dataset.difficulty;
+        contextElement.innerHTML = context;
+        selection.textContent = "Wybierz poziom trudności.";
+        continueButton.disabled = true;
 
-                cards.forEach(c => c.classList.remove("selected"));
-                card.classList.add("selected");
-
-                if (selectedDifficulty === "easy") {
-                    selection.textContent =
-                        "Wybrano tryb ŁATWY — oceny zawodników będą widoczne.";
-                } else {
-                    selection.textContent =
-                        "Wybrano tryb TRUDNY — oceny zawodników będą ukryte.";
-                }
-
-                continueButton.disabled = false;
-            });
+        document.querySelectorAll(".difficulty-card").forEach(card => {
+            card.classList.remove("selected");
         });
 
-        continueButton.addEventListener("click", () => {
-            // Draft screen will be implemented in the next step.
-            alert(
-                `Tryb: ${selectedDifficulty === "easy" ? "Łatwy" : "Trudny"}\n` +
-                `Przechodzimy do draftu.`
-            );
-        });
+        showScreen(difficultyScreen);
     }
 
+    document.querySelectorAll(".difficulty-card").forEach(card => {
+        card.addEventListener("click", () => {
+            selectedDifficulty = card.dataset.difficulty;
+
+            document.querySelectorAll(".difficulty-card").forEach(c =>
+                c.classList.remove("selected")
+            );
+            card.classList.add("selected");
+
+            document.getElementById("difficultySelection").textContent =
+                selectedDifficulty === "easy"
+                    ? "Wybrano tryb ŁATWY — oceny zawodników będą widoczne."
+                    : "Wybrano tryb TRUDNY — oceny zawodników będą ukryte.";
+
+            document.getElementById("difficultyContinue").disabled = false;
+        });
+    });
+
+    document.getElementById("difficultyContinue").addEventListener("click", () => {
+        // Next step: actual draft.
+        alert(
+            `Tryb: ${selectedDifficulty === "easy" ? "Łatwy" : "Trudny"}\n` +
+            "Następny etap: draft zawodników."
+        );
+    });
 });
