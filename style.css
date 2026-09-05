@@ -856,3 +856,30 @@ h1 span {
         grid-template-columns: 1fr;
     }
 }
+
+/* Formation cards: 3 centered on the first row, 2 centered on the second row */
+.formation-grid {
+    width: min(1200px, 94vw);
+    margin: 30px auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: stretch;
+    gap: 16px;
+}
+.formation-card {
+    box-sizing: border-box;
+    flex: 0 0 calc((100% - 32px) / 3);
+    width: auto;
+    min-width: 0;
+}
+@media (max-width: 800px) {
+    .formation-card {
+        flex-basis: calc((100% - 16px) / 2);
+    }
+}
+@media (max-width: 480px) {
+    .formation-card {
+        flex-basis: 100%;
+    }
+}
