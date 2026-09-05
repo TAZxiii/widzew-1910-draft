@@ -1426,3 +1426,155 @@ h1 span {
     #candidateGrid .final-layout { grid-template-columns:1fr; }
     #candidateGrid .football-pitch { aspect-ratio:1.72/1; }
 }
+
+
+/* ===== EKRAN KOŃCOWY — finalny układ inspirowany makietą ===== */
+#candidateGrid:has(.final-layout) {
+    display:block;
+    width:100%;
+    margin-top:18px;
+}
+#candidateGrid .final-layout {
+    width:min(1450px, 96vw);
+    margin:0 auto;
+    display:grid;
+    grid-template-columns:minmax(500px, 1.05fr) minmax(430px, .95fr);
+    gap:24px;
+    align-items:start;
+}
+#candidateGrid .final-pitch-panel,
+#candidateGrid .final-list-panel {
+    border:1px solid #343434;
+    border-radius:18px;
+    background:linear-gradient(145deg,#171717,#0d0d0d);
+    overflow:hidden;
+}
+#candidateGrid .final-pitch-panel { padding:20px; }
+#candidateGrid .final-list-panel { padding:20px; }
+#candidateGrid .final-panel-heading {
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+    margin-bottom:16px;
+}
+.final-branding {
+    display:flex;
+    align-items:center;
+    gap:16px;
+}
+.final-crest {
+    width:76px;
+    height:76px;
+    object-fit:contain;
+    flex:0 0 auto;
+}
+.final-team-rating {
+    display:flex;
+    flex-direction:column;
+}
+.final-team-rating span,
+.final-formation span {
+    display:block;
+    color:#999;
+    font-size:11px;
+    letter-spacing:1.6px;
+    font-weight:900;
+}
+.final-team-rating strong {
+    font-size:48px;
+    line-height:1;
+    margin-top:4px;
+}
+.final-formation {
+    text-align:right;
+    min-width:120px;
+}
+.final-formation strong {
+    display:block;
+    font-size:25px;
+    line-height:1.1;
+    margin-top:5px;
+}
+#candidateGrid .football-pitch {
+    position:relative;
+    width:min(100%, 570px);
+    margin:0 auto;
+    aspect-ratio:.76 / 1;
+    min-height:0;
+    border:2px solid rgba(255,255,255,.76);
+    border-radius:8px;
+    overflow:hidden;
+    background:
+      repeating-linear-gradient(0deg,rgba(255,255,255,.035) 0 9%,rgba(0,0,0,.015) 9% 18%),
+      linear-gradient(90deg,#1a1a1a,#242424,#1a1a1a);
+}
+#candidateGrid .pitch-lines {
+    position:absolute;
+    inset:0;
+    pointer-events:none;
+}
+#candidateGrid .pitch-lines::before {
+    content:"";
+    position:absolute;
+    left:0; right:0; top:50%;
+    height:2px;
+    background:rgba(255,255,255,.65);
+}
+#candidateGrid .pitch-penalty-area,
+#candidateGrid .pitch-goal-area {
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    box-sizing:border-box;
+    border:2px solid rgba(255,255,255,.72);
+    background:transparent;
+    pointer-events:none;
+    z-index:1;
+}
+#candidateGrid .pitch-penalty-area { width:38%; height:18%; }
+#candidateGrid .pitch-penalty-top { top:0; border-top:0; }
+#candidateGrid .pitch-penalty-bottom { bottom:0; border-bottom:0; }
+#candidateGrid .pitch-goal-area { width:18%; height:7%; }
+#candidateGrid .pitch-goal-top { top:0; border-top:0; }
+#candidateGrid .pitch-goal-bottom { bottom:0; border-bottom:0; }
+#candidateGrid .pitch-center-circle {
+    position:absolute;
+    width:19%;
+    aspect-ratio:1;
+    left:40.5%; top:40.5%;
+    border:2px solid rgba(255,255,255,.65);
+    border-radius:50%;
+    z-index:1;
+}
+#candidateGrid .pitch-center-dot {
+    position:absolute; width:7px; height:7px;
+    left:calc(50% - 3.5px); top:calc(50% - 3.5px);
+    border-radius:50%; background:#fff; z-index:2;
+}
+#candidateGrid .pitch-row { z-index:3; }
+#candidateGrid .pitch-shirt {
+    width:34px; height:34px;
+    display:flex; align-items:center; justify-content:center;
+    border:2px solid #fff;
+    border-radius:50%;
+    background:#151515;
+    font-size:11px; font-weight:900;
+}
+#candidateGrid .pitch-name {
+    margin-top:4px; max-width:115px;
+    text-align:center; font-size:10px; font-weight:800;
+    line-height:1.1; text-shadow:0 1px 3px #000;
+}
+
+@media (max-width: 980px) {
+    #candidateGrid .final-layout { grid-template-columns:1fr; }
+    #candidateGrid .football-pitch { width:min(100%,520px); }
+}
+@media (max-width: 520px) {
+    #candidateGrid .final-pitch-panel,#candidateGrid .final-list-panel { padding:14px; }
+    .final-crest { width:60px; height:60px; }
+    .final-team-rating strong { font-size:38px; }
+    .final-formation strong { font-size:20px; }
+    #candidateGrid .football-pitch { width:100%; }
+}

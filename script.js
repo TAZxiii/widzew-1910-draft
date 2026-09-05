@@ -726,15 +726,25 @@ function formatSquadValue(value) {
             <div class="final-layout">
                 <section class="final-pitch-panel">
                     <div class="final-panel-heading">
-                        <div>
-                            <span>TWÓJ SKŁAD</span>
-                            <h3>${formation}</h3>
+                        <div class="final-branding">
+                            <img src="data/widzew-crest.png" alt="Herb Widzewa Łódź" class="final-crest">
+                            <div class="final-team-rating">
+                                <span>OCENA OGÓLNA</span>
+                                <strong>${roundScore(scores.overall)}</strong>
+                            </div>
                         </div>
-                        <div class="final-score-small">${roundScore(scores.overall)}</div>
+                        <div class="final-formation">
+                            <span>FORMACJA</span>
+                            <strong>${formation}</strong>
+                        </div>
                     </div>
 
                     <div class="football-pitch">
                         <div class="pitch-lines"></div>
+                        <div class="pitch-penalty-area pitch-penalty-top"></div>
+                        <div class="pitch-goal-area pitch-goal-top"></div>
+                        <div class="pitch-penalty-area pitch-penalty-bottom"></div>
+                        <div class="pitch-goal-area pitch-goal-bottom"></div>
                         <div class="pitch-center-circle"></div>
                         <div class="pitch-center-dot"></div>
                         ${pitchRows.map(pitchRow).join("")}
