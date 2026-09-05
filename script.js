@@ -9,6 +9,14 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedTrainer = null;
     let selectedFormation = null;
     let selectedDifficulty = null;
+    let playerDatabase = {
+        br: [],
+        loPo: [],
+        so: [],
+        pomoc: [],
+        skrzydlowi: [],
+        napastnicy: []
+    };
 
     function showScreen(screen) {
         [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen]
@@ -303,11 +311,54 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
 
-    document.getElementById("difficultyContinue").addEventListener("click", () => {
-        // Next step: actual draft.
-        alert(
-            `Tryb: ${selectedDifficulty === "easy" ? "Łatwy" : "Trudny"}\n` +
-            "Następny etap: draft zawodników."
-        );
+    async function loadPlayerDatabase() {
+        const files = {
+            br: "data/br.csv",
+            loPo: "data/lo-po.csv",
+            so: "data/so.csv",
+            pomoc: "data/pomoc.csv",
+            skrzydlowi: "data/skrzydlowi.csv",
+            napastnicy: "data/napastnicy.csv"
+        };
+
+        const entries = Object.entries(files);
+        const loaded = await Promise.all(entries.map(async ([key, path]) => {
+            const rows = await getCSV(path);
+            return [key, rows];
+        }));
+
+        playerDatabase = Object.fromEntries(loaded);
+        return playerDatabase;
+    }
+
+    document.getElementById("difficultyContinue").addEventListener("click", async () => {
+        const button = document.getElementById("difficultyContinue");
+        button.disabled = true;
+        button.textContent = "WCZYTYWANIE BAZY...";
+
+        try {
+            await loadPlayerDatabase();
+
+            const total = Object.values(playerDatabase)
+                .reduce((sum, rows) => sum + rows.length, 0);
+
+            alert(
+                `Baza zawodników została poprawnie wczytana!\n\n` +
+                `Łącznie rekordów sezonowych: ${total}\n` +
+                `BR: ${playerDatabase.br.length}\n` +
+                `LO/PO: ${playerDatabase.loPo.length}\n` +
+                `ŚO: ${playerDatabase.so.length}\n` +
+                `Pomocnicy: ${playerDatabase.pomoc.length}\n` +
+                `Skrzydłowi: ${playerDatabase.skrzydlowi.length}\n` +
+                `Napastnicy: ${playerDatabase.napastnicy.length}\n\n` +
+                `Następny etap: właściwy draft.`
+            );
+        } catch (error) {
+            console.error(error);
+            alert("Nie udało się wczytać bazy zawodników. Sprawdź folder data.");
+        } finally {
+            button.disabled = false;
+            button.textContent = "ROZPOCZNIJ DRAFT";
+        }
     });
 });
