@@ -682,7 +682,7 @@ function formatSquadValue(value) {
         ];
 
         const pitchPlayer = p => `
-            <div class="pitch-player ${positionColorClass(player.position || player["Pozycja"])}" title="${playerName(p)}">
+            <div class="pitch-player ${positionColorClass(p.position || p["Pozycja"])}" title="${playerName(p)}">
                 <span class="pitch-shirt">${safe(p.row["#"])}</span>
                 <span class="pitch-name">${playerName(p)}</span>
             </div>`;
