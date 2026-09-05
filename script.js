@@ -1,13 +1,17 @@
 document.addEventListener("DOMContentLoaded", () => {
 
 
-function positionColorClass(position) {
+function positionColorClass(position, role) {
+    const r = String(role || "");
+    if (r === "br" || r === "bench-br") return "position-gk";
+    if (r === "loPo" || r === "so" || r === "bench-def") return "position-def";
+    if (r === "pomoc" || r === "bench-mid") return "position-mid";
+    if (r === "skrzydlowi" || r === "napastnicy" || r === "bench-n") return "position-att";
     const p = String(position || "").toUpperCase().replace(/\s/g, "");
     if (p === "BR") return "position-gk";
     if (p === "LO/PO" || p === "ŚO" || p === "SO") return "position-def";
-    if (p.includes("ŚPD") || p.includes("ŚP") || p.includes("OP") ||
-        p.includes("LS") || p.includes("LP") || p.includes("PS") || p.includes("PP")) return "position-mid";
-    if (p === "N") return "position-att";
+    if (p.includes("ŚPD") || p.includes("ŚP") || p.includes("OP")) return "position-mid";
+    if (p.includes("LS") || p.includes("LP") || p.includes("PS") || p.includes("PP") || p === "N") return "position-att";
     return "";
 }
 
@@ -682,8 +686,8 @@ function formatSquadValue(value) {
         ];
 
         const pitchPlayer = p => `
-            <div class="pitch-player ${positionColorClass(p.position || p["Pozycja"])}" title="${playerName(p)}">
-                <span class="pitch-shirt">${safe(p.row["#"])}</span>
+            <div class="pitch-player ${positionColorClass(p.position || p["Pozycja"], p.role)}" title="${playerName(p)}">
+                <span class="pitch-shirt ${positionColorClass(p.position || p["Pozycja"], p.role)}">${safe(p.row["#"])}</span>
                 <span class="pitch-name">${playerName(p)}</span>
             </div>`;
 
@@ -699,7 +703,7 @@ function formatSquadValue(value) {
                     <strong>${playerName(p)}</strong>
                     <small>${roleNames[p.role] || ""}</small>
                 </div>
-                <strong class="bench-rating">${roundScore(p.row["Ogólna"])}</strong>
+                <strong class="bench-rating ${positionColorClass(p.position || p["Pozycja"], p.role)}">${roundScore(p.row["Ogólna"])}</strong>
             </div>`;
 
         const starterItem = (p, i) => `
@@ -709,7 +713,7 @@ function formatSquadValue(value) {
                     <strong>${playerName(p)}</strong>
                     <small>${roleNames[p.role] || ""}</small>
                 </div>
-                <strong class="squad-rating">${roundScore(p.row["Ogólna"])}</strong>
+                <strong class="squad-rating ${positionColorClass(p.position || p["Pozycja"], p.role)}">${roundScore(p.row["Ogólna"])}</strong>
             </div>`;
 
         const formation = safe(

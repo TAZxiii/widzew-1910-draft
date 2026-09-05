@@ -1350,3 +1350,79 @@ h1 span {
     border-radius: 50%;
     box-sizing: border-box;
 }
+
+/* ===== EKRAN KOŃCOWY - układ desktopowy ===== */
+#candidateGrid:has(.final-layout) {
+    display:block;
+    width:100%;
+    margin-top:20px;
+}
+#candidateGrid .final-layout {
+    width:min(1450px, 96vw);
+    margin:0 auto;
+    grid-template-columns:minmax(0, 1.12fr) minmax(420px, .88fr);
+    gap:24px;
+}
+#candidateGrid .final-score-breakdown {
+    width:min(1450px, 96vw);
+    margin:18px auto 0;
+}
+
+/* Szersze, bardziej prostokątne boisko */
+#candidateGrid .football-pitch {
+    aspect-ratio: 1.72 / 1;
+    min-height:0;
+}
+.pitch-penalty-area,
+.pitch-goal-area {
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    box-sizing:border-box;
+    border:2px solid rgba(255,255,255,.72);
+    z-index:1;
+    pointer-events:none;
+}
+.pitch-penalty-area {
+    width:32%;
+    height:18%;
+}
+.pitch-penalty-top { top:0; border-top:0; }
+.pitch-penalty-bottom { bottom:0; border-bottom:0; }
+.pitch-goal-area {
+    width:14%;
+    height:7%;
+}
+.pitch-goal-top { top:0; border-top:0; }
+.pitch-goal-bottom { bottom:0; border-bottom:0; }
+
+/* Kolorowy obrys kółka z numerem na boisku */
+.pitch-shirt.position-gk { border-color:#e53935 !important; }
+.pitch-shirt.position-def { border-color:#f2c94c !important; }
+.pitch-shirt.position-mid { border-color:#39b86a !important; }
+.pitch-shirt.position-att { border-color:#3f82f7 !important; }
+
+/* Kolorowy okrąg wokół oceny na liście */
+.squad-rating,
+.bench-rating {
+    width:36px;
+    height:36px;
+    min-width:36px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border:2px solid #555;
+    border-radius:50%;
+    box-sizing:border-box;
+    text-align:center;
+    font-size:15px;
+}
+.squad-rating.position-gk,.bench-rating.position-gk { border-color:#e53935 !important; }
+.squad-rating.position-def,.bench-rating.position-def { border-color:#f2c94c !important; }
+.squad-rating.position-mid,.bench-rating.position-mid { border-color:#39b86a !important; }
+.squad-rating.position-att,.bench-rating.position-att { border-color:#3f82f7 !important; }
+
+@media (max-width: 1100px) {
+    #candidateGrid .final-layout { grid-template-columns:1fr; }
+    #candidateGrid .football-pitch { aspect-ratio:1.72/1; }
+}
