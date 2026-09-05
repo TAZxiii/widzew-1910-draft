@@ -3,7 +3,7 @@ document.addEventListener("DOMContentLoaded", () => {
 function calculateTotalSquadValue(players) {
     return players.reduce((sum, player) => {
         const value = parseFloat(
-            String(player["Wartość"] || "0")
+            String((player.row && player.row["Wartość"]) || player["Wartość"] || "0")
                 .replace(/\s/g, "")
                 .replace(",", ".")
         );
@@ -393,14 +393,14 @@ function formatSquadValue(value) {
         const result = [];
 
         const add = (key, count) => {
-            for (let i = 0; i < Number(count || 0); i++) result.push(key);
+            for (let i = 0; i < Number(String(count ?? "0").replace(",", ".")); i++) result.push(key);
         };
 
         add("br", f["BR"]);
         add("loPo", f["LO/PO"]);
         add("so", f["ŚO"]);
         add("pomoc", f["ŚPD/śP/OP"]);
-        add("skrzydlowi", f["LS/LP/PS/PP"]);
+        add("skrzydlowi", f["LS/LP/PS/PP"] || f["LS/SP/PS/PP"]);
         add("napastnicy", f["N"]);
 
         return result;
@@ -483,7 +483,7 @@ function formatSquadValue(value) {
             : (selectedFormationRow || findFormationByName(selectedFormation));
 
         if (!draft.formation) {
-            throw new Error("Nie znaleziono wybranej formacji.");
+            throw new Error("Nie znaleziono wybranej formacji w bazie formacje.csv.");
         }
         draft.difficulty = selectedDifficulty;
         draft.available = [...new Set(allPlayerRows().map(playerKey))];
@@ -499,10 +499,10 @@ function formatSquadValue(value) {
     }
 
     function findFormationByName(name) {
-        // Formation counts are already represented by the currently selected row
-        // when the player chose it. For trainer mode, load the row matching the
-        // selected formation from the database.
-        return { "Formacje": name, "BR": 1, "LO/PO": 2, "ŚO": 2, "ŚPD/śP/OP": 3, "LS/SP/PS/PP": 2, "N": 1 };
+        const wanted = String(name || "").trim();
+        const found = formationRows.find(row => String(row["Formacje"] || "").trim() === wanted);
+        if (found) return found;
+        return null;
     }
 
     // Keep exact formation row selected by player, including its position counts.
@@ -590,7 +590,13 @@ function formatSquadValue(value) {
         draft.benchIndex++;
 
         if (draft.benchIndex >= draft.bench.length) {
-            finishDraft();
+            try {
+                finishDraft();
+            } catch (error) {
+                console.error("Błąd ekranu końcowego:", error);
+                const instruction = document.getElementById("draftInstruction");
+                if (instruction) instruction.textContent = "Wystąpił błąd ekranu końcowego. Sprawdź konsolę przeglądarki.";
+            }
         } else {
             renderBenchPosition();
         }
