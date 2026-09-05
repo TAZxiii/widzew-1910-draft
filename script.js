@@ -37,6 +37,7 @@ function formatSquadValue(value) {
     const modeScreen = document.getElementById("modeScreen");
     const coachScreen = document.getElementById("coachScreen");
     const playerScreen = document.getElementById("playerScreen");
+    const playerNameScreen = document.getElementById("playerNameScreen");
     const difficultyScreen = document.getElementById("difficultyScreen");
     const draftScreen = document.getElementById("draftScreen");
 
@@ -46,6 +47,7 @@ function formatSquadValue(value) {
     let selectedFormationRow = null;
     let formationRows = [];
     let selectedDifficulty = null;
+    let playerName = "";
     let playerDatabase = {
         br: [],
         loPo: [],
@@ -105,9 +107,65 @@ function formatSquadValue(value) {
 
     // MODE: PLAYER
     document.getElementById("playerMode").addEventListener("click", () => {
-        showScreen(playerScreen);
-        loadFormationDatabase();
+        showPlayerNameScreen();
     });
+
+    function showPlayerNameScreen() {
+        showScreen(playerScreen);
+
+        const content = playerScreen.querySelector(".player-content");
+        content.innerHTML = `
+            <h2>JAK MAMY CIĘ NAZWAĆ?</h2>
+            <p class="screen-intro">
+                Wpisz swoje imię i nazwisko albo nazwę, pod którą chcesz poprowadzić Widzew.
+            </p>
+
+            <div class="player-name-form">
+                <input id="playerNameInput" class="player-name-input" type="text"
+                       maxlength="30" autocomplete="off"
+                       placeholder="Imię, nazwisko lub nazwa gracza">
+                <button id="playerNameConfirm" class="next-button" type="button">POTWIERDŹ</button>
+            </div>
+
+            <div id="playerNameMessage" class="player-name-message hidden"></div>
+            <button id="playerNameContinue" class="next-button hidden" type="button">DALEJ</button>
+        `;
+
+        const input = document.getElementById("playerNameInput");
+        const confirm = document.getElementById("playerNameConfirm");
+        const message = document.getElementById("playerNameMessage");
+        const continueButton = document.getElementById("playerNameContinue");
+
+        const confirmName = () => {
+            const value = input.value.trim();
+            if (!value) {
+                input.focus();
+                message.textContent = "Najpierw wpisz swoją nazwę.";
+                message.classList.remove("hidden");
+                message.classList.add("error");
+                return;
+            }
+
+            playerName = value;
+            input.disabled = true;
+            confirm.classList.add("hidden");
+            message.classList.remove("hidden", "error");
+            message.innerHTML =
+                "Mówią, że trzeba lata doświadczeń i kurs UEFA PRO, aby prowadzić zespół w PKO Ekstraklasie. Tobie wystarczyło tylko szczęście...";
+            continueButton.classList.remove("hidden");
+        };
+
+        confirm.addEventListener("click", confirmName);
+        input.addEventListener("keydown", event => {
+            if (event.key === "Enter") confirmName();
+        });
+
+        continueButton.addEventListener("click", () => {
+            loadFormationDatabase();
+        });
+
+        setTimeout(() => input.focus(), 0);
+    }
 
     // HOW TO PLAY
     const modal = document.getElementById("howToPlayModal");
@@ -376,6 +434,7 @@ function formatSquadValue(value) {
         mode: null,
         formation: null,
         difficulty: null,
+        playerName: "",
         available: [],
         selected: [],
         stage: "starting",
@@ -586,6 +645,7 @@ function formatSquadValue(value) {
             throw new Error("Nie znaleziono wybranej formacji w bazie formacje.csv.");
         }
         draft.difficulty = selectedDifficulty;
+        draft.playerName = playerName;
         draft.available = [...new Set(allPlayerRows().map(playerKey))];
         draft.selected = [];
         draft.positions = createPositionSequence();
@@ -616,7 +676,7 @@ function formatSquadValue(value) {
         const grid = document.getElementById("candidateGrid");
         const action = document.getElementById("draftAction");
 
-        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span>`;
+        header.innerHTML = `<span><b class="brand-red">Widzew</b> <b class="brand-white">1910</b> <b class="brand-red">Draft</b></span>`;
         progress.textContent = `Jedenastka: ${draft.selected.length}/11`;
 
         const key = draft.positions[draft.positionIndex];
@@ -668,7 +728,7 @@ function formatSquadValue(value) {
         const header = document.getElementById("draftHeader");
         const action = document.getElementById("draftAction");
 
-        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span>`;
+        header.innerHTML = `<span><b class="brand-red">Widzew</b> <b class="brand-white">1910</b> <b class="brand-red">Draft</b></span>`;
         progress.textContent = `Ławka: ${draft.benchIndex}/9 · Cały skład: ${draft.selected.length}/20`;
         position.textContent = `WYBIERZ ${labels[type]}`;
         instruction.textContent = "Wybierz 1 z 5 wylosowanych zawodników.";
@@ -744,7 +804,11 @@ function formatSquadValue(value) {
 
         position.textContent = "SKŁAD GOTOWY";
         instruction.textContent = "Twój 20-osobowy skład Widzewa.";
-        progress.textContent = "Cały skład: 20/20";
+        progress.innerHTML = `Cały skład: 20/20<br><span class="final-coach-name">Trener: ${safe(
+            selectedTrainer
+                ? `${selectedTrainer.first} ${selectedTrainer.last}`
+                : (draft.playerName || playerName)
+        )}</span>`;
 
         const starters = draft.selected.filter(p => !String(p.role).startsWith("bench-"));
         const bench = draft.selected.filter(p => String(p.role).startsWith("bench-"));
@@ -864,7 +928,7 @@ function formatSquadValue(value) {
                 </section>
             </div>
 
-            <div class="final-score-breakdown">
+            <div class="final-score-breakdown compact-stats">
                 <div><span>BR</span><strong>${roundScore(scores.br)}</strong></div>
                 <div><span>OBRONA</span><strong>${roundScore(scores.defense)}</strong></div>
                 <div><span>POMOC</span><strong>${roundScore(scores.midfield)}</strong></div>

@@ -1776,3 +1776,100 @@ h1 span {
         max-width: none;
     }
 }
+
+/* ===== V10 – kolory brandingu ===== */
+.brand-red { color: var(--red) !important; }
+.brand-white { color: #fff !important; }
+
+/* Tytuł główny: Widzew czerwony, 1910 Draft biały, Game czerwony */
+.start-content h1 .brand-red,
+.start-content h1 .brand-white {
+    display: inline;
+}
+
+/* ===== V10 – ekran nazwy gracza ===== */
+.player-name-form {
+    width: min(520px, 90vw);
+    margin: 30px auto 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: stretch;
+}
+
+.player-name-input {
+    width: 100%;
+    height: 58px;
+    padding: 0 18px;
+    border: 1px solid #444;
+    border-radius: 10px;
+    background: #111;
+    color: #fff;
+    font-size: 17px;
+    text-align: center;
+    outline: none;
+}
+
+.player-name-input:focus {
+    border-color: var(--red);
+    box-shadow: 0 0 0 2px rgba(227,6,19,.15);
+}
+
+.player-name-input::placeholder {
+    color: #777;
+}
+
+.player-name-message {
+    width: min(760px, 90vw);
+    margin: 26px auto 0;
+    color: #ddd;
+    font-size: 17px;
+    line-height: 1.55;
+}
+
+.player-name-message.error {
+    color: #ff7777;
+}
+
+#playerNameContinue {
+    margin: 24px auto 0;
+}
+
+/* Nazwa trenera/gracza pod licznikiem 20/20 */
+.final-coach-name {
+    display: inline-block;
+    margin-top: 8px;
+    color: #aaa;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+/* ===== V10 – węższe statystyki ===== */
+#candidateGrid .final-score-breakdown.compact-stats {
+    width: min(760px, 88vw);
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 8px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#candidateGrid .final-score-breakdown.compact-stats > div {
+    min-width: 0;
+    padding: 8px 10px;
+    border-radius: 9px;
+}
+
+#candidateGrid .final-score-breakdown.compact-stats span {
+    font-size: 10px;
+}
+
+#candidateGrid .final-score-breakdown.compact-stats strong {
+    font-size: 17px;
+}
+
+@media (max-width: 650px) {
+    #candidateGrid .final-score-breakdown.compact-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: min(430px, 90vw);
+    }
+}
