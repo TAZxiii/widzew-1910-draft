@@ -381,7 +381,7 @@ document.addEventListener("DOMContentLoaded", () => {
         add("loPo", f["LO/PO"]);
         add("so", f["ŚO"]);
         add("pomoc", f["ŚPD/śP/OP"]);
-        add("skrzydlowi", f["LS/SP/PS/PP"]);
+        add("skrzydlowi", f["LS/LP/PS/PP"]);
         add("napastnicy", f["N"]);
 
         return result;
@@ -449,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 ${draft.difficulty === "easy"
                     ? `<div class="candidate-rating">${rating}</div>`
                     : ""}
-                <div class="candidate-value">${value} tys. €</div>
+                ${draft.difficulty === "easy" ? `<div class="candidate-value">${value} tys. €</div>` : ""}
             </button>
         `;
     }
