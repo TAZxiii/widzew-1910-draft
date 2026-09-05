@@ -150,11 +150,42 @@ document.addEventListener("DOMContentLoaded", () => {
                     formation: season["Taktyka"]
                 };
 
-                showDifficultyScreen(
-                    `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
-                     Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
-                );
+                showSelectedTrainer();
+
             });
+        });
+    }
+
+
+    function showSelectedTrainer() {
+        const content = coachScreen.querySelector(".coach-content");
+
+        content.innerHTML = `
+            <h2>WYBRANY TRENER</h2>
+            <div class="trainer-summary">
+                <div class="trainer-name">
+                    <span>${selectedTrainer.first}</span>
+                    <span>${selectedTrainer.last}</span>
+                </div>
+                <div class="trainer-details">
+                    <div>
+                        <span>SEZON</span>
+                        <strong>${selectedTrainer.season}</strong>
+                    </div>
+                    <div>
+                        <span>FORMACJA</span>
+                        <strong>${selectedTrainer.formation}</strong>
+                    </div>
+                </div>
+            </div>
+            <button id="trainerContinue" class="next-button">DALEJ</button>
+        `;
+
+        document.getElementById("trainerContinue").addEventListener("click", () => {
+            showDifficultyScreen(
+                `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
+                 Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
+            );
         });
     }
 
@@ -214,7 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (!button) {
                         button = document.createElement("button");
                         button.id = "formationContinue";
-                        button.className = "next-button";
+                        button.className = "next-button formation-continue";
                         button.textContent = "DALEJ";
                         content.appendChild(button);
 

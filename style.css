@@ -784,3 +784,75 @@ h1 span {
         grid-template-columns: 1fr;
     }
 }
+
+/* Trainer summary */
+.trainer-summary {
+    width: min(650px, 92vw);
+    margin: 30px auto 25px;
+    padding: 32px;
+    border: 1px solid #3d3d3d;
+    border-radius: 18px;
+    background: linear-gradient(145deg, #191919, #0d0d0d);
+}
+.trainer-name {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1.1;
+    margin-bottom: 28px;
+}
+.trainer-details {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+.trainer-details div {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+}
+.trainer-details span {
+    color: #999;
+    font-size: 13px;
+    font-weight: 700;
+}
+.trainer-details strong {
+    font-size: 21px;
+}
+
+/* Formation selection: five cards exactly across the row */
+.formation-grid {
+    width: min(1200px, 94vw);
+    margin: 30px auto 0;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+.formation-card {
+    width: 100%;
+    min-width: 0;
+}
+.formation-continue {
+    display: block;
+    margin: 30px auto 0;
+}
+@media (max-width: 800px) {
+    .formation-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .trainer-details {
+        grid-template-columns: 1fr;
+    }
+}
+@media (max-width: 480px) {
+    .formation-grid {
+        grid-template-columns: 1fr;
+    }
+}
