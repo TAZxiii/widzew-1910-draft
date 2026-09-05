@@ -1612,3 +1612,9 @@ h1 span {
     bottom:0;
     border-bottom:0;
 }
+
+/* FINAL PITCH FIX: remove legacy top goal/penalty rectangle from .pitch-lines.
+   The final pitch draws both penalty areas and goal areas explicitly. */
+#candidateGrid .pitch-lines::after {
+    display:none !important;
+}
