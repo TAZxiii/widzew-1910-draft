@@ -462,6 +462,10 @@ document.addEventListener("DOMContentLoaded", () => {
         draft.formation = selectedTrainer
             ? (formationRows.find(row => row["Formacje"] === selectedTrainer.formation) || findFormationByName(selectedTrainer.formation))
             : (selectedFormationRow || findFormationByName(selectedFormation));
+
+        if (!draft.formation) {
+            throw new Error("Nie znaleziono wybranej formacji.");
+        }
         draft.difficulty = selectedDifficulty;
         draft.available = [...new Set(allPlayerRows().map(playerKey))];
         draft.selected = [];
@@ -595,17 +599,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
     document.getElementById("difficultyContinue").addEventListener("click", async () => {
         const button = document.getElementById("difficultyContinue");
+        if (!selectedDifficulty) return;
+
         button.disabled = true;
-        button.textContent = "WCZYTYWANIE BAZY...";
+        button.textContent = "WCZYTYWANIE...";
+
         try {
             await loadPlayerDatabase();
+            selectedDifficulty = selectedDifficulty === "easy" ? "easy" : "hard";
             await startDraft();
         } catch (error) {
-            console.error(error);
-            alert("Nie udało się wczytać bazy zawodników. Sprawdź folder data.");
-        } finally {
+            console.error("Błąd uruchamiania draftu:", error);
             button.disabled = false;
             button.textContent = "ROZPOCZNIJ DRAFT";
+            const selection = document.getElementById("difficultySelection");
+            selection.textContent = "Nie udało się uruchomić draftu. Sprawdź folder data i konsolę przeglądarki.";
+            selection.classList.add("error");
         }
     });
 
