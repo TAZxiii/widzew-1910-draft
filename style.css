@@ -1654,3 +1654,46 @@ h1 span {
     top:50%;
     transform:translate(-50%,-50%);
 }
+
+/* ===== Kosmetyka V8 ===== */
+.creator-credit {
+    position: fixed;
+    top: 16px;
+    right: 22px;
+    z-index: 9999;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* Węższa lista składu na ekranie końcowym */
+.final-layout .squad-list,
+.squad-panel {
+    width: min(100%, 430px);
+    max-width: 430px;
+    margin-left: auto;
+    margin-right: auto;
+    box-sizing: border-box;
+}
+
+/* Imię i nazwisko na dwóch liniach przy zawodnikach na boisku */
+.pitch-player .player-name,
+.player-marker .player-name {
+    line-height: 1.12;
+    white-space: normal;
+}
+.pitch-player .player-first-name,
+.pitch-player .player-last-name,
+.player-marker .player-first-name,
+.player-marker .player-last-name {
+    display: block;
+}
+
+/* Na mniejszych ekranach kredyt pozostaje w prawym górnym rogu */
+@media (max-width: 700px) {
+    .creator-credit {
+        top: 10px;
+        right: 12px;
+        font-size: 12px;
+    }
+}
