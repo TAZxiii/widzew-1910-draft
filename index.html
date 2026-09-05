@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Widzew 1910 DRAFT Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <main class="start-screen">
+        <div class="start-content">
+            <h1>Widzew 1910 <span>DRAFT Game</span></h1>
+            <p class="subtitle">Zbuduj swój najlepszy skład Widzewa Łódź</p>
+
+            <div class="menu">
+                <button id="startGame" class="btn btn-primary">ROZPOCZNIJ GRĘ</button>
+                <button id="howToPlay" class="btn btn-secondary">JAK GRAĆ?</button>
+            </div>
+        </div>
+
+        <div class="credits">Stworzono przez: <strong>Alan WTM</strong></div>
+    </main>
+
+    <section id="modeScreen" class="mode-screen hidden">
+    <div class="mode-content">
+        <h2>Jak chcesz grać</h2>
+
+        <div class="mode-options">
+            <div class="mode-option">
+                <button id="coachMode" class="mode-title">TRENER</button>
+                <p class="mode-description">Wciel się w jednego z dotychczasowych szkoleniowców, którzy prowadzili Widzew od wejścia do PKO Ekstraklasy</p>
+            </div>
+
+            <div class="mode-option">
+                <button id="playerMode" class="mode-title">GRACZ</button>
+                <p class="mode-description">Zostań nowym trenerem Widzewa i wybierz swoją formację</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="credits">Stworzono przez: <strong>Alan WTM</strong></div>
+</section>
+
+<section id="coachScreen" class="coach-screen hidden">
+    <div class="coach-content">
+        <h2>Wybierz trenera</h2>
+        <p class="screen-intro">Wybierz jednego z dotychczasowych szkoleniowców, którzy prowadzili Widzew od wejścia do PKO Ekstraklasy.</p>
+        <div id="coachStatus" class="coach-status"></div>
+        <div id="coachGrid" class="coach-grid"></div>
+    </div>
+    <div class="credits">Stworzono przez: <strong>Alan WTM</strong></div>
+</section>
+
+<section id="playerScreen" class="player-screen hidden">
+    <div class="player-content">
+        <h2>Wybierz formację</h2>
+        <p class="screen-intro">Tutaj pojawi się pięć losowo wylosowanych formacji, z których wybierzesz swoją.</p>
+        <div class="coming-soon">NASTĘPNY ETAP</div>
+    </div>
+    <div class="credits">Stworzono przez: <strong>Alan WTM</strong></div>
+</section>
+
+<div id="howToPlayModal" class="modal hidden">
+        <div class="modal-card">
+            <button id="closeModal" class="close" aria-label="Zamknij">×</button>
+            <h2>Jak grać?</h2>
+            <p>Wybierz sposób gry, formację i kolejno buduj swoją jedenastkę oraz ławkę rezerwowych.</p>
+            <p>Przy każdym wyborze otrzymasz 5 losowych zawodników. Każdy zawodnik może zostać wybrany tylko raz w całej rozgrywce.</p>
+            <button id="modalOk" class="btn btn-primary">ROZUMIEM</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
