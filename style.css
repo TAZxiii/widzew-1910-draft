@@ -1781,7 +1781,12 @@ h1 span {
 .brand-red { color: var(--red) !important; }
 .brand-white { color: #fff !important; }
 
-/* Tytuł główny: Widzew czerwony, 1910 Draft biały, Game czerwony */
+/* Tytuł główny: Widzew czerwony, 1910 biały, Draft czerwony, Game w nowej linii */
+.start-content h1 .brand-game {
+    display: inline-block;
+    margin-top: 4px;
+}
+
 .start-content h1 .brand-red,
 .start-content h1 .brand-white {
     display: inline;

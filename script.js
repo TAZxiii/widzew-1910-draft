@@ -802,6 +802,12 @@ function formatSquadValue(value) {
         const action = document.getElementById("draftAction");
         const scores = getTeamScores();
 
+        // Bezpieczne wstawianie danych do HTML musi być zdefiniowane
+        // przed pierwszym użyciem (inaczej ekran końcowy wywala się przy 20. wyborze).
+        const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+        }[c]));
+
         position.textContent = "SKŁAD GOTOWY";
         instruction.textContent = "Twój 20-osobowy skład Widzewa.";
         progress.innerHTML = `Cały skład: 20/20<br><span class="final-coach-name">Trener: ${safe(
@@ -819,10 +825,6 @@ function formatSquadValue(value) {
             "bench-br": "BR", "bench-def": "OBROŃCA",
             "bench-mid": "POMOCNIK / SKRZYDŁOWY", "bench-n": "N"
         };
-
-        const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
-            "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-        }[c]));
 
         const playerName = p => `${safe(p.row["Imię"])} ${safe(p.row["Nazwisko"])}`;
 
