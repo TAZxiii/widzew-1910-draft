@@ -400,66 +400,78 @@ function formatSquadValue(value) {
     // x/y są procentami szerokości/wysokości boiska; y rośnie w dół (nasza bramka jest na dole).
     const FORMATION_LAYOUTS = {
         "3-1-4-2": [
-            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
-            ["skrzydlowi",8,44],["pomoc",50,45],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",92,44],
+            ["br",50,90],
+            ["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,40],["pomoc",50,45],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",92,40],
             ["napastnicy",35,25],["napastnicy",65,25]
         ],
         "3-4-1-2": [
-            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
-            ["skrzydlowi",8,44],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,44],
+            ["br",50,90],
+            ["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,40],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,40],
             ["napastnicy",35,25],["napastnicy",65,25]
         ],
         "3-4-2-1": [
-            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
-            ["skrzydlowi",8,44],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,44],
+            ["br",50,90],
+            ["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,40],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,40],
             ["skrzydlowi",34,27],["skrzydlowi",66,27],["napastnicy",50,14]
         ],
         "3-4-3": [
-            ["br",50,90],["so",27,74],["so",50,74],["so",73,74],
-            ["skrzydlowi",8,46],["pomoc",32,50],["pomoc",68,50],["pomoc",50,50],["skrzydlowi",92,46],
+            ["br",50,90],
+            ["so",27,74],["so",50,74],["so",73,74],
+            ["skrzydlowi",8,47],["pomoc",32,50],["pomoc",68,50],["pomoc",50,50],["skrzydlowi",92,47],
             ["skrzydlowi",14,27],["skrzydlowi",86,27],["napastnicy",50,15]
         ],
         "4-1-4-1": [
-            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["pomoc",50,45],["skrzydlowi",9,50],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",91,50],
             ["napastnicy",50,15]
         ],
         "4-1-3-2": [
-            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["pomoc",29,57],["pomoc",50,45],["pomoc",50,62],["pomoc",71,57],
             ["napastnicy",35,24],["napastnicy",65,24]
         ],
         "4-2-1-3": [
-            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["pomoc",35,45],["pomoc",65,45],["pomoc",50,58],
             ["skrzydlowi",14,25],["skrzydlowi",86,25],["napastnicy",50,14]
         ],
         "4-3-3": [
-            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["pomoc",33,50],["pomoc",67,50],["pomoc",50,50],
             ["skrzydlowi",14,27],["skrzydlowi",86,27],["napastnicy",50,15]
         ],
         "4-4-1-1": [
-            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["skrzydlowi",8,44],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,44],
-            ["pomoc",50,64],["napastnicy",50,27]
+            ["pomoc",50,60],["napastnicy",50,27]
         ],
         "4-4-2": [
-            ["br",50,90],["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["skrzydlowi",9,50],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",91,50],
             ["napastnicy",35,25],["napastnicy",65,25]
         ],
         "5-4-1": [
-            ["br",50,90],["loPo",7,69],["so",29,74],["so",50,74],["so",71,74],["loPo",93,69],
+            ["br",50,90],
+            ["loPo",7,69],["so",29,74],["so",50,74],["so",71,74],["loPo",93,69],
             ["skrzydlowi",8,44],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,44],
             ["napastnicy",50,15]
         ],
         "5-3-2": [
-            ["br",50,90],["loPo",9,74],["so",29,74],["so",50,74],["so",71,74],["loPo",91,74],
+            ["br",50,90],
+            ["loPo",9,74],["so",29,74],["so",50,74],["so",71,74],["loPo",91,74],
             ["pomoc",33,50],["pomoc",67,50],["pomoc",50,50],
             ["napastnicy",35,25],["napastnicy",65,25]
         ]
-    };;
+    };
 
     function pitchCoordinates(formationName, role, occurrence) {
         const layout = FORMATION_LAYOUTS[String(formationName || "").trim()] || [];
@@ -604,7 +616,7 @@ function formatSquadValue(value) {
         const grid = document.getElementById("candidateGrid");
         const action = document.getElementById("draftAction");
 
-        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span><strong>${draft.formation["Formacje"]}</strong>`;
+        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span>`;
         progress.textContent = `Jedenastka: ${draft.selected.length}/11`;
 
         const key = draft.positions[draft.positionIndex];
@@ -656,7 +668,7 @@ function formatSquadValue(value) {
         const header = document.getElementById("draftHeader");
         const action = document.getElementById("draftAction");
 
-        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span><strong>${draft.formation["Formacje"]}</strong>`;
+        header.innerHTML = `<span>WIDZEW 1910 DRAFT</span>`;
         progress.textContent = `Ławka: ${draft.benchIndex}/9 · Cały skład: ${draft.selected.length}/20`;
         position.textContent = `WYBIERZ ${labels[type]}`;
         instruction.textContent = "Wybierz 1 z 5 wylosowanych zawodników.";
@@ -762,7 +774,7 @@ function formatSquadValue(value) {
             return `
             <div class="pitch-player ${positionColorClass(p.position || p["Pozycja"], p.role)}" style="${positionStyle}" title="${playerName(p)}">
                 <span class="pitch-shirt ${positionColorClass(p.position || p["Pozycja"], p.role)}">${safe(p.row["#"])}</span>
-                <span class="pitch-name">${playerName(p)}</span>
+                <span class="pitch-name"><span class="pitch-first-name">${safe(p.row["Imię"])}</span><span class="pitch-last-name">${safe(p.row["Nazwisko"])}</span></span>
             </div>`;
         };
 
