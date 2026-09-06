@@ -1381,7 +1381,7 @@ function chooseWeightedScorer() {
         candidates.push(["starter", cat, starterWeights[cat]]);
     });
     ["N","MID","WING","DEF","CB"].forEach(cat => {
-        if (benchPools[cat].length) candidates.push(["bench", cat, ({N:18,MID:6,WING:5,DEF:3,CB:1}[cat]));
+        if (benchPools[cat].length) candidates.push(["bench", cat, ({N:18,MID:6,WING:5,DEF:3,CB:1}[cat])]);
     });
 
     // Samobój: 1% bazowej szansy.
