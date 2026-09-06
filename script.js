@@ -475,12 +475,7 @@ function formatSquadValue(value) {
     // Indywidualny układ pozycji dla każdej z 12 formacji.
     // x/y są procentami szerokości/wysokości boiska; y rośnie w dół (nasza bramka jest na dole).
     const FORMATION_LAYOUTS = {
-        "3-1-4-2": [
-            ["br",50,90],
-            ["so",27,74],["so",50,74],["so",73,74],
-            ["skrzydlowi",8,40],["pomoc",50,45],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",92,40],
-            ["napastnicy",35,25],["napastnicy",65,25]
-        ],
+        "3-1-4-2": [["br",50,90],["so",27,74],["so",50,74],["so",73,74],["skrzydlowi",12,47],["pomoc",50,54],["pomoc",36,45],["pomoc",64,45],["skrzydlowi",88,47],["napastnicy",38,25],["napastnicy",62,25]],
         "3-4-1-2": [
             ["br",50,90],
             ["so",27,74],["so",50,74],["so",73,74],
@@ -506,30 +501,15 @@ function formatSquadValue(value) {
             ["skrzydlowi",9,43],["pomoc",50,57],["pomoc",35,43],["pomoc",65,43],["skrzydlowi",91,43],
             ["napastnicy",50,15]
         ],
-        "4-1-3-2": [
-            ["br",50,90],
-            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
-            ["pomoc",29,57],["pomoc",50,45],["pomoc",50,62],["pomoc",71,57],
-            ["napastnicy",35,24],["napastnicy",65,24]
-        ],
-        "4-2-1-3": [
-            ["br",50,90],
-            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
-            ["pomoc",35,45],["pomoc",65,45],["pomoc",50,58],
-            ["skrzydlowi",14,25],["skrzydlowi",86,25],["napastnicy",50,14]
-        ],
+        "4-1-3-2": [["br",50,90],["loPo",10,72],["so",36,74],["so",64,74],["loPo",90,72],["pomoc",34,45],["pomoc",50,54],["pomoc",50,42],["pomoc",66,45],["napastnicy",37,25],["napastnicy",63,25]],
+        "4-2-1-3": [["br",50,90],["loPo",10,72],["so",36,74],["so",64,74],["loPo",90,72],["pomoc",35,50],["pomoc",65,50],["pomoc",50,44],["napastnicy",22,25],["napastnicy",78,25],["napastnicy",50,17]],
         "4-3-3": [
             ["br",50,90],
             ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
             ["pomoc",33,50],["pomoc",67,50],["pomoc",50,50],
             ["skrzydlowi",14,27],["skrzydlowi",86,27],["napastnicy",50,15]
         ],
-        "4-4-1-1": [
-            ["br",50,90],
-            ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
-            ["skrzydlowi",8,44],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,44],
-            ["pomoc",50,60],["napastnicy",50,27]
-        ],
+        "4-4-1-1": [["br",50,90],["loPo",10,72],["so",36,74],["so",64,74],["loPo",90,72],["skrzydlowi",12,47],["pomoc",36,50],["pomoc",64,50],["pomoc",50,39],["skrzydlowi",88,47],["napastnicy",50,25]],
         "4-4-2": [
             ["br",50,90],
             ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
@@ -542,12 +522,7 @@ function formatSquadValue(value) {
             ["skrzydlowi",8,44],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,44],
             ["napastnicy",50,15]
         ],
-        "5-3-2": [
-            ["br",50,90],
-            ["loPo",9,74],["so",29,74],["so",50,74],["so",71,74],["loPo",91,74],
-            ["pomoc",33,50],["pomoc",67,50],["pomoc",50,50],
-            ["napastnicy",35,25],["napastnicy",65,25]
-        ]
+        "5-3-2": [["br",50,90],["loPo",12,69],["so",34,75],["so",50,77],["so",66,75],["loPo",88,69],["pomoc",37,50],["pomoc",50,50],["pomoc",63,50],["napastnicy",37,25],["napastnicy",63,25]]
     };
 
     function actualBenchPosition(p) {
@@ -1121,6 +1096,7 @@ function formatSquadValue(value) {
             alert('W teorii powinni grać najlepsi, jednak każdy trener ma swoich ulubieńców. Możesz na tym etapie rozgrywki wymienić zawodników ze swojej jedenastki. Pamiętaj, że bycie w podstawowej jedenastce wpływa na zaangażowanie i rozwój zawodnika.');
         }
         setupFinalSwapInteractions();
+        updateFinalSeasonLabel();
     }
 
     document.getElementById("difficultyContinue").addEventListener("click", async () => {
@@ -1146,3 +1122,22 @@ function formatSquadValue(value) {
 
 
 });
+
+function updateFinalSeasonLabel() {
+    const root = document.getElementById("candidateGrid");
+    if (!root) return;
+    let season = (draft.mode === "player" || draft.mode === "gracz") ? "22/23" : (draft.gameSeason || "");
+    if (!season) return;
+    let el = root.querySelector(".final-season");
+    if (!el) {
+        const coach = Array.from(root.querySelectorAll("*")).find(x =>
+            x.children.length === 0 && /Trener\s*:/.test((x.textContent || "").trim())
+        );
+        if (coach) {
+            el=document.createElement("div");
+            el.className="final-season";
+            coach.insertAdjacentElement("afterend",el);
+        }
+    }
+    if (el) el.textContent="Sezon: "+season;
+}
