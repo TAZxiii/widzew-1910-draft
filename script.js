@@ -502,7 +502,7 @@ function formatSquadValue(value) {
         "4-1-4-1": [
             ["br",50,90],
             ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
-            ["pomoc",50,45],["skrzydlowi",9,50],["pomoc",35,57],["pomoc",65,57],["skrzydlowi",91,50],
+            ["skrzydlowi",9,43],["pomoc",50,57],["pomoc",35,43],["pomoc",65,43],["skrzydlowi",91,43],
             ["napastnicy",50,15]
         ],
         "4-1-3-2": [
@@ -548,6 +548,17 @@ function formatSquadValue(value) {
             ["napastnicy",35,25],["napastnicy",65,25]
         ]
     };
+
+    function actualBenchPosition(p) {
+        if (!String(p.role || "").startsWith("bench-")) return p.position || p.row?.["Pozycja"] || "";
+        const key = p.key || playerKey(p.row);
+        const hasPlayer = (arr) => Array.isArray(arr) && arr.some(row => playerKey(row) === key);
+        if (p.role === "bench-br") return "BR";
+        if (p.role === "bench-def") return hasPlayer(playerDatabase.loPo) ? "LO/PO" : (hasPlayer(playerDatabase.so) ? "ŚO" : "LO/PO");
+        if (p.role === "bench-mid") return hasPlayer(playerDatabase.skrzydlowi) ? "LP/LS/PP/PS" : (hasPlayer(playerDatabase.pomoc) ? "ŚPD/ŚP/OP" : "LP/LS/PP/PS");
+        if (p.role === "bench-n") return "N";
+        return p.position || p.row?.["Pozycja"] || "";
+    }
 
     function pitchCoordinates(formationName, role, occurrence) {
         const layout = FORMATION_LAYOUTS[String(formationName || "").trim()] || [];
@@ -838,9 +849,7 @@ function formatSquadValue(value) {
 
         const roleNames = {
             br: "BR", loPo: "LO/PO", so: "ŚO", pomoc: "ŚPD/ŚP/OP",
-            skrzydlowi: "LS/LP/PS/PP", napastnicy: "N",
-            "bench-br": "BR", "bench-def": "OBROŃCA",
-            "bench-mid": "POMOCNIK / SKRZYDŁOWY", "bench-n": "N"
+            skrzydlowi: "LS/LP/PS/PP", napastnicy: "N"
         };
 
         const playerName = p => `${safe(p.row["Imię"])} ${safe(p.row["Nazwisko"])}`;
@@ -866,15 +875,19 @@ function formatSquadValue(value) {
             return pitchPlayer(p, occurrence);
         }).join("");
 
-        const benchItem = (p, i) => `
+        const benchItem = (p, i) => {
+            const actualPos = actualBenchPosition(p);
+            const colorClass = positionColorClass(actualPos, p.role);
+            return `
             <div class="bench-player">
                 <span class="bench-number">${i + 1}</span>
                 <div class="bench-info">
                     <strong>${playerName(p)}</strong>
-                    <small>${roleNames[p.role] || ""}</small>
+                    <small>${safe(actualPos)}</small>
                 </div>
-                <strong class="bench-rating ${positionColorClass(p.position || p["Pozycja"], p.role)}">${roundScore(p.row["Ogólna"])}</strong>
+                <strong class="bench-rating ${colorClass}">${roundScore(p.row["Ogólna"])}</strong>
             </div>`;
+        };
 
         const starterItem = (p, i) => `
             <div class="squad-list-player">
