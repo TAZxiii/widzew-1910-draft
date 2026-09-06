@@ -1295,10 +1295,8 @@ function seasonOtherResult(fixture) {
     return String(fixture.wynik || "").trim();
 }
 function generateProvisionalWidzewResult(opponent, home) {
-    // Zwracamy zawsze [gole Widzewa, gole przeciwnika].
-    // Generator ma dawać realistyczną szansę na 0/1/2+ gole, także w trybie
-    // „Rozegraj cały sezon”. Ocena składu wpływa na przesunięcie prawdopodobieństw,
-    // ale nigdy nie blokuje zdobywania bramek.
+    // Zawsze zwracamy [gole Widzewa, gole przeciwnika].
+    // Widzew musi mieć normalną, niezależną od trybu gry szansę na zdobywanie bramek.
     const opponentRow = seasonGameState.teams.find(t =>
         seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]) === seasonTeamName(opponent)
     );
@@ -1307,25 +1305,37 @@ function generateProvisionalWidzewResult(opponent, home) {
     const widzew = Number.isFinite(raw) && raw > 0 ? raw : 65;
     const diff = Math.max(-20, Math.min(20, widzew - opp));
 
-    // Bazowo: Widzew ~0.95 gola/mecz, rywal ~1.15. Różnica ocen tylko
-    // umiarkowanie przesuwa rozkład. Gospodarz ma niewielki bonus.
-    const wLambda = Math.max(0.55, Math.min(1.35, 0.95 + diff * 0.018 + (home ? 0.08 : -0.04)));
-    const oLambda = Math.max(0.65, Math.min(1.50, 1.15 - diff * 0.018 + (home ? -0.05 : 0.08)));
+    // Prawdopodobieństwo zdobycia gola przez Widzew. Różnica ocen tylko
+    // umiarkowanie je przesuwa, a tryb "Rozegraj sezon" i "Symuluj sezon"
+    // korzystają z dokładnie tej samej funkcji.
+    let pGoal = 0.62 + diff * 0.008 + (home ? 0.04 : -0.03);
+    pGoal = Math.max(0.42, Math.min(0.78, pGoal));
 
-    const drawGoals = (lambda) => {
-        // Rozkład Poissona obcięty do 5 bramek.
+    // Warunkowy rozkład liczby goli, jeśli Widzew trafi.
+    const drawWidzewGoals = () => {
         const r = Math.random();
-        let cumulative = 0;
-        let term = Math.exp(-lambda);
-        for (let k = 0; k <= 4; k++) {
-            cumulative += term;
-            if (r < cumulative) return k;
-            term *= lambda / (k + 1);
-        }
-        return 5;
+        if (r >= pGoal) return 0;
+        const q = Math.random();
+        if (q < 0.58) return 1;
+        if (q < 0.88) return 2;
+        if (q < 0.97) return 3;
+        return 4;
     };
 
-    return [drawGoals(wLambda), drawGoals(oLambda)];
+    // Rywal ma podobny, ale niezależny rozkład. Silniejszy rywal dostaje
+    // umiarkowanie większą szansę na trafienie.
+    let oGoal = 0.68 - diff * 0.008 + (home ? -0.03 : 0.04);
+    oGoal = Math.max(0.45, Math.min(0.80, oGoal));
+    const drawOpponentGoals = () => {
+        if (Math.random() >= oGoal) return 0;
+        const r = Math.random();
+        if (r < 0.60) return 1;
+        if (r < 0.89) return 2;
+        if (r < 0.98) return 3;
+        return 4;
+    };
+
+    return [drawWidzewGoals(), drawOpponentGoals()];
 }
 
 const WIDZEW_SCORER_WEIGHTS = [
