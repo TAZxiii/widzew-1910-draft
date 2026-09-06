@@ -2037,3 +2037,52 @@ h1 span {
 }
 .season-launch-button:hover { transform:translateY(-1px); }
 .season-launch p { margin:10px 0 0; color:#999; font-size:13px; }
+
+
+/* Wybór sposobu rozegrania sezonu */
+.season-choice-content {
+    max-width: 1000px;
+}
+.season-choice-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(280px, 1fr));
+    gap: 24px;
+    margin: 42px auto 0;
+}
+.season-choice-card {
+    min-height: 190px;
+    padding: 30px;
+    border: 2px solid rgba(255,255,255,.16);
+    border-radius: 18px;
+    background: rgba(255,255,255,.06);
+    color: inherit;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+    text-align: center;
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+.season-choice-card:hover {
+    transform: translateY(-3px);
+    border-color: rgba(255,255,255,.38);
+    background: rgba(255,255,255,.1);
+}
+.season-choice-card strong {
+    font-size: 22px;
+}
+.season-choice-card span {
+    max-width: 420px;
+    line-height: 1.5;
+    opacity: .82;
+}
+@media (max-width: 700px) {
+    .season-choice-grid {
+        grid-template-columns: 1fr;
+    }
+    .season-choice-card {
+        min-height: 160px;
+    }
+}

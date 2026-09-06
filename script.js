@@ -58,6 +58,7 @@ function formatSquadValue(value) {
     const difficultyScreen = document.getElementById("difficultyScreen");
     const draftScreen = document.getElementById("draftScreen");
     const seasonScreen = document.getElementById("seasonScreen");
+    const seasonChoiceScreen = document.getElementById("seasonChoiceScreen");
 
     let trainerRows = [];
     let selectedTrainer = null;
@@ -76,7 +77,8 @@ function formatSquadValue(value) {
     };
 
     function showScreen(screen) {
-        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen, draftScreen, seasonScreen]
+
+        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen, draftScreen, seasonChoiceScreen, seasonScreen]
             .forEach(s => {
                 if (s) s.classList.add("hidden");
             });
@@ -84,6 +86,7 @@ function formatSquadValue(value) {
         if (screen) screen.classList.remove("hidden");
         window.scrollTo(0, 0);
     }
+    window.__showScreen = showScreen;
 
     function parseCSV(text) {
         const clean = text.replace(/^\uFEFF/, "").trim();
@@ -1147,11 +1150,10 @@ function formatSquadValue(value) {
 
 function openSeasonScreen(season) {
     const seasonValue = season || ((draft.mode === "player" || draft.mode === "gracz") ? "22/23" : draft.gameSeason || "");
-    const title = document.getElementById("seasonTitle");
-    const intro = document.getElementById("seasonIntro");
-    if (title) title.textContent = `ROZGRYWKI SEZONU ${seasonValue}`;
-    if (intro) intro.textContent = `Trener: ${draft.playerName || playerName || (selectedTrainer ? `${selectedTrainer.first} ${selectedTrainer.last}` : "Widzew")}`;
-    showScreen(seasonScreen);
+    window.__seasonValue = seasonValue;
+    const intro = document.getElementById("seasonChoiceIntro");
+    if (intro) intro.textContent = `Sezon ${seasonValue} · wybierz sposób rozegrania rozgrywek.`;
+    if (window.__showScreen) window.__showScreen(document.getElementById("seasonChoiceScreen"));
 }
 
 function updateFinalSeasonLabel() {
@@ -1172,3 +1174,33 @@ function updateFinalSeasonLabel() {
     }
     if (el) el.textContent="Sezon: "+season;
 }
+
+
+function openSeasonMode(mode) {
+    const season = window.__seasonValue || "22/23";
+    const title = document.getElementById("seasonTitle");
+    const intro = document.getElementById("seasonIntro");
+    const placeholder = document.getElementById("seasonPlaceholder");
+
+    if (title) title.textContent = `SEZON ${season}`;
+    if (intro) intro.textContent = `Widzew Łódź · ${mode === "play" ? "Rozegraj cały sezon" : "Symuluj cały sezon"}`;
+
+    if (placeholder) {
+        if (mode === "play") {
+            placeholder.innerHTML = `
+                <strong>PRZYGOTOWANIE SEZONU</strong>
+                <span>W tym miejscu pojawi się aktualna kolejka, tabela oraz mecze do rozegrania.</span>
+            `;
+        } else {
+            placeholder.innerHTML = `
+                <strong>SYMULACJA CAŁEGO SEZONU</strong>
+                <span>W tym miejscu pojawi się końcowa tabela oraz komplet wyników Widzewa.</span>
+            `;
+        }
+    }
+
+    if (window.__showScreen) window.__showScreen(document.getElementById("seasonScreen"));
+}
+
+document.getElementById("playWholeSeason")?.addEventListener("click", () => openSeasonMode("play"));
+document.getElementById("simulateWholeSeason")?.addEventListener("click", () => openSeasonMode("simulate"));
