@@ -1985,3 +1985,14 @@ h1 span {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
 }
+
+/* V18: final squad swap interaction */
+#candidateGrid .swap-player { cursor: pointer; }
+#candidateGrid .swap-player.swap-target {
+    outline: 2px solid rgba(255,255,255,.7);
+    outline-offset: 2px;
+}
+#candidateGrid .swap-player.swap-selected {
+    outline: 2px solid var(--red);
+    outline-offset: 2px;
+}

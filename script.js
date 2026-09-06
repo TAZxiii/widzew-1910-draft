@@ -848,56 +848,65 @@ function formatSquadValue(value) {
     let finalSwapIndex = null;
 
     function setupFinalSwapInteractions() {
-        const rows = document.querySelectorAll("#candidateGrid [data-starter-index], #candidateGrid [data-bench-index]");
-        rows.forEach(row => {
-            row.addEventListener("click", () => {
-                const starterAttr = row.dataset.starterIndex;
-                const benchAttr = row.dataset.benchIndex;
+        const grid = document.getElementById("candidateGrid");
+        if (!grid) return;
 
-                if (starterAttr !== undefined) {
-                    const idx = Number(starterAttr);
-                    if (!Number.isInteger(idx) || !draft.selected[idx]) return;
+        // Event delegation: survives every re-render of the final screen.
+        if (grid.dataset.swapBound === "1") return;
+        grid.dataset.swapBound = "1";
 
-                    if (finalSwapIndex === null) {
-                        finalSwapIndex = idx;
-                        row.classList.add("swap-selected");
-                        document.querySelectorAll("#candidateGrid [data-bench-index]").forEach(el => {
-                            const bi = Number(el.dataset.benchIndex);
-                            if (Number.isInteger(bi) && draft.selected[bi] && sameSwapPosition(draft.selected[idx], draft.selected[bi])) {
-                                el.classList.add("swap-target");
-                            }
-                        });
-                        return;
-                    }
+        grid.addEventListener("click", (event) => {
+            const row = event.target.closest("[data-starter-index], [data-bench-index]");
+            if (!row || !grid.contains(row)) return;
 
+            const starterAttr = row.dataset.starterIndex;
+            const benchAttr = row.dataset.benchIndex;
+
+            if (starterAttr !== undefined) {
+                const idx = Number(starterAttr);
+                if (!Number.isInteger(idx) || !draft.selected[idx]) return;
+
+                if (finalSwapIndex === null) {
+                    finalSwapIndex = idx;
+                    row.classList.add("swap-selected");
+
+                    grid.querySelectorAll("[data-bench-index]").forEach(el => {
+                        const bi = Number(el.dataset.benchIndex);
+                        if (Number.isInteger(bi) &&
+                            draft.selected[bi] &&
+                            sameSwapPosition(draft.selected[idx], draft.selected[bi])) {
+                            el.classList.add("swap-target");
+                        }
+                    });
+                } else {
                     clearSwapSelection();
                     finalSwapIndex = idx;
                     row.classList.add("swap-selected");
+                }
+                return;
+            }
+
+            if (benchAttr !== undefined && finalSwapIndex !== null) {
+                const benchIdx = Number(benchAttr);
+                if (!Number.isInteger(benchIdx) || !draft.selected[benchIdx]) return;
+
+                if (!sameSwapPosition(draft.selected[finalSwapIndex], draft.selected[benchIdx])) {
+                    showSwapMessage("Możesz zamienić zawodnika tylko z zawodnikiem z tej samej pozycji.");
                     return;
                 }
 
-                if (benchAttr !== undefined && finalSwapIndex !== null) {
-                    const benchIdx = Number(benchAttr);
-                    if (!Number.isInteger(benchIdx) || !draft.selected[benchIdx]) return;
+                const starter = draft.selected[finalSwapIndex];
+                const bench = draft.selected[benchIdx];
 
-                    if (!sameSwapPosition(draft.selected[finalSwapIndex], draft.selected[benchIdx])) {
-                        showSwapMessage("Możesz zamienić zawodnika tylko z zawodnikiem z tej samej pozycji.");
-                        return;
-                    }
+                // Exchange players while preserving the role/slot in the squad.
+                draft.selected[finalSwapIndex] = { ...bench, role: starter.role };
+                draft.selected[benchIdx] = { ...starter, role: bench.role };
 
-                    // Exchange the players AND their XI/bench roles.
-                    const starter = draft.selected[finalSwapIndex];
-                    const bench = draft.selected[benchIdx];
-                    const starterRole = starter.role;
-                    const benchRole = bench.role;
+                clearSwapSelection();
 
-                    draft.selected[finalSwapIndex] = { ...bench, role: starterRole };
-                    draft.selected[benchIdx] = { ...starter, role: benchRole };
-
-                    clearSwapSelection();
-                    finishDraft();
-                }
-            });
+                // Re-render the final screen and recalculate all displayed ratings.
+                finishDraft();
+            }
         });
     }
 
@@ -1062,6 +1071,10 @@ function formatSquadValue(value) {
             </div>
         `;
         action.innerHTML = `<div class="draft-finished">DRAFT ZAKOŃCZONY</div>`;
+        if (!window.finalSquadAlertShown) {
+            window.finalSquadAlertShown = true;
+            alert('W teorii powinni grać najlepsi, jednak każdy trener ma swoich ulubieńców. Możesz na tym etapie rozgrywki wymienić zawodników ze swojej jedenastki. Pamiętaj, że bycie w podstawowej jedenastce wpływa na zaangażowanie i rozwój zawodnika.');
+        }
         setupFinalSwapInteractions();
     }
 
