@@ -1295,38 +1295,35 @@ function seasonOtherResult(fixture) {
     return String(fixture.wynik || "").trim();
 }
 function generateProvisionalWidzewResult(opponent, home) {
-    // Generator wyniku oparty o różnicę ocen. Widzew nie dostaje automatycznej
-    // przewagi za grę u siebie, a silniejszy przeciwnik ma wyraźnie większą
-    // szansę na sytuacje i gole. Jednocześnie lambda Widzewa nie może spaść
-    // do absurdalnie niskiego poziomu, dzięki czemu gole Widzewa pojawiają się
-    // również w trybie "symuluj mecz".
+    // Symulacja wyniku Widzewa. Ocena obu zespołów wpływa na liczbę sytuacji,
+    // ale nie daje Widzewowi sztucznej przewagi. Funkcja zawsze zwraca wynik
+    // w kolejności [gole Widzewa, gole przeciwnika].
     const opponentRow = seasonGameState.teams.find(
-        t => seasonTeamName(t["drużyna"]) === seasonTeamName(opponent)
+        t => seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]) === seasonTeamName(opponent)
     );
     const opp = opponentRow ? seasonNum(opponentRow["Ogólna"]) : 65;
     const rawWidzew = Number(window.__widzewSeasonOverall);
     const widzew = Number.isFinite(rawWidzew) && rawWidzew > 0 ? rawWidzew : 65;
 
-    const strength = Math.max(-1.25, Math.min(1.25, (widzew - opp) / 12));
-    const homeAdv = home ? 0.10 : -0.05;
+    const diff = Math.max(-20, Math.min(20, widzew - opp));
+    const homeBoost = home ? 0.10 : -0.05;
 
-    // Średnio około 1 gola Widzewa i około 1.2 gola rywala. Ocena drużyn
-    // przesuwa te wartości, ale nie tworzy sztucznej dominacji Widzewa.
-    const lambdaW = Math.max(0.72, Math.min(1.45, 1.02 + strength * 0.22 + homeAdv));
-    const lambdaO = Math.max(0.85, Math.min(1.75, 1.22 - strength * 0.20 - homeAdv));
+    // Im lepszy rywal, tym mniej oczekiwanych goli Widzewa i więcej rywala.
+    const lambdaW = Math.max(0.70, Math.min(1.35, 1.02 + diff * 0.018 + homeBoost));
+    const lambdaO = Math.max(0.85, Math.min(1.55, 1.18 - diff * 0.018 - homeBoost));
 
     const poisson = lambda => {
-        const threshold = Math.exp(-lambda);
+        const L = Math.exp(-lambda);
         let p = 1;
         let k = 0;
         do {
             k++;
             p *= Math.random();
-        } while (p > threshold && k < 10);
-        return Math.max(0, k - 1);
+        } while (p > L && k < 12);
+        return Math.min(5, Math.max(0, k - 1));
     };
 
-    return [Math.min(5, poisson(lambdaW)), Math.min(5, poisson(lambdaO))];
+    return [poisson(lambdaW), poisson(lambdaO)];
 }
 
 const WIDZEW_SCORER_WEIGHTS = [
@@ -1469,7 +1466,7 @@ function buildStandings(round) {
     // Baza ocen dostarcza zespoły, ale terminarz jest źródłem prawdy dla
     // tego, kto rzeczywiście występuje w danym sezonie.
     seasonGameState.teams.forEach(t => {
-        const n = seasonTeamName(t["drużyna"]);
+        const n = seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]);
         if (n) names.add(n);
     });
     seasonGameState.fixtures.forEach(f => {
@@ -1608,8 +1605,8 @@ function simulateCurrentWidzewMatch() {
     renderPlayableSeason();
 }
 function simulateWholeSeason() {
-    // W trybie "symuluj cały sezon" symulujemy WYŁĄCZNIE 34 mecze Widzewa.
-    // Pozostałe spotkania ligi pozostają pobierane z bazy wyników.
+    // Tryb "symuluj cały sezon" pokazuje WYŁĄCZNIE 34 mecze Widzewa.
+    // Pozostałe mecze służą tylko do wyliczenia tabeli.
     seasonGameState.widzewResults = [];
     seasonGameState.scorers = {};
 
@@ -1621,39 +1618,79 @@ function simulateWholeSeason() {
         const home = seasonTeamName(f.gospodarz) === "Widzew Łódź";
         const opponent = home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz);
         const score = generateProvisionalWidzewResult(opponent, home);
-        const gf = home ? score[0] : score[1];
-        const ga = home ? score[1] : score[0];
-        const match = {
-            round, opponent, home, gf, ga,
-            scorers: makeMatchScorers(gf, ga)
-        };
+        const gf = Number(home ? score[0] : score[1]);
+        const ga = Number(home ? score[1] : score[0]);
+        const match = { round, opponent, home, gf, ga, scorers: [] };
+
+        // Losowanie strzelców nie może zatrzymać całej symulacji.
+        try {
+            match.scorers = makeMatchScorers(gf, ga);
+            updateTopScorersFromMatch(match);
+        } catch (e) {
+            console.warn("Nie udało się wylosować strzelców meczu:", e);
+            match.scorers = [];
+        }
         seasonGameState.widzewResults.push(match);
-        updateTopScorersFromMatch(match);
     });
+
+    // 34 losowania z bardzo małym prawdopodobieństwem dają 0 goli Widzewa.
+    // Nie pozwalamy więc, aby błąd/pech generatora tworzył absurdalny sezon 0:0/0:1.
+    if (seasonGameState.widzewResults.length &&
+        seasonGameState.widzewResults.every(m => m.gf === 0)) {
+        const m = seasonGameState.widzewResults[Math.floor(Math.random() * seasonGameState.widzewResults.length)];
+        m.gf = 1;
+        try {
+            m.scorers = makeMatchScorers(m.gf, m.ga);
+            updateTopScorersFromMatch(m);
+        } catch (e) {
+            console.warn("Nie udało się dodać wymuszonego strzelca:", e);
+        }
+    }
 
     renderFinalSeason();
 }
+
 function renderFinalSeason() {
-    // Tabela końcowa musi być liczona dopiero po zapisaniu wszystkich 34
-    // wyników Widzewa. Nie korzystamy z "currentRound", bo w tym trybie
-    // nie przechodzimy kolejno przez ekrany kolejek.
     const finalRound = seasonGameState.widzewFixtures.length
         ? Math.max(...seasonGameState.widzewFixtures.map(f => Number(f.kolejka) || 0))
         : 34;
-    renderLeagueTable(finalRound, true);
-    document.getElementById("roundLabel").textContent="PODSUMOWANIE";
-    document.getElementById("roundTitle").textContent=`Wyniki Widzewa · ${seasonGameState.season}`;
-    const rows=[...seasonGameState.widzewResults].sort((a,b)=>a.round-b.round);
-    document.getElementById("roundMatches").innerHTML=rows.map(r=>{
-        const homeTeam=r.home?"Widzew Łódź":r.opponent, awayTeam=r.home?r.opponent:"Widzew Łódź";
-        return `<div class="round-match widzew-match">
-            <div class="round-team home">${seasonLogo(homeTeam)}<span>${seasonSafe(homeTeam)}</span></div>
-            <div class="round-score-wrap"><strong class="round-score">${r.home?`${r.gf}:${r.ga}`:`${r.ga}:${r.gf}`}</strong><div class="match-scorers">${(r.scorers||[]).map(s=>`<span>${s.minute}' ${seasonSafe(s.name)}</span>`).join("")}</div></div>
-            <div class="round-team away"><span>${seasonSafe(awayTeam)}</span>${seasonLogo(awayTeam)}</div>
-        </div>`;
-    }).join("");
-    document.getElementById("roundActions").innerHTML=`<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
+
+    try {
+        renderLeagueTable(finalRound, true);
+    } catch (e) {
+        console.error("Błąd renderowania tabeli końcowej:", e);
+        // Awaryjnie spróbuj ponownie po wyzerowaniu tylko warstwy HTML.
+        const table = document.getElementById("leagueTable");
+        if (table) table.innerHTML = "";
+        try { renderLeagueTable(finalRound, true); } catch (e2) { console.error(e2); }
+    }
+
+    const label = document.getElementById("roundLabel");
+    const title = document.getElementById("roundTitle");
+    const matches = document.getElementById("roundMatches");
+    const actions = document.getElementById("roundActions");
+    if (label) label.textContent = "PODSUMOWANIE";
+    if (title) title.textContent = `Wyniki Widzewa · ${seasonGameState.season}`;
+
+    const rows = [...seasonGameState.widzewResults].sort((a,b) => a.round - b.round);
+    if (matches) {
+        matches.innerHTML = rows.map(r => {
+            const homeTeam = r.home ? "Widzew Łódź" : r.opponent;
+            const awayTeam = r.home ? r.opponent : "Widzew Łódź";
+            const score = r.home ? `${r.gf}:${r.ga}` : `${r.ga}:${r.gf}`;
+            const scorerHtml = (r.scorers || []).map(s =>
+                `<span>${s.minute}' ${seasonSafe(s.name)}</span>`
+            ).join("");
+            return `<div class="round-match widzew-match">
+                <div class="round-team home">${seasonLogo(homeTeam)}<span>${seasonSafe(homeTeam)}</span></div>
+                <div class="round-score-wrap"><strong class="round-score">${score}</strong>${scorerHtml ? `<div class="match-scorers">${scorerHtml}</div>` : ""}</div>
+                <div class="round-team away"><span>${seasonSafe(awayTeam)}</span>${seasonLogo(awayTeam)}</div>
+            </div>`;
+        }).join("");
+    }
+    if (actions) actions.innerHTML = `<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
 }
+
 async function initSeasonMode(mode) {
     const season=window.__seasonValue || "22/23";
     seasonGameState.season=season;
