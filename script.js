@@ -826,16 +826,40 @@ function formatSquadValue(value) {
 
     function getSwapPosition(p) {
         if (!p) return "";
-        if (String(p.role || "").startsWith("bench-")) return actualBenchPosition(p);
+        const role = String(p.role || "");
+
+        // Dla zawodnika z jedenastki pozycję określa jego slot formacji.
+        if (role === "br" || role === "loPo" || role === "so" ||
+            role === "pomoc" || role === "skrzydlowi" || role === "napastnicy") {
+            const rolePosition = {
+                br: "BR",
+                loPo: "LO/PO",
+                so: "ŚO",
+                pomoc: "ŚPD/ŚP/OP",
+                skrzydlowi: "LP/LS/PP/PS",
+                napastnicy: "N"
+            };
+            return rolePosition[role];
+        }
+
+        if (role.startsWith("bench-")) {
+            return actualBenchPosition(p);
+        }
+
         return String(p.position || p.row?.["Pozycja"] || "").trim();
     }
 
     function normalizeSwapPosition(pos) {
-        return String(pos || "").trim().toUpperCase().replace(/\s+/g, "");
+        return String(pos || "")
+            .trim()
+            .toUpperCase()
+            .replace(/\s+/g, "");
     }
 
     function sameSwapPosition(a, b) {
-        return normalizeSwapPosition(getSwapPosition(a)) === normalizeSwapPosition(getSwapPosition(b));
+        const pa = normalizeSwapPosition(getSwapPosition(a));
+        const pb = normalizeSwapPosition(getSwapPosition(b));
+        return pa !== "" && pa === pb;
     }
 
     function clearSwapSelection() {
@@ -851,62 +875,83 @@ function formatSquadValue(value) {
         const grid = document.getElementById("candidateGrid");
         if (!grid) return;
 
-        // Event delegation: survives every re-render of the final screen.
-        if (grid.dataset.swapBound === "1") return;
-        grid.dataset.swapBound = "1";
+        // Jedna obsługa kliknięć dla całego ekranu końcowego.
+        if (grid.dataset.swapBound !== "1") {
+            grid.dataset.swapBound = "1";
 
-        grid.addEventListener("click", (event) => {
-            const row = event.target.closest("[data-starter-index], [data-bench-index]");
-            if (!row || !grid.contains(row)) return;
+            grid.addEventListener("click", (event) => {
+                const row = event.target.closest(".swap-player");
+                if (!row || !grid.contains(row)) return;
 
-            const starterAttr = row.dataset.starterIndex;
-            const benchAttr = row.dataset.benchIndex;
+                const starterAttr = row.getAttribute("data-starter-index");
+                const benchAttr = row.getAttribute("data-bench-index");
 
-            if (starterAttr !== undefined) {
-                const idx = Number(starterAttr);
-                if (!Number.isInteger(idx) || !draft.selected[idx]) return;
+                // 1. Kliknięcie zawodnika z jedenastki.
+                if (starterAttr !== null) {
+                    const idx = Number(starterAttr);
+                    if (!Number.isInteger(idx) || !draft.selected[idx]) return;
 
-                if (finalSwapIndex === null) {
+                    // Drugie kliknięcie na innym zawodniku XI = wybór nowego źródła.
                     finalSwapIndex = idx;
+
+                    grid.querySelectorAll(".swap-player").forEach(el => {
+                        el.classList.remove("swap-selected", "swap-target");
+                    });
                     row.classList.add("swap-selected");
 
+                    // Podświetlamy tylko rezerwowych z tej samej pozycji.
                     grid.querySelectorAll("[data-bench-index]").forEach(el => {
-                        const bi = Number(el.dataset.benchIndex);
+                        const bi = Number(el.getAttribute("data-bench-index"));
                         if (Number.isInteger(bi) &&
                             draft.selected[bi] &&
                             sameSwapPosition(draft.selected[idx], draft.selected[bi])) {
                             el.classList.add("swap-target");
                         }
                     });
-                } else {
-                    clearSwapSelection();
-                    finalSwapIndex = idx;
-                    row.classList.add("swap-selected");
-                }
-                return;
-            }
-
-            if (benchAttr !== undefined && finalSwapIndex !== null) {
-                const benchIdx = Number(benchAttr);
-                if (!Number.isInteger(benchIdx) || !draft.selected[benchIdx]) return;
-
-                if (!sameSwapPosition(draft.selected[finalSwapIndex], draft.selected[benchIdx])) {
-                    showSwapMessage("Możesz zamienić zawodnika tylko z zawodnikiem z tej samej pozycji.");
                     return;
                 }
 
-                const starter = draft.selected[finalSwapIndex];
-                const bench = draft.selected[benchIdx];
+                // 2. Kliknięcie rezerwowego po wybraniu zawodnika z XI.
+                if (benchAttr !== null && finalSwapIndex !== null) {
+                    const benchIdx = Number(benchAttr);
+                    const starterIdx = finalSwapIndex;
 
-                // Exchange players while preserving the role/slot in the squad.
-                draft.selected[finalSwapIndex] = { ...bench, role: starter.role };
-                draft.selected[benchIdx] = { ...starter, role: bench.role };
+                    if (!Number.isInteger(benchIdx) ||
+                        !Number.isInteger(starterIdx) ||
+                        !draft.selected[benchIdx] ||
+                        !draft.selected[starterIdx]) return;
 
-                clearSwapSelection();
+                    const starter = draft.selected[starterIdx];
+                    const bench = draft.selected[benchIdx];
 
-                // Re-render the final screen and recalculate all displayed ratings.
-                finishDraft();
-            }
+                    if (!sameSwapPosition(starter, bench)) {
+                        showSwapMessage("Możesz zamienić zawodnika tylko z zawodnikiem z tej samej pozycji.");
+                        return;
+                    }
+
+                    // Prawdziwa zamiana miejsc w 20-osobowym składzie.
+                    // XI zachowuje rolę formacji, ławka zachowuje swój slot ławki.
+                    draft.selected[starterIdx] = {
+                        ...bench,
+                        role: starter.role
+                    };
+                    draft.selected[benchIdx] = {
+                        ...starter,
+                        role: bench.role
+                    };
+
+                    finalSwapIndex = null;
+
+                    // Ponownie renderujemy cały ekran, dzięki czemu
+                    // boisko, listy i wszystkie oceny są aktualizowane.
+                    finishDraft();
+                }
+            });
+        }
+
+        // Przy każdym renderze usuwamy stare podświetlenia.
+        grid.querySelectorAll(".swap-player").forEach(el => {
+            el.classList.remove("swap-selected", "swap-target");
         });
     }
 

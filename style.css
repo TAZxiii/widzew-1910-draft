@@ -1996,3 +1996,14 @@ h1 span {
     outline: 2px solid var(--red);
     outline-offset: 2px;
 }
+
+#candidateGrid .swap-player.swap-target {
+    cursor: pointer;
+    outline: 2px solid rgba(255,255,255,.75);
+    outline-offset: 2px;
+}
+#candidateGrid .swap-player.swap-selected {
+    cursor: pointer;
+    outline: 2px solid var(--red);
+    outline-offset: 2px;
+}
