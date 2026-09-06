@@ -1295,28 +1295,37 @@ function seasonOtherResult(fixture) {
     return String(fixture.wynik || "").trim();
 }
 function generateProvisionalWidzewResult(opponent, home) {
-    // Tymczasowy generator wyników: Widzew nie dostaje sztucznej przewagi.
-    // Ocena składu wpływa na wynik, ale tylko umiarkowanie.
+    // Generator wyniku oparty o różnicę ocen. Widzew nie dostaje automatycznej
+    // przewagi za grę u siebie, a silniejszy przeciwnik ma wyraźnie większą
+    // szansę na sytuacje i gole. Jednocześnie lambda Widzewa nie może spaść
+    // do absurdalnie niskiego poziomu, dzięki czemu gole Widzewa pojawiają się
+    // również w trybie "symuluj mecz".
     const opponentRow = seasonGameState.teams.find(
         t => seasonTeamName(t["drużyna"]) === seasonTeamName(opponent)
     );
     const opp = opponentRow ? seasonNum(opponentRow["Ogólna"]) : 65;
-    const widzew = Number.isFinite(Number(window.__widzewSeasonOverall))
-        ? Number(window.__widzewSeasonOverall) : 65;
+    const rawWidzew = Number(window.__widzewSeasonOverall);
+    const widzew = Number.isFinite(rawWidzew) && rawWidzew > 0 ? rawWidzew : 65;
 
-    const strength = Math.max(-1.0, Math.min(1.0, (widzew - opp) / 20));
-    const homeAdv = home ? 0.05 : -0.05;
+    const strength = Math.max(-1.25, Math.min(1.25, (widzew - opp) / 12));
+    const homeAdv = home ? 0.10 : -0.05;
 
-    // Bazowo lekka przewaga rywala; siła składu tylko delikatnie ją modyfikuje.
-    const lambdaW = Math.max(0.40, Math.min(1.40, 0.88 + strength * 0.18 + homeAdv));
-    const lambdaO = Math.max(0.55, Math.min(1.65, 1.15 - strength * 0.15 - homeAdv));
+    // Średnio około 1 gola Widzewa i około 1.2 gola rywala. Ocena drużyn
+    // przesuwa te wartości, ale nie tworzy sztucznej dominacji Widzewa.
+    const lambdaW = Math.max(0.72, Math.min(1.45, 1.02 + strength * 0.22 + homeAdv));
+    const lambdaO = Math.max(0.85, Math.min(1.75, 1.22 - strength * 0.20 - homeAdv));
 
     const poisson = lambda => {
-        const L = Math.exp(-lambda);
-        let k = 0, p = 1;
-        do { k++; p *= Math.random(); } while (p > L && k < 9);
-        return k - 1;
+        const threshold = Math.exp(-lambda);
+        let p = 1;
+        let k = 0;
+        do {
+            k++;
+            p *= Math.random();
+        } while (p > threshold && k < 10);
+        return Math.max(0, k - 1);
     };
+
     return [Math.min(5, poisson(lambdaW)), Math.min(5, poisson(lambdaO))];
 }
 
@@ -1599,23 +1608,39 @@ function simulateCurrentWidzewMatch() {
     renderPlayableSeason();
 }
 function simulateWholeSeason() {
-    // Symulujemy dokładnie wszystkie mecze Widzewa z terminarza (docelowo 34),
-    // a nie wszystkie mecze ligi. Po prawej stronie pokazujemy tylko te spotkania.
-    seasonGameState.widzewFixtures.forEach(f => {
+    // W trybie "symuluj cały sezon" symulujemy WYŁĄCZNIE 34 mecze Widzewa.
+    // Pozostałe spotkania ligi pozostają pobierane z bazy wyników.
+    seasonGameState.widzewResults = [];
+    seasonGameState.scorers = {};
+
+    const fixtures = [...seasonGameState.widzewFixtures]
+        .sort((a,b) => Number(a.kolejka) - Number(b.kolejka));
+
+    fixtures.forEach(f => {
         const round = Number(f.kolejka);
-        if(seasonGameState.widzewResults.some(x=>x.round===round)) return;
-        const home=seasonTeamName(f.gospodarz)==="Widzew Łódź";
-        const opponent=home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz);
-        const score=generateProvisionalWidzewResult(opponent,home);
-        const gf=home?score[0]:score[1], ga=home?score[1]:score[0];
-        const match={round,opponent,home,gf,ga,scorers:makeMatchScorers(gf,ga)};
+        const home = seasonTeamName(f.gospodarz) === "Widzew Łódź";
+        const opponent = home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz);
+        const score = generateProvisionalWidzewResult(opponent, home);
+        const gf = home ? score[0] : score[1];
+        const ga = home ? score[1] : score[0];
+        const match = {
+            round, opponent, home, gf, ga,
+            scorers: makeMatchScorers(gf, ga)
+        };
         seasonGameState.widzewResults.push(match);
         updateTopScorersFromMatch(match);
     });
+
     renderFinalSeason();
 }
 function renderFinalSeason() {
-    renderLeagueTable(seasonGameState.widzewFixtures.length ? Number(seasonGameState.widzewFixtures[seasonGameState.widzewFixtures.length-1].kolejka) : 34,true);
+    // Tabela końcowa musi być liczona dopiero po zapisaniu wszystkich 34
+    // wyników Widzewa. Nie korzystamy z "currentRound", bo w tym trybie
+    // nie przechodzimy kolejno przez ekrany kolejek.
+    const finalRound = seasonGameState.widzewFixtures.length
+        ? Math.max(...seasonGameState.widzewFixtures.map(f => Number(f.kolejka) || 0))
+        : 34;
+    renderLeagueTable(finalRound, true);
     document.getElementById("roundLabel").textContent="PODSUMOWANIE";
     document.getElementById("roundTitle").textContent=`Wyniki Widzewa · ${seasonGameState.season}`;
     const rows=[...seasonGameState.widzewResults].sort((a,b)=>a.round-b.round);
