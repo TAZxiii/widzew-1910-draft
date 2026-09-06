@@ -1314,16 +1314,24 @@ h1 span {
 .pitch-player.position-gk {
     border-color: #e53935 !important;
 }
-.player-marker.position-def,
-.pitch-player.position-def {
+.player-marker.position-fullback,
+.pitch-player.position-fullback {
+    border-color: #f39c12 !important;
+}
+.player-marker.position-cb,
+.pitch-player.position-cb {
     border-color: #f2c94c !important;
 }
 .player-marker.position-mid,
 .pitch-player.position-mid {
     border-color: #39b86a !important;
 }
-.player-marker.position-att,
-.pitch-player.position-att {
+.player-marker.position-wing,
+.pitch-player.position-wing {
+    border-color: #9b59b6 !important;
+}
+.player-marker.position-n,
+.pitch-player.position-n {
     border-color: #3f82f7 !important;
 }
 
@@ -1332,16 +1340,24 @@ h1 span {
 .rating-circle.position-gk {
     border: 2px solid #e53935 !important;
 }
-.player-rating.position-def,
-.rating-circle.position-def {
+.player-rating.position-fullback,
+.rating-circle.position-fullback {
+    border: 2px solid #f39c12 !important;
+}
+.player-rating.position-cb,
+.rating-circle.position-cb {
     border: 2px solid #f2c94c !important;
 }
 .player-rating.position-mid,
 .rating-circle.position-mid {
     border: 2px solid #39b86a !important;
 }
-.player-rating.position-att,
-.rating-circle.position-att {
+.player-rating.position-wing,
+.rating-circle.position-wing {
+    border: 2px solid #9b59b6 !important;
+}
+.player-rating.position-n,
+.rating-circle.position-n {
     border: 2px solid #3f82f7 !important;
 }
 
@@ -1399,9 +1415,11 @@ h1 span {
 
 /* Kolorowy obrys kółka z numerem na boisku */
 .pitch-shirt.position-gk { border-color:#e53935 !important; }
-.pitch-shirt.position-def { border-color:#f2c94c !important; }
+.pitch-shirt.position-fullback { border-color:#f39c12 !important; }
+.pitch-shirt.position-cb { border-color:#f2c94c !important; }
 .pitch-shirt.position-mid { border-color:#39b86a !important; }
-.pitch-shirt.position-att { border-color:#3f82f7 !important; }
+.pitch-shirt.position-wing { border-color:#9b59b6 !important; }
+.pitch-shirt.position-n { border-color:#3f82f7 !important; }
 
 /* Kolorowy okrąg wokół oceny na liście */
 .squad-rating,
@@ -1419,9 +1437,11 @@ h1 span {
     font-size:15px;
 }
 .squad-rating.position-gk,.bench-rating.position-gk { border-color:#e53935 !important; }
-.squad-rating.position-def,.bench-rating.position-def { border-color:#f2c94c !important; }
+.squad-rating.position-fullback,.bench-rating.position-fullback { border-color:#f39c12 !important; }
+.squad-rating.position-cb,.bench-rating.position-cb { border-color:#f2c94c !important; }
 .squad-rating.position-mid,.bench-rating.position-mid { border-color:#39b86a !important; }
-.squad-rating.position-att,.bench-rating.position-att { border-color:#3f82f7 !important; }
+.squad-rating.position-wing,.bench-rating.position-wing { border-color:#9b59b6 !important; }
+.squad-rating.position-n,.bench-rating.position-n { border-color:#3f82f7 !important; }
 
 @media (max-width: 1100px) {
     #candidateGrid .final-layout { grid-template-columns:1fr; }

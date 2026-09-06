@@ -3,15 +3,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 function positionColorClass(position, role) {
     const r = String(role || "");
-    if (r === "br" || r === "bench-br") return "position-gk";
-    if (r === "loPo" || r === "so" || r === "bench-def") return "position-def";
-    if (r === "pomoc" || r === "bench-mid") return "position-mid";
-    if (r === "skrzydlowi" || r === "napastnicy" || r === "bench-n") return "position-att";
     const p = String(position || "").toUpperCase().replace(/\s/g, "");
+
+    // Dla zawodników z ławki kolor wynika z ich rzeczywistej pozycji,
+    // a nie tylko z ogólnej kategorii miejsca na ławce.
+    if (r.startsWith("bench-")) {
+        if (p === "BR") return "position-gk";
+        if (p === "LO/PO" || p === "LOPO") return "position-fullback";
+        if (p === "ŚO" || p === "SO") return "position-cb";
+        if (p.includes("ŚPD") || p.includes("ŚP") || p.includes("OP")) return "position-mid";
+        if (p.includes("LS") || p.includes("LP") || p.includes("PS") || p.includes("PP")) return "position-wing";
+        if (p === "N") return "position-n";
+    }
+
+    if (r === "br") return "position-gk";
+    if (r === "loPo") return "position-fullback";
+    if (r === "so") return "position-cb";
+    if (r === "pomoc") return "position-mid";
+    if (r === "skrzydlowi") return "position-wing";
+    if (r === "napastnicy") return "position-n";
+
     if (p === "BR") return "position-gk";
-    if (p === "LO/PO" || p === "ŚO" || p === "SO") return "position-def";
+    if (p === "LO/PO" || p === "LOPO") return "position-fullback";
+    if (p === "ŚO" || p === "SO") return "position-cb";
     if (p.includes("ŚPD") || p.includes("ŚP") || p.includes("OP")) return "position-mid";
-    if (p.includes("LS") || p.includes("LP") || p.includes("PS") || p.includes("PP") || p === "N") return "position-att";
+    if (p.includes("LS") || p.includes("LP") || p.includes("PS") || p.includes("PP")) return "position-wing";
+    if (p === "N") return "position-n";
     return "";
 }
 
@@ -473,8 +490,8 @@ function formatSquadValue(value) {
         "3-4-2-1": [
             ["br",50,90],
             ["so",27,74],["so",50,74],["so",73,74],
-            ["skrzydlowi",8,40],["pomoc",35,43],["pomoc",65,43],["pomoc",50,57],["skrzydlowi",92,40],
-            ["skrzydlowi",34,27],["skrzydlowi",66,27],["napastnicy",50,14]
+            ["skrzydlowi",8,50],["pomoc",35,50],["pomoc",65,50],["skrzydlowi",92,50],
+            ["skrzydlowi",25,27],["skrzydlowi",75,27],["napastnicy",50,14]
         ],
         "3-4-3": [
             ["br",50,90],
