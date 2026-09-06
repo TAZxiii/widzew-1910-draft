@@ -3,9 +3,14 @@
     let preparedResults = null;
 
     function cloneMatch(match) {
-        // JSON clone zachowuje dokładnie strukturę obiektów strzelców
-        // (w tym minute/type/name/player), zamiast rozbijać np. stringi na znaki.
-        return JSON.parse(JSON.stringify(match));
+        return {
+            round: Number(match.round),
+            opponent: match.opponent,
+            home: !!match.home,
+            gf: Number(match.gf),
+            ga: Number(match.ga),
+            scorers: Array.isArray(match.scorers) ? match.scorers.map(s => ({ ...s })) : []
+        };
     }
 
     function prepareResults() {
@@ -53,16 +58,20 @@
 
     window.simulateCurrentWidzewMatch = revealCurrentRound;
 
-    // Tylko SYMULUJ MECZ jest obsługiwany przez tę poprawkę.
-    // ZAGRAJ MECZ pozostaje osobną funkcją — obecnie w głównym kodzie
-    // nie istnieje jeszcze właściwy ekran/interakcja rozegrania meczu.
+    // "ZAGRAJ MECZ" zostawiamy na później. Na tym etapie kliknięcie nie może
+    // uruchamiać symulacji. Tylko "SYMULUJ MECZ" odsłania gotowy wynik kolejki.
     document.addEventListener("click", function (event) {
         const button = event.target && event.target.closest
-            ? event.target.closest("#simulateMatchButton")
+            ? event.target.closest("#playMatchButton, #simulateMatchButton")
             : null;
         if (!button) return;
+
         event.preventDefault();
         event.stopImmediatePropagation();
-        revealCurrentRound();
+
+        if (button.id === "simulateMatchButton") {
+            revealCurrentRound();
+        }
+        // playMatchButton celowo nic teraz nie robi.
     }, true);
 })();
