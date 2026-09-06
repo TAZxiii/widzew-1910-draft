@@ -2086,3 +2086,39 @@ h1 span {
         min-height: 160px;
     }
 }
+
+/* ================= SEZON / TABELA ================= */
+.season-board { width:100%; max-width:1400px; }
+.season-board-grid { display:grid; grid-template-columns:minmax(520px,1.15fr) minmax(430px,.85fr); gap:24px; align-items:start; }
+.league-table-panel,.round-panel { background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:18px; }
+.season-panel-title { margin-bottom:14px; }
+.season-panel-title span { font-size:11px; letter-spacing:.14em; opacity:.65; }
+.season-panel-title h3 { margin:5px 0 0; font-size:21px; }
+.league-table { display:flex; flex-direction:column; gap:4px; }
+.league-row { display:grid; grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px; gap:5px; align-items:center; min-height:43px; padding:5px 7px; border-radius:9px; font-size:12px; text-align:center; }
+.league-row > span:not(.league-team) { opacity:.78; }
+.league-pos { font-weight:700; }
+.league-team { display:flex; align-items:center; gap:8px; text-align:left; min-width:0; }
+.league-team b { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.season-team-logo { width:25px; height:25px; object-fit:contain; flex:0 0 25px; }
+.season-team-logo-fallback { width:25px; text-align:center; opacity:.45; }
+.league-row strong { font-size:14px; }
+.league-row.is-widzew { outline:1px solid rgba(220,20,40,.55); background:rgba(220,20,40,.09); }
+.round-matches { display:flex; flex-direction:column; gap:7px; }
+.round-match { display:grid; grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr); align-items:center; gap:8px; padding:9px 10px; border-radius:10px; background:rgba(0,0,0,.14); }
+.round-match.widzew-match { border:1px solid rgba(220,20,40,.5); background:rgba(220,20,40,.08); }
+.round-team { display:flex; align-items:center; gap:7px; min-width:0; font-size:12px; }
+.round-team span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.round-team.away { justify-content:flex-end; text-align:right; }
+.round-score { text-align:center; font-size:15px; }
+.round-actions { display:flex; flex-direction:column; gap:9px; margin-top:18px; }
+.season-main-button,.season-secondary-button { border:0; border-radius:10px; padding:13px 18px; font-weight:800; cursor:pointer; }
+.season-main-button { background:#c8102e; color:#fff; }
+.season-secondary-button { background:rgba(255,255,255,.1); color:inherit; border:1px solid rgba(255,255,255,.16); }
+.season-main-button:hover,.season-secondary-button:hover { transform:translateY(-1px); }
+.season-finished-note { text-align:center; padding:13px; font-weight:800; letter-spacing:.08em; }
+.season-loading { padding:70px 20px; text-align:center; opacity:.75; }
+@media(max-width:900px) {
+ .season-board-grid { grid-template-columns:1fr; }
+ .league-row { grid-template-columns:28px minmax(140px,1fr) repeat(4,25px) 52px 35px; font-size:11px; }
+}

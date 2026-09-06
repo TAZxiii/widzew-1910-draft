@@ -138,9 +138,27 @@
             <h2 id="seasonTitle">ROZGRYWKI SEZONU</h2>
             <p id="seasonIntro" class="screen-intro"></p>
         </div>
-        <div id="seasonPlaceholder" class="season-placeholder">
-            <strong>SEZON</strong>
-            <span>Terminarz i mecze Widzewa pojawią się tutaj.</span>
+        <div id="seasonPlaceholder" class="season-placeholder season-board">
+            <div id="seasonLoading" class="season-loading">Wczytywanie danych sezonu...</div>
+            <div id="seasonBoardContent" class="hidden">
+                <div class="season-board-grid">
+                    <section class="league-table-panel">
+                        <div class="season-panel-title">
+                            <span>TABELA</span>
+                            <h3 id="leagueTableTitle">PKO EKSTRAKLASA</h3>
+                        </div>
+                        <div id="leagueTable" class="league-table"></div>
+                    </section>
+                    <section class="round-panel">
+                        <div class="season-panel-title">
+                            <span id="roundLabel">KOLEJKA 1</span>
+                            <h3 id="roundTitle">Aktualna kolejka</h3>
+                        </div>
+                        <div id="roundMatches" class="round-matches"></div>
+                        <div id="roundActions" class="round-actions"></div>
+                    </section>
+                </div>
+            </div>
         </div>
     </div>
     <div class="credits">Stworzono przez: <strong>Alan WTM</strong></div>

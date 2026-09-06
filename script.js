@@ -1176,31 +1176,281 @@ function updateFinalSeasonLabel() {
 }
 
 
+
+/* ========================= SEZON ========================= */
+const seasonGameState = {
+    season: "",
+    mode: "",
+    currentRound: 1,
+    fixtures: [],
+    teams: [],
+    results: [],
+    widzewResults: [],
+    started: false
+};
+
+const logoFiles = {
+    "Arka Gdynia":"arka_gdynia.png",
+    "Bruk-Bet Termalica Nieciecza":"bruk-bet_termalica_nieciecza.png",
+    "Cracovia":"cracovia.png",
+    "Cracovia Kraków":"cracovia.png",
+    "GKS Katowice":"gks_katowice.png",
+    "Górnik Zabrze":"gornik_zabrze.png",
+    "Jagiellonia Białystok":"jagiellonia_bialystok.png",
+    "Korona Kielce":"korona_kielce.png",
+    "Lech Poznań":"lech_poznan.png",
+    "Lechia Gdańsk":"lechia_gdansk.png",
+    "Legia Warszawa":"legia_warszawa.png",
+    "ŁKS Łódź":"lks-lodz.png",
+    "Miedź Legnica":"miedz_legnica.png",
+    "Motor Lublin":"motor_lublin.png",
+    "Piast Gliwice":"piast_gliwice.png",
+    "Pogoń Szczecin":"pogon_szczecin.png",
+    "Puszcza Niepołomice":"puszcza_niepolomice.png",
+    "Radomiak Radom":"radomiak_radom.png",
+    "Raków Częstochowa":"rakow_czestochowa.png",
+    "Ruch Chorzów":"ruch_chorzow.png",
+    "Śląsk Wrocław":"slask_wroclaw.png",
+    "Stal Mielec":"stal_mielec.png",
+    "Warta Poznań":"warta_poznan.png",
+    "Widzew Łódź":"widzew_lodz.png",
+    "Wieczysta Kraków":"wieczysta_krakow.png",
+    "Wisła Kraków":"wisla_krakow.png",
+    "Wisła Płock":"wisla_plock.png",
+    "Zagłębie Lubin":"zaglebie_lubin.png"
+};
+
+function seasonSafe(v) {
+    return String(v ?? "").replace(/[&<>"']/g, ch => ({
+        "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+    }[ch]));
+}
+function seasonLogo(team) {
+    const file = logoFiles[String(team).trim()];
+    return file ? `<img class="season-team-logo" src="data/logos/${file}" alt="">` : `<span class="season-team-logo-fallback">●</span>`;
+}
+function seasonNum(v) {
+    const n = Number(String(v ?? "").replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+}
+async function loadSeasonCSV(path) {
+    const response = await fetch(`${path}?v=${Date.now()}`, {cache:"no-store"});
+    if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
+    const text = await response.text();
+    return parseCSV(text);
+}
+function seasonTeamName(name) {
+    const n = String(name || "").trim();
+    return n === "Cracovia Kraków" ? "Cracovia" : n;
+}
+function seasonResultParts(result) {
+    const m = String(result || "").trim().match(/^(\d+)\s*:\s*(\d+)$/);
+    return m ? [Number(m[1]), Number(m[2])] : null;
+}
+function seasonOtherResult(fixture) {
+    return String(fixture.wynik || "").trim();
+}
+function generateProvisionalWidzewResult(opponent, home) {
+    // Tymczasowy generator do czasu podpięcia właściwej mechaniki wydarzeń.
+    const opponentRow = seasonGameState.teams.find(t => seasonTeamName(t["drużyna"]) === seasonTeamName(opponent));
+    const opp = opponentRow ? seasonNum(opponentRow["Ogólna"]) : 65;
+    const widzew = window.__widzewSeasonOverall || 70;
+    const strength = Math.max(-1.4, Math.min(1.4, (widzew - opp) / 10));
+    const homeAdv = home ? 0.25 : -0.25;
+    const lambdaW = Math.max(0.25, 1.15 + strength * 0.42 + homeAdv);
+    const lambdaO = Math.max(0.2, 0.95 - strength * 0.32 - homeAdv);
+    const poisson = lambda => {
+        let L=Math.exp(-lambda), k=0, p=1;
+        do { k++; p*=Math.random(); } while (p>L && k<8);
+        return k-1;
+    };
+    return [Math.min(6,poisson(lambdaW)), Math.min(6,poisson(lambdaO))];
+}
+function getWidzewFixture(round) {
+    return seasonGameState.fixtures.find(f =>
+        Number(f.kolejka) === Number(round) &&
+        (seasonTeamName(f.gospodarz) === "Widzew Łódź" || seasonTeamName(f.gosc) === "Widzew Łódź")
+    );
+}
+function completedNonWidzewFixtures(upToRound) {
+    return seasonGameState.fixtures.filter(f => {
+        const r=Number(f.kolejka);
+        if (r > upToRound) return false;
+        const isW = seasonTeamName(f.gospodarz)==="Widzew Łódź" || seasonTeamName(f.gosc)==="Widzew Łódź";
+        return !isW && !!seasonResultParts(f.wynik);
+    });
+}
+function seasonWidzewResultsByRound() {
+    const map = {};
+    seasonGameState.widzewResults.forEach(r => map[r.round] = r);
+    return map;
+}
+function buildStandings(round) {
+    const names = new Set(["Widzew Łódź"]);
+    seasonGameState.teams.forEach(t => names.add(seasonTeamName(t["drużyna"])));
+    const stats = {};
+    [...names].forEach(name => stats[name]={name,mp:0,w:0,d:0,l:0,gf:0,ga:0,pts:0});
+    // All real non-Widzew results through current round.
+    completedNonWidzewFixtures(round).forEach(f => {
+        applyStandingResult(stats, seasonTeamName(f.gospodarz), seasonTeamName(f.gosc), seasonResultParts(f.wynik));
+    });
+    // Generated Widzew results through current round (only after they are played).
+    seasonGameState.widzewResults.forEach(r => {
+        if (r.round <= round) {
+            applyStandingResult(stats, "Widzew Łódź", seasonTeamName(r.opponent), [r.gf,r.ga], r.home);
+        }
+    });
+    return Object.values(stats).sort((a,b) =>
+        b.pts-a.pts || ((b.gf-b.ga)-(a.gf-a.ga)) || b.gf-a.gf || a.name.localeCompare(b.name,"pl")
+    );
+}
+function applyStandingResult(stats, home, away, score, explicitHome=true) {
+    if (!score) return;
+    const [hg,ag]=score;
+    stats[home].mp++; stats[away].mp++;
+    stats[home].gf+=hg; stats[home].ga+=ag;
+    stats[away].gf+=ag; stats[away].ga+=hg;
+    if (hg>ag) { stats[home].w++; stats[away].l++; stats[home].pts+=3; }
+    else if (hg<ag) { stats[away].w++; stats[home].l++; stats[away].pts+=3; }
+    else { stats[home].d++; stats[away].d++; stats[home].pts++; stats[away].pts++; }
+}
+function renderLeagueTable(round, final=false) {
+    const el=document.getElementById("leagueTable");
+    if(!el) return;
+    const rows=buildStandings(round);
+    el.innerHTML = rows.map((r,i)=>`
+        <div class="league-row ${r.name==="Widzew Łódź" ? "is-widzew":""}">
+            <span class="league-pos">${i+1}</span>
+            <span class="league-team">${seasonLogo(r.name)}<b>${seasonSafe(r.name)}</b></span>
+            <span>${r.mp}</span><span>${r.w}</span><span>${r.d}</span><span>${r.l}</span>
+            <span>${r.gf}:${r.ga}</span><strong>${r.pts}</strong>
+        </div>`).join("");
+    document.getElementById("leagueTableTitle").textContent = final ? "TABELA KOŃCOWA" : "PKO EKSTRAKLASA";
+}
+function renderRound(round) {
+    const f=getWidzewFixture(round);
+    const others=seasonGameState.fixtures.filter(x=>Number(x.kolejka)===Number(round) &&
+        seasonTeamName(x.gospodarz)!=="Widzew Łódź" && seasonTeamName(x.gosc)!=="Widzew Łódź");
+    document.getElementById("roundLabel").textContent=`KOLEJKA ${round}`;
+    document.getElementById("roundTitle").textContent=`Sezon ${seasonGameState.season}`;
+    const widzewPlayed=seasonGameState.widzewResults.find(x=>x.round===round);
+    const rows=[...others];
+    if(f) rows.push(f);
+    rows.sort((a,b)=>{
+        const aw=seasonTeamName(a.gospodarz)==="Widzew Łódź" ? 1:0;
+        const bw=seasonTeamName(b.gospodarz)==="Widzew Łódź" ? 1:0;
+        return aw-bw;
+    });
+    const html=rows.map(x=>{
+        const isW=seasonTeamName(x.gospodarz)==="Widzew Łódź" || seasonTeamName(x.gosc)==="Widzew Łódź";
+        const result=isW ? (widzewPlayed ? `${widzewPlayed.gf}:${widzewPlayed.ga}` : "—") : seasonOtherResult(x);
+        return `<div class="round-match ${isW?"widzew-match":""}">
+            <div class="round-team home">${seasonLogo(seasonTeamName(x.gospodarz))}<span>${seasonSafe(seasonTeamName(x.gospodarz))}</span></div>
+            <strong class="round-score">${result}</strong>
+            <div class="round-team away"><span>${seasonSafe(seasonTeamName(x.gosc))}</span>${seasonLogo(seasonTeamName(x.gosc))}</div>
+        </div>`;
+    }).join("");
+    document.getElementById("roundMatches").innerHTML=html;
+    const actions=document.getElementById("roundActions");
+    if(widzewPlayed) {
+        if(round<34) actions.innerHTML=`<button id="nextRoundButton" class="season-main-button">NASTĘPNA KOLEJKA →</button>`;
+        else actions.innerHTML=`<button id="seasonFinishButton" class="season-main-button">ZAKOŃCZ SEZON</button>`;
+    } else {
+        actions.innerHTML=`<button id="playMatchButton" class="season-main-button">ZAGRAJ MECZ</button>
+                           <button id="simulateMatchButton" class="season-secondary-button">SYMULUJ MECZ</button>`;
+    }
+    document.getElementById("playMatchButton")?.addEventListener("click",()=>{
+        alert("Ekran właściwego meczu przygotujemy w kolejnym etapie.");
+    });
+    document.getElementById("simulateMatchButton")?.addEventListener("click",()=>{
+        simulateCurrentWidzewMatch();
+    });
+    document.getElementById("nextRoundButton")?.addEventListener("click",()=>{
+        seasonGameState.currentRound++;
+        renderPlayableSeason();
+    });
+    document.getElementById("seasonFinishButton")?.addEventListener("click",()=>{
+        renderFinalSeason();
+    });
+}
+function renderPlayableSeason() {
+    renderLeagueTable(seasonGameState.currentRound,false);
+    renderRound(seasonGameState.currentRound);
+}
+function simulateCurrentWidzewMatch() {
+    const f=getWidzewFixture(seasonGameState.currentRound);
+    if(!f || seasonGameState.widzewResults.some(x=>x.round===seasonGameState.currentRound)) return;
+    const home=seasonTeamName(f.gospodarz)==="Widzew Łódź";
+    const opponent=home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz);
+    const score=generateProvisionalWidzewResult(opponent,home);
+    seasonGameState.widzewResults.push({round:seasonGameState.currentRound, opponent, home, gf:home?score[0]:score[1], ga:home?score[1]:score[0]});
+    renderPlayableSeason();
+}
+function simulateWholeSeason() {
+    for(let round=1;round<=34;round++) {
+        if(!seasonGameState.widzewResults.some(x=>x.round===round)) {
+            const f=getWidzewFixture(round);
+            if(f) {
+                const home=seasonTeamName(f.gospodarz)==="Widzew Łódź";
+                const opponent=home?seasonTeamName(f.gosc):seasonTeamName(f.gospodarz);
+                const score=generateProvisionalWidzewResult(opponent,home);
+                seasonGameState.widzewResults.push({round,opponent,home,gf:home?score[0]:score[1],ga:home?score[1]:score[0]});
+            }
+        }
+    }
+    renderFinalSeason();
+}
+function renderFinalSeason() {
+    renderLeagueTable(34,true);
+    document.getElementById("roundLabel").textContent="PODSUMOWANIE";
+    document.getElementById("roundTitle").textContent=`Wyniki Widzewa · ${seasonGameState.season}`;
+    const rows=seasonGameState.widzewResults.sort((a,b)=>a.round-b.round);
+    document.getElementById("roundMatches").innerHTML=rows.map(r=>{
+        const homeTeam=r.home?"Widzew Łódź":r.opponent, awayTeam=r.home?r.opponent:"Widzew Łódź";
+        return `<div class="round-match widzew-match">
+            <div class="round-team home">${seasonLogo(homeTeam)}<span>${seasonSafe(homeTeam)}</span></div>
+            <strong class="round-score">${r.home?`${r.gf}:${r.ga}`:`${r.ga}:${r.gf}`}</strong>
+            <div class="round-team away"><span>${seasonSafe(awayTeam)}</span>${seasonLogo(awayTeam)}</div>
+        </div>`;
+    }).join("");
+    document.getElementById("roundActions").innerHTML=`<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
+}
+async function initSeasonMode(mode) {
+    const season=window.__seasonValue || "22/23";
+    seasonGameState.season=season;
+    seasonGameState.mode=mode;
+    seasonGameState.currentRound=1;
+    seasonGameState.widzewResults=[];
+    const loading=document.getElementById("seasonLoading");
+    const content=document.getElementById("seasonBoardContent");
+    if(loading) {loading.classList.remove("hidden"); loading.textContent="Wczytywanie baz sezonu...";}
+    if(content) content.classList.add("hidden");
+    try {
+        const [fixtures,teams]=await Promise.all([
+            loadSeasonCSV(`data/fixtures/fixtures_${season.replace("/","-")}.csv`),
+            loadSeasonCSV(`data/teams/Book 1(teams(${season.replace("/","-")})).csv`)
+        ]);
+        seasonGameState.fixtures=fixtures;
+        seasonGameState.teams=teams;
+        // Widzew is intentionally rated from the drafted XI, while other clubs use the season database.
+        try { window.__widzewSeasonOverall = getTeamScores().overall; } catch(e) { window.__widzewSeasonOverall=70; }
+        if(loading) loading.classList.add("hidden");
+        if(content) content.classList.remove("hidden");
+        if(mode==="simulate") simulateWholeSeason();
+        else renderPlayableSeason();
+    } catch(err) {
+        console.error("Błąd ładowania sezonu:",err);
+        if(loading) loading.textContent="Nie udało się wczytać baz sezonu. Sprawdź folder data.";
+    }
+}
 function openSeasonMode(mode) {
     const season = window.__seasonValue || "22/23";
     const title = document.getElementById("seasonTitle");
     const intro = document.getElementById("seasonIntro");
-    const placeholder = document.getElementById("seasonPlaceholder");
-
-    if (title) title.textContent = `SEZON ${season}`;
-    if (intro) intro.textContent = `Widzew Łódź · ${mode === "play" ? "Rozegraj cały sezon" : "Symuluj cały sezon"}`;
-
-    if (placeholder) {
-        if (mode === "play") {
-            placeholder.innerHTML = `
-                <strong>PRZYGOTOWANIE SEZONU</strong>
-                <span>W tym miejscu pojawi się aktualna kolejka, tabela oraz mecze do rozegrania.</span>
-            `;
-        } else {
-            placeholder.innerHTML = `
-                <strong>SYMULACJA CAŁEGO SEZONU</strong>
-                <span>W tym miejscu pojawi się końcowa tabela oraz komplet wyników Widzewa.</span>
-            `;
-        }
-    }
-
-    if (window.__showScreen) window.__showScreen(document.getElementById("seasonScreen"));
+    if(title) title.textContent=`SEZON ${season}`;
+    if(intro) intro.textContent=`Widzew Łódź · ${mode==="play"?"Rozegraj cały sezon":"Symuluj cały sezon"}`;
+    if(window.__showScreen) window.__showScreen(document.getElementById("seasonScreen"));
+    initSeasonMode(mode);
 }
-
-document.getElementById("playWholeSeason")?.addEventListener("click", () => openSeasonMode("play"));
-document.getElementById("simulateWholeSeason")?.addEventListener("click", () => openSeasonMode("simulate"));
+document.getElementById("playWholeSeason")?.addEventListener("click",()=>openSeasonMode("play"));
+document.getElementById("simulateWholeSeason")?.addEventListener("click",()=>openSeasonMode("simulate"));
