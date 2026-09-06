@@ -1295,22 +1295,105 @@ function seasonOtherResult(fixture) {
     return String(fixture.wynik || "").trim();
 }
 function generateProvisionalWidzewResult(opponent, home) {
-    // Tymczasowy generator wyników: różnica siły wpływa na szanse, ale nie
-    // daje Widzewowi zbyt dużej przewagi. Właściwa mechanika wydarzeń
-    // meczowych zostanie podpięta później.
+    // Tymczasowy generator jest celowo bardziej zachowawczy wobec Widzewa.
+    // Różnica ocen wpływa na oczekiwaną liczbę goli, ale nie daje dużej premii.
     const opponentRow = seasonGameState.teams.find(t => seasonTeamName(t["drużyna"]) === seasonTeamName(opponent));
     const opp = opponentRow ? seasonNum(opponentRow["Ogólna"]) : 65;
     const widzew = Number.isFinite(Number(window.__widzewSeasonOverall)) ? Number(window.__widzewSeasonOverall) : 65;
-    const strength = Math.max(-1.25, Math.min(1.25, (widzew - opp) / 12));
-    const homeAdv = home ? 0.12 : -0.12;
-    const lambdaW = Math.max(0.35, Math.min(1.85, 1.05 + strength * 0.34 + homeAdv));
-    const lambdaO = Math.max(0.35, Math.min(1.85, 1.00 - strength * 0.30 - homeAdv));
+    const strength = Math.max(-0.9, Math.min(0.9, (widzew - opp) / 15));
+    const homeAdv = home ? 0.06 : -0.06;
+    const lambdaW = Math.max(0.45, Math.min(1.45, 0.88 + strength * 0.20 + homeAdv));
+    const lambdaO = Math.max(0.50, Math.min(1.55, 1.02 - strength * 0.18 - homeAdv));
     const poisson = lambda => {
         const L=Math.exp(-lambda); let k=0, p=1;
         do { k++; p*=Math.random(); } while (p>L && k<9);
         return k-1;
     };
-    return [Math.min(6,poisson(lambdaW)), Math.min(6,poisson(lambdaO))];
+    return [Math.min(5,poisson(lambdaW)), Math.min(5,poisson(lambdaO))];
+}
+
+const WIDZEW_SCORER_WEIGHTS = [
+    ["starter", "N", 33],
+    ["starter", "MID", 12],
+    ["starter", "WING", 9],
+    ["starter", "DEF", 7],
+    ["starter", "CB", 5],
+    ["bench", "N", 18],
+    ["bench", "MID", 6],
+    ["bench", "WING", 5],
+    ["bench", "DEF", 3],
+    ["bench", "CB", 1],
+    ["own", "OWN", 1]
+];
+function scorerCategory(p) {
+    const pos = normalizeSwapPosition(getSwapPosition(p));
+    if (pos === "N") return "N";
+    if (pos === "ŚO") return "CB";
+    if (pos === "LO/PO") return "DEF";
+    if (pos === "ŚPD/ŚP/OP") return "MID";
+    if (pos === "LP/LS/PP/PS") return "WING";
+    return "N";
+}
+function chooseWeightedScorer() {
+    const starters = draft.selected.filter(p => !String(p.role).startsWith("bench-"));
+    const bench = draft.selected.filter(p => String(p.role).startsWith("bench-"));
+    const pools = {
+        "starter:N": starters.filter(p => scorerCategory(p)==="N"),
+        "starter:MID": starters.filter(p => scorerCategory(p)==="MID"),
+        "starter:WING": starters.filter(p => scorerCategory(p)==="WING"),
+        "starter:DEF": starters.filter(p => scorerCategory(p)==="DEF"),
+        "starter:CB": starters.filter(p => scorerCategory(p)==="CB"),
+        "bench:N": bench.filter(p => scorerCategory(p)==="N"),
+        "bench:MID": bench.filter(p => scorerCategory(p)==="MID"),
+        "bench:WING": bench.filter(p => scorerCategory(p)==="WING"),
+        "bench:DEF": bench.filter(p => scorerCategory(p)==="DEF"),
+        "bench:CB": bench.filter(p => scorerCategory(p)==="CB")
+    };
+    const available = WIDZEW_SCORER_WEIGHTS.filter(([side,cat]) => side==="own" || pools[`${side}:${cat}`]?.length);
+    if (!available.length) return {type:"opponent", name:"Przeciwnik"};
+    const total = available.reduce((sum,x)=>sum+x[2],0);
+    let roll=Math.random()*total;
+    for (const [side,cat,weight] of available) {
+        roll-=weight;
+        if (roll<=0) {
+            if (side==="own") return {type:"own", name:"Samobój"};
+            const pool=pools[`${side}:${cat}`];
+            const player=pool[Math.floor(Math.random()*pool.length)];
+            return {type:"widzew", player, name:`${player.row["Imię"]} ${player.row["Nazwisko"]}`};
+        }
+    }
+    return {type:"opponent", name:"Przeciwnik"};
+}
+function makeMatchScorers(widzewGoals, opponentGoals) {
+    const usedMinutes=new Set();
+    const minute=()=>{
+        let m;
+        do { m=1+Math.floor(Math.random()*90); } while(usedMinutes.has(m) && usedMinutes.size<90);
+        usedMinutes.add(m); return m;
+    };
+    const scorers=[];
+    for(let i=0;i<widzewGoals;i++) {
+        const s=chooseWeightedScorer();
+        scorers.push({minute:minute(), type:s.type, name:s.name, player:s.player||null});
+    }
+    for(let i=0;i<opponentGoals;i++) scorers.push({minute:minute(), type:"opponent", name:"Przeciwnik", player:null});
+    return scorers.sort((a,b)=>a.minute-b.minute);
+}
+function updateTopScorersFromMatch(match) {
+    if (!seasonGameState.scorers) seasonGameState.scorers={};
+    (match.scorers||[]).forEach(s=>{
+        if(s.type==="widzew" && s.player) {
+            const key=playerKey(s.player.row);
+            if(!seasonGameState.scorers[key]) seasonGameState.scorers[key]={name:s.name,goals:0};
+            seasonGameState.scorers[key].goals++;
+        }
+    });
+}
+function renderTopScorers() {
+    const el=document.getElementById("topScorers");
+    if(!el) return;
+    const rows=Object.values(seasonGameState.scorers||{}).sort((a,b)=>b.goals-a.goals || a.name.localeCompare(b.name,"pl"));
+    el.innerHTML=rows.length ? rows.map((r,i)=>`<div class="scorer-row"><span>${i+1}.</span><strong>${seasonSafe(r.name)}</strong><b>${r.goals}</b></div>`).join("") : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
 }
 function getWidzewFixtures() {
     return seasonGameState.fixtures
@@ -1381,6 +1464,7 @@ function renderLeagueTable(round, final=false) {
             <span>${r.gf}:${r.ga}</span><strong>${r.pts}</strong>
         </div>`).join("");
     document.getElementById("leagueTableTitle").textContent = final ? "TABELA KOŃCOWA" : "PKO EKSTRAKLASA";
+    renderTopScorers();
 }
 function renderRound(round) {
     const f=getWidzewFixture(round);
@@ -1401,7 +1485,7 @@ function renderRound(round) {
         const result=isW ? (widzewPlayed ? (widzewPlayed.home ? `${widzewPlayed.gf}:${widzewPlayed.ga}` : `${widzewPlayed.ga}:${widzewPlayed.gf}`) : "—") : seasonOtherResult(x);
         return `<div class="round-match ${isW?"widzew-match":""}">
             <div class="round-team home">${seasonLogo(seasonTeamName(x.gospodarz))}<span>${seasonSafe(seasonTeamName(x.gospodarz))}</span></div>
-            <strong class="round-score">${result}</strong>
+            <div class="round-score-wrap"><strong class="round-score">${result}</strong>${isW && widzewPlayed ? `<div class="match-scorers">${(widzewPlayed.scorers||[]).map(s=>`<span>${s.minute}' ${seasonSafe(s.name)}</span>`).join("")}</div>` : ""}</div>
             <div class="round-team away"><span>${seasonSafe(seasonTeamName(x.gosc))}</span>${seasonLogo(seasonTeamName(x.gosc))}</div>
         </div>`;
     }).join("");
@@ -1439,7 +1523,10 @@ function simulateCurrentWidzewMatch() {
     const home=seasonTeamName(f.gospodarz)==="Widzew Łódź";
     const opponent=home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz);
     const score=generateProvisionalWidzewResult(opponent,home);
-    seasonGameState.widzewResults.push({round:seasonGameState.currentRound, opponent, home, gf:home?score[0]:score[1], ga:home?score[1]:score[0]});
+    const gf=home?score[0]:score[1], ga=home?score[1]:score[0];
+    const match={round:seasonGameState.currentRound, opponent, home, gf, ga, scorers:makeMatchScorers(gf,ga)};
+    seasonGameState.widzewResults.push(match);
+    updateTopScorersFromMatch(match);
     renderPlayableSeason();
 }
 function simulateWholeSeason() {
@@ -1451,7 +1538,10 @@ function simulateWholeSeason() {
         const home=seasonTeamName(f.gospodarz)==="Widzew Łódź";
         const opponent=home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz);
         const score=generateProvisionalWidzewResult(opponent,home);
-        seasonGameState.widzewResults.push({round,opponent,home,gf:home?score[0]:score[1],ga:home?score[1]:score[0]});
+        const gf=home?score[0]:score[1], ga=home?score[1]:score[0];
+        const match={round,opponent,home,gf,ga,scorers:makeMatchScorers(gf,ga)};
+        seasonGameState.widzewResults.push(match);
+        updateTopScorersFromMatch(match);
     });
     renderFinalSeason();
 }
@@ -1464,7 +1554,7 @@ function renderFinalSeason() {
         const homeTeam=r.home?"Widzew Łódź":r.opponent, awayTeam=r.home?r.opponent:"Widzew Łódź";
         return `<div class="round-match widzew-match">
             <div class="round-team home">${seasonLogo(homeTeam)}<span>${seasonSafe(homeTeam)}</span></div>
-            <strong class="round-score">${r.home?`${r.gf}:${r.ga}`:`${r.ga}:${r.gf}`}</strong>
+            <div class="round-score-wrap"><strong class="round-score">${r.home?`${r.gf}:${r.ga}`:`${r.ga}:${r.gf}`}</strong><div class="match-scorers">${(r.scorers||[]).map(s=>`<span>${s.minute}' ${seasonSafe(s.name)}</span>`).join("")}</div></div>
             <div class="round-team away"><span>${seasonSafe(awayTeam)}</span>${seasonLogo(awayTeam)}</div>
         </div>`;
     }).join("");
@@ -1476,6 +1566,7 @@ async function initSeasonMode(mode) {
     seasonGameState.mode=mode;
     seasonGameState.currentRound=1;
     seasonGameState.widzewResults=[];
+    seasonGameState.scorers={};
     seasonGameState.widzewFixtures=[];
     const loading=document.getElementById("seasonLoading");
     const content=document.getElementById("seasonBoardContent");
