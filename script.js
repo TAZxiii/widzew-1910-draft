@@ -57,6 +57,7 @@ function formatSquadValue(value) {
     const playerNameScreen = document.getElementById("playerNameScreen");
     const difficultyScreen = document.getElementById("difficultyScreen");
     const draftScreen = document.getElementById("draftScreen");
+    const seasonScreen = document.getElementById("seasonScreen");
 
     let trainerRows = [];
     let selectedTrainer = null;
@@ -75,7 +76,7 @@ function formatSquadValue(value) {
     };
 
     function showScreen(screen) {
-        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen, draftScreen]
+        [startScreen, modeScreen, coachScreen, playerScreen, difficultyScreen, draftScreen, seasonScreen]
             .forEach(s => {
                 if (s) s.classList.add("hidden");
             });
@@ -1101,7 +1102,17 @@ function formatSquadValue(value) {
                 <div><span>ATAK</span><strong>${roundScore(scores.attack)}</strong></div>
             </div>
         `;
-        action.innerHTML = `<div class="draft-finished">DRAFT ZAKOŃCZONY</div>`;
+        const seasonButtonLabel = finalSeason ? `ROZEGRAJ SEZON ${safe(finalSeason)}` : "ROZEGRAJ SEZON";
+        action.innerHTML = `
+            <div class="draft-finished">DRAFT ZAKOŃCZONY</div>
+            <div class="season-launch">
+                <button id="playSeasonButton" class="season-launch-button" type="button">${seasonButtonLabel}</button>
+                <p>Jeśli jesteś gotowy z wyborem swojego składu to pora podbić PKO Ekstraklasę.</p>
+            </div>`;
+
+        document.getElementById("playSeasonButton")?.addEventListener("click", () => {
+            openSeasonScreen(finalSeason);
+        });
         if (!window.finalSquadAlertShown) {
             window.finalSquadAlertShown = true;
             alert('W teorii powinni grać najlepsi, jednak każdy trener ma swoich ulubieńców. Możesz na tym etapie rozgrywki wymienić zawodników ze swojej jedenastki. Pamiętaj, że bycie w podstawowej jedenastce wpływa na zaangażowanie i rozwój zawodnika.');
@@ -1133,6 +1144,15 @@ function formatSquadValue(value) {
 
 
 });
+
+function openSeasonScreen(season) {
+    const seasonValue = season || ((draft.mode === "player" || draft.mode === "gracz") ? "22/23" : draft.gameSeason || "");
+    const title = document.getElementById("seasonTitle");
+    const intro = document.getElementById("seasonIntro");
+    if (title) title.textContent = `ROZGRYWKI SEZONU ${seasonValue}`;
+    if (intro) intro.textContent = `Trener: ${draft.playerName || playerName || (selectedTrainer ? `${selectedTrainer.first} ${selectedTrainer.last}` : "Widzew")}`;
+    showScreen(seasonScreen);
+}
 
 function updateFinalSeasonLabel() {
     const root = document.getElementById("candidateGrid");
