@@ -1345,7 +1345,14 @@ function buildStandings(round) {
     // Generated Widzew results through current round (only after they are played).
     seasonGameState.widzewResults.forEach(r => {
         if (r.round <= round) {
-            applyStandingResult(stats, "Widzew Łódź", seasonTeamName(r.opponent), [r.gf,r.ga], r.home);
+            // Wynik przechowujemy zawsze z perspektywy Widzewa (gf/ga),
+            // ale tabela musi dostać go w kolejności gospodarz-gość.
+            const opponent = seasonTeamName(r.opponent);
+            if (r.home) {
+                applyStandingResult(stats, "Widzew Łódź", opponent, [r.gf, r.ga]);
+            } else {
+                applyStandingResult(stats, opponent, "Widzew Łódź", [r.ga, r.gf]);
+            }
         }
     });
     return Object.values(stats).sort((a,b) =>
@@ -1391,7 +1398,7 @@ function renderRound(round) {
     });
     const html=rows.map(x=>{
         const isW=seasonTeamName(x.gospodarz)==="Widzew Łódź" || seasonTeamName(x.gosc)==="Widzew Łódź";
-        const result=isW ? (widzewPlayed ? `${widzewPlayed.gf}:${widzewPlayed.ga}` : "—") : seasonOtherResult(x);
+        const result=isW ? (widzewPlayed ? (widzewPlayed.home ? `${widzewPlayed.gf}:${widzewPlayed.ga}` : `${widzewPlayed.ga}:${widzewPlayed.gf}`) : "—") : seasonOtherResult(x);
         return `<div class="round-match ${isW?"widzew-match":""}">
             <div class="round-team home">${seasonLogo(seasonTeamName(x.gospodarz))}<span>${seasonSafe(seasonTeamName(x.gospodarz))}</span></div>
             <strong class="round-score">${result}</strong>
