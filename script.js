@@ -1295,41 +1295,37 @@ function seasonOtherResult(fixture) {
     return String(fixture.wynik || "").trim();
 }
 function generateProvisionalWidzewResult(opponent, home) {
-    // Wynik jest liczony zawsze jako [gole Widzewa, gole przeciwnika].
-    // Ocena Widzewa pochodzi wyłącznie z aktualnie wybranego składu, a ocena
-    // rywala z bazy danego sezonu. Rywal silniejszy -> mniej sytuacji Widzewa
-    // i więcej sytuacji przeciwnika. Nie blokujemy jednak goli Widzewa.
-    const opponentRow = seasonGameState.teams.find(
-        t => seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]) === seasonTeamName(opponent)
+    // Zwracamy zawsze [gole Widzewa, gole przeciwnika].
+    // Generator ma dawać realistyczną szansę na 0/1/2+ gole, także w trybie
+    // „Rozegraj cały sezon”. Ocena składu wpływa na przesunięcie prawdopodobieństw,
+    // ale nigdy nie blokuje zdobywania bramek.
+    const opponentRow = seasonGameState.teams.find(t =>
+        seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]) === seasonTeamName(opponent)
     );
     const opp = opponentRow ? seasonNum(opponentRow["Ogólna"]) : 65;
-    const rawWidzew = Number(window.__widzewSeasonOverall);
-    const widzew = Number.isFinite(rawWidzew) && rawWidzew > 0 ? rawWidzew : 65;
+    const raw = Number(window.__widzewSeasonOverall);
+    const widzew = Number.isFinite(raw) && raw > 0 ? raw : 65;
+    const diff = Math.max(-20, Math.min(20, widzew - opp));
 
-    const diff = Math.max(-25, Math.min(25, widzew - opp));
-    const homeBoost = home ? 0.10 : -0.08;
+    // Bazowo: Widzew ~0.95 gola/mecz, rywal ~1.15. Różnica ocen tylko
+    // umiarkowanie przesuwa rozkład. Gospodarz ma niewielki bonus.
+    const wLambda = Math.max(0.55, Math.min(1.35, 0.95 + diff * 0.018 + (home ? 0.08 : -0.04)));
+    const oLambda = Math.max(0.65, Math.min(1.50, 1.15 - diff * 0.018 + (home ? -0.05 : 0.08)));
 
-    // Średnia liczba goli. Zakres jest celowo umiarkowany, żeby mecze nie
-    // kończyły się seryjnie wysokimi wynikami, ale Widzew regularnie zdobywał gole.
-    const lambdaW = Math.max(0.45, Math.min(1.50, 0.82 + diff * 0.020 + homeBoost));
-    const lambdaO = Math.max(0.65, Math.min(1.75, 1.12 - diff * 0.020 - homeBoost));
-
-    // Stabilniejszy generator niż poprzedni Poisson: przy typowym lambda daje
-    // realną szansę na 0, 1, 2+ gole i nie prowadzi do sezonu bez bramek.
-    const goalCount = lambda => {
+    const drawGoals = (lambda) => {
+        // Rozkład Poissona obcięty do 5 bramek.
         const r = Math.random();
-        const p0 = Math.exp(-lambda);
-        const p1 = p0 * lambda;
-        const p2 = p1 * lambda / 2;
-        const p3 = p2 * lambda / 3;
-        if (r < p0) return 0;
-        if (r < p0 + p1) return 1;
-        if (r < p0 + p1 + p2) return 2;
-        if (r < p0 + p1 + p2 + p3) return 3;
-        return Math.random() < 0.78 ? 4 : 5;
+        let cumulative = 0;
+        let term = Math.exp(-lambda);
+        for (let k = 0; k <= 4; k++) {
+            cumulative += term;
+            if (r < cumulative) return k;
+            term *= lambda / (k + 1);
+        }
+        return 5;
     };
 
-    return [goalCount(lambdaW), goalCount(lambdaO)];
+    return [drawGoals(wLambda), drawGoals(oLambda)];
 }
 
 const WIDZEW_SCORER_WEIGHTS = [
@@ -1392,14 +1388,16 @@ function chooseWeightedScorer() {
             const pool=side==="starter" ? starterPools[cat] : benchPools[cat];
             if(pool.length) {
                 const player=pool[Math.floor(Math.random()*pool.length)];
-                const first=player.row?.["Imię"] || "";
+                const first=player.row?.["Imię"] || player.row?.["Imie"] || "";
                 const last=player.row?.["Nazwisko"] || "";
-                return {type:"widzew",player,name:`${first} ${last}`.trim()};
+                const name=`${first} ${last}`.trim() || player.name || "Zawodnik Widzewa";
+                return {type:"widzew",player,name};
             }
         }
     }
     const player=fallback[Math.floor(Math.random()*fallback.length)];
-    return {type:"widzew",player,name:`${player.row?.["Imię"] || ""} ${player.row?.["Nazwisko"] || ""}`.trim()};
+    const name=`${player.row?.["Imię"] || player.row?.["Imie"] || ""} ${player.row?.["Nazwisko"] || ""}`.trim() || "Zawodnik Widzewa";
+    return {type:"widzew",player,name};
 }
 function makeMatchScorers(widzewGoals, opponentGoals) {
     const usedMinutes=new Set();
@@ -1578,7 +1576,9 @@ function renderRound(round) {
                            <button id="simulateMatchButton" class="season-secondary-button">SYMULUJ MECZ</button>`;
     }
     document.getElementById("playMatchButton")?.addEventListener("click",()=>{
-        alert("Ekran właściwego meczu przygotujemy w kolejnym etapie.");
+        // Do czasu wdrożenia właściwego ekranu meczu przycisk nie może pozostawiać
+        // kolejki bez wyniku — wykonujemy tę samą symulację meczu.
+        simulateCurrentWidzewMatch();
     });
     document.getElementById("simulateMatchButton")?.addEventListener("click",()=>{
         simulateCurrentWidzewMatch();
