@@ -93,10 +93,12 @@ function formatSquadValue(value) {
         if (!clean) return [];
 
         const lines = clean.split(/\r?\n/);
-        const headers = lines.shift().split(";").map(h => h.trim());
+        const first = lines[0] || "";
+        const delimiter = (first.split(";").length > first.split(",").length) ? ";" : ",";
+        const headers = lines.shift().split(delimiter).map(h => h.trim());
 
         return lines.filter(line => line.trim()).map(line => {
-            const values = line.split(";");
+            const values = line.split(delimiter);
             return Object.fromEntries(
                 headers.map((header, i) => [header, (values[i] || "").trim()])
             );
