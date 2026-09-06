@@ -1,3 +1,4 @@
+const WTDRAFT_CODE_VERSION = 'v44';
 
 function parseCSV(text) {
     const clean = String(text ?? "").replace(/^\uFEFF/, "").trim();
