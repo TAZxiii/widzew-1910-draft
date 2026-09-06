@@ -2,6 +2,181 @@
 (function () {
     let preparedResults = null;
 
+    function getDrafted20PlayerPool() {
+        // The draft object is lexical inside script.js, so this file cannot safely
+        // read `draft` directly. The finished 20-player squad is, however, already
+        // rendered in the final squad screen immediately before the season starts.
+        // We rebuild the exact 20-player scorer pool from that rendered squad.
+        const starters = Array.from(document.querySelectorAll(".squad-list-player"));
+        const bench = Array.from(document.querySelectorAll(".bench-player"));
+        const pool = [];
+
+        const starterRole = {
+            "BR": "br",
+            "LO/PO": "loPo",
+            "ŚO": "so",
+            "ŚPD/ŚP/OP": "pomoc",
+            "LS/LP/PS/PP": "skrzydlowi",
+            "N": "napastnicy"
+        };
+
+        starters.forEach(el => {
+            const info = el.querySelector(".squad-player-info");
+            const name = info ? info.querySelector("strong")?.textContent.trim() : "";
+            const roleLabel = info ? info.querySelector("small")?.textContent.trim() : "";
+            const parts = name.split(/\s+/);
+            if (!name || parts.length < 2) return;
+            const first = parts.shift();
+            const last = parts.join(" ");
+            const role = starterRole[roleLabel] || "";
+            if (!role) return;
+            pool.push({
+                row: { "Imię": first, "Nazwisko": last },
+                role,
+                position: roleLabel
+            });
+        });
+
+        bench.forEach(el => {
+            const info = el.querySelector(".bench-info");
+            const name = info ? info.querySelector("strong")?.textContent.trim() : "";
+            const position = info ? info.querySelector("small")?.textContent.trim() : "";
+            const parts = name.split(/\s+/);
+            if (!name || parts.length < 2) return;
+            const first = parts.shift();
+            const last = parts.join(" ");
+            const normalized = String(position || "").toUpperCase().replace(/\s+/g, "");
+            let role = "bench-mid";
+            if (normalized === "BR") role = "bench-br";
+            else if (normalized === "N") role = "bench-n";
+            else if (normalized === "ŚO" || normalized === "SO" || normalized === "LO/PO" || normalized === "LOPO") role = "bench-def";
+            pool.push({
+                row: { "Imię": first, "Nazwisko": last },
+                role,
+                position
+            });
+        });
+
+        return pool;
+    }
+
+    function scorerCategoryFromPoolPlayer(p) {
+        const pos = String(p.position || "").toUpperCase().replace(/\s+/g, "");
+        if (pos === "N") return "N";
+        if (pos === "ŚO" || pos === "SO") return "CB";
+        if (pos === "LO/PO" || pos === "LOPO") return "DEF";
+        if (pos.includes("ŚPD") || pos.includes("ŚP") || pos.includes("OP")) return "MID";
+        if (pos.includes("LS") || pos.includes("LP") || pos.includes("PS") || pos.includes("PP")) return "WING";
+
+        const role = String(p.role || "");
+        if (role === "napastnicy" || role === "bench-n") return "N";
+        if (role === "so") return "CB";
+        if (role === "loPo" || role === "bench-def") return "DEF";
+        if (role === "pomoc" || role === "bench-mid") return "MID";
+        if (role === "skrzydlowi") return "WING";
+        return "N";
+    }
+
+    function chooseWeightedScorerFromDrafted20() {
+        const squad = getDrafted20PlayerPool();
+        const starters = squad.filter(p => !String(p.role).startsWith("bench-"));
+        const bench = squad.filter(p => String(p.role).startsWith("bench-"));
+        const starterPools = { N: [], MID: [], WING: [], DEF: [], CB: [] };
+        const benchPools = { N: [], MID: [], WING: [], DEF: [], CB: [] };
+
+        starters.forEach(p => {
+            const c = scorerCategoryFromPoolPlayer(p);
+            if (starterPools[c]) starterPools[c].push(p);
+        });
+        bench.forEach(p => {
+            const c = scorerCategoryFromPoolPlayer(p);
+            if (benchPools[c]) benchPools[c].push(p);
+        });
+
+        // Ustalone wagi — bez zmiany prawdopodobieństw.
+        const base = { N: 33, MID: 12, WING: 9, DEF: 7, CB: 5 };
+        const starterWeights = { ...base };
+        const available = Object.keys(base).filter(c => starterPools[c].length);
+
+        Object.keys(base).forEach(c => {
+            if (!starterPools[c].length && available.length) {
+                const bonus = base[c] / 4;
+                available.forEach(a => starterWeights[a] += bonus);
+            }
+        });
+
+        const candidates = [];
+        available.forEach(c => candidates.push(["starter", c, starterWeights[c]]));
+        const benchWeights = { N: 18, MID: 6, WING: 5, DEF: 3, CB: 1 };
+        Object.keys(benchWeights).forEach(c => {
+            if (benchPools[c].length) candidates.push(["bench", c, benchWeights[c]]);
+        });
+        // 1% — samobój rywala.
+        candidates.push(["own", "OWN", 1]);
+
+        const fallback = [...starters, ...bench].filter(p => scorerCategoryFromPoolPlayer(p) !== "GK");
+        if (!candidates.length || !fallback.length) return { type: "opponent", name: "Przeciwnik", player: null };
+
+        const total = candidates.reduce((sum, item) => sum + item[2], 0);
+        let roll = Math.random() * total;
+        for (const [side, category, weight] of candidates) {
+            roll -= weight;
+            if (roll <= 0) {
+                if (side === "own") return { type: "own", name: "Samobój", player: null };
+                const pool = side === "starter" ? starterPools[category] : benchPools[category];
+                if (pool.length) {
+                    const player = pool[Math.floor(Math.random() * pool.length)];
+                    const name = `${player.row["Imię"]} ${player.row["Nazwisko"]}`.trim();
+                    return { type: "widzew", player, name };
+                }
+            }
+        }
+
+        const player = fallback[Math.floor(Math.random() * fallback.length)];
+        return {
+            type: "widzew",
+            player,
+            name: `${player.row["Imię"]} ${player.row["Nazwisko"]}`.trim()
+        };
+    }
+
+    function makeScorersUsingDrafted20(widzewGoals, opponentGoals) {
+        const usedMinutes = new Set();
+        const minute = () => {
+            let m = 1 + Math.floor(Math.random() * 90);
+            while (usedMinutes.has(m) && usedMinutes.size < 90) {
+                m = 1 + Math.floor(Math.random() * 90);
+            }
+            usedMinutes.add(m);
+            return m;
+        };
+
+        const scorers = [];
+        for (let i = 0; i < Number(widzewGoals || 0); i++) {
+            const s = chooseWeightedScorerFromDrafted20();
+            scorers.push({
+                minute: minute(),
+                type: s.type,
+                name: s.name,
+                player: s.player || null
+            });
+        }
+        for (let i = 0; i < Number(opponentGoals || 0); i++) {
+            scorers.push({
+                minute: minute(),
+                type: "opponent",
+                name: "Przeciwnik",
+                player: null
+            });
+        }
+        return scorers.sort((a, b) => a.minute - b.minute);
+    }
+
+    // Zastępujemy tylko generator strzelców. Generator wyników pozostaje bez zmian.
+    // Dzięki temu zarówno "Rozegraj sezon", jak i "Symuluj sezon" korzystają z
+    // dokładnie tego samego 20-osobowego składu wybranego w drafcie.
+    window.makeMatchScorers = makeScorersUsingDrafted20;
+
     function cloneMatch(match) {
         return {
             round: Number(match.round),
@@ -55,8 +230,6 @@
         const container = document.querySelector(".round-match.widzew-match .match-scorers");
         if (!container) return;
 
-        // Każdy gol dostaje osobny wpis. Nie grupujemy strzelców — jeśli zawodnik
-        // strzeli dwa gole, pojawią się dwie pozycje z dwiema minutami.
         container.innerHTML = match.scorers
             .slice()
             .sort((a, b) => Number(a.minute || 0) - Number(b.minute || 0))
