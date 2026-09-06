@@ -1295,9 +1295,10 @@ function seasonOtherResult(fixture) {
     return String(fixture.wynik || "").trim();
 }
 function generateProvisionalWidzewResult(opponent, home) {
-    // Symulacja wyniku Widzewa. Ocena obu zespołów wpływa na liczbę sytuacji,
-    // ale nie daje Widzewowi sztucznej przewagi. Funkcja zawsze zwraca wynik
-    // w kolejności [gole Widzewa, gole przeciwnika].
+    // Wynik jest liczony zawsze jako [gole Widzewa, gole przeciwnika].
+    // Ocena Widzewa pochodzi wyłącznie z aktualnie wybranego składu, a ocena
+    // rywala z bazy danego sezonu. Rywal silniejszy -> mniej sytuacji Widzewa
+    // i więcej sytuacji przeciwnika. Nie blokujemy jednak goli Widzewa.
     const opponentRow = seasonGameState.teams.find(
         t => seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]) === seasonTeamName(opponent)
     );
@@ -1305,39 +1306,37 @@ function generateProvisionalWidzewResult(opponent, home) {
     const rawWidzew = Number(window.__widzewSeasonOverall);
     const widzew = Number.isFinite(rawWidzew) && rawWidzew > 0 ? rawWidzew : 65;
 
-    const diff = Math.max(-20, Math.min(20, widzew - opp));
-    const homeBoost = home ? 0.10 : -0.05;
+    const diff = Math.max(-25, Math.min(25, widzew - opp));
+    const homeBoost = home ? 0.10 : -0.08;
 
-    // Im lepszy rywal, tym mniej oczekiwanych goli Widzewa i więcej rywala.
-    const lambdaW = Math.max(0.70, Math.min(1.35, 1.02 + diff * 0.018 + homeBoost));
-    const lambdaO = Math.max(0.85, Math.min(1.55, 1.18 - diff * 0.018 - homeBoost));
+    // Średnia liczba goli. Zakres jest celowo umiarkowany, żeby mecze nie
+    // kończyły się seryjnie wysokimi wynikami, ale Widzew regularnie zdobywał gole.
+    const lambdaW = Math.max(0.45, Math.min(1.50, 0.82 + diff * 0.020 + homeBoost));
+    const lambdaO = Math.max(0.65, Math.min(1.75, 1.12 - diff * 0.020 - homeBoost));
 
-    const poisson = lambda => {
-        const L = Math.exp(-lambda);
-        let p = 1;
-        let k = 0;
-        do {
-            k++;
-            p *= Math.random();
-        } while (p > L && k < 12);
-        return Math.min(5, Math.max(0, k - 1));
+    // Stabilniejszy generator niż poprzedni Poisson: przy typowym lambda daje
+    // realną szansę na 0, 1, 2+ gole i nie prowadzi do sezonu bez bramek.
+    const goalCount = lambda => {
+        const r = Math.random();
+        const p0 = Math.exp(-lambda);
+        const p1 = p0 * lambda;
+        const p2 = p1 * lambda / 2;
+        const p3 = p2 * lambda / 3;
+        if (r < p0) return 0;
+        if (r < p0 + p1) return 1;
+        if (r < p0 + p1 + p2) return 2;
+        if (r < p0 + p1 + p2 + p3) return 3;
+        return Math.random() < 0.78 ? 4 : 5;
     };
 
-    return [poisson(lambdaW), poisson(lambdaO)];
+    return [goalCount(lambdaW), goalCount(lambdaO)];
 }
 
 const WIDZEW_SCORER_WEIGHTS = [
-    ["starter", "N", 33],
-    ["starter", "MID", 12],
-    ["starter", "WING", 9],
-    ["starter", "DEF", 7],
-    ["starter", "CB", 5],
-    ["bench", "N", 18],
-    ["bench", "MID", 6],
-    ["bench", "WING", 5],
-    ["bench", "DEF", 3],
-    ["bench", "CB", 1],
-    ["own", "OWN", 1]
+    ["starter", "N", 33], ["starter", "MID", 12], ["starter", "WING", 9],
+    ["starter", "DEF", 7], ["starter", "CB", 5],
+    ["bench", "N", 18], ["bench", "MID", 6], ["bench", "WING", 5],
+    ["bench", "DEF", 3], ["bench", "CB", 1], ["own", "OWN", 1]
 ];
 function scorerCategory(p) {
     const pos = normalizeSwapPosition(getSwapPosition(p));
@@ -1349,78 +1348,74 @@ function scorerCategory(p) {
     return "N";
 }
 function chooseWeightedScorer() {
-    const starters = draft.selected.filter(p => !String(p.role).startsWith("bench-"));
-    const bench = draft.selected.filter(p => String(p.role).startsWith("bench-"));
+    const starters = draft.selected.filter(p => !String(p.role || "").startsWith("bench-"));
+    const bench = draft.selected.filter(p => String(p.role || "").startsWith("bench-"));
+    const starterPools = { N: [], MID: [], WING: [], DEF: [], CB: [] };
+    const benchPools = { N: [], MID: [], WING: [], DEF: [], CB: [] };
+    starters.forEach(p => { const c=scorerCategory(p); if(starterPools[c]) starterPools[c].push(p); });
+    bench.forEach(p => { const c=scorerCategory(p); if(benchPools[c]) benchPools[c].push(p); });
 
-    const starterPools = {
-        N: starters.filter(p => scorerCategory(p) === "N"),
-        MID: starters.filter(p => scorerCategory(p) === "MID"),
-        WING: starters.filter(p => scorerCategory(p) === "WING"),
-        DEF: starters.filter(p => scorerCategory(p) === "DEF"),
-        CB: starters.filter(p => scorerCategory(p) === "CB")
-    };
-    const benchPools = {
-        N: bench.filter(p => scorerCategory(p) === "N"),
-        MID: bench.filter(p => scorerCategory(p) === "MID"),
-        WING: bench.filter(p => scorerCategory(p) === "WING"),
-        DEF: bench.filter(p => scorerCategory(p) === "DEF"),
-        CB: bench.filter(p => scorerCategory(p) === "CB")
-    };
-
-    // Bazowe wagi podane przez gracza. Jeżeli danej kategorii nie ma w XI,
-    // jej wagę dzielimy przez 4 i dodajemy do każdej z pozostałych dostępnych
-    // kategorii podstawowej jedenastki.
-    const starterBase = {N:33, MID:12, WING:9, DEF:7, CB:5};
-    const starterWeights = {...starterBase};
-    const availableStarter = Object.keys(starterBase).filter(cat => starterPools[cat].length);
-
-    Object.keys(starterBase).forEach(cat => {
-        if (!starterPools[cat].length && availableStarter.length) {
-            const bonus = starterBase[cat] / 4;
-            availableStarter.forEach(target => starterWeights[target] += bonus);
+    // Jeśli brakuje kategorii w podstawowej XI, jej 1/4 wagi trafia do każdej
+    // dostępnej kategorii podstawowej XI – zgodnie z ustalonymi zasadami.
+    const base = {N:33, MID:12, WING:9, DEF:7, CB:5};
+    const starterWeights = {...base};
+    const available = Object.keys(base).filter(c => starterPools[c].length);
+    Object.keys(base).forEach(c => {
+        if(!starterPools[c].length && available.length) {
+            const bonus=base[c]/4;
+            available.forEach(a => starterWeights[a]+=bonus);
         }
     });
 
-    // Ławka zachowuje własne wagi; pozycje nieobecne są po prostu niedostępne.
-    const candidates = [];
-    availableStarter.forEach(cat => {
-        candidates.push(["starter", cat, starterWeights[cat]]);
+    const candidates=[];
+    available.forEach(c => candidates.push(["starter",c,starterWeights[c]]));
+    const benchWeights={N:18,MID:6,WING:5,DEF:3,CB:1};
+    Object.keys(benchWeights).forEach(c => {
+        if(benchPools[c].length) candidates.push(["bench",c,benchWeights[c]]);
     });
-    ["N","MID","WING","DEF","CB"].forEach(cat => {
-        if (benchPools[cat].length) candidates.push(["bench", cat, ({N:18,MID:6,WING:5,DEF:3,CB:1}[cat])]);
+    // Samobój pozostaje 1% puli.
+    candidates.push(["own","OWN",1]);
+
+    // Awaryjnie zawsze wybierz zawodnika z pola, jeśli draft jest nietypowy.
+    const fallback = [...starters,...bench].filter(p => {
+        const pos=normalizeSwapPosition(getSwapPosition(p));
+        return pos !== "BR";
     });
+    if(!candidates.length || !fallback.length) return {type:"opponent",name:"Przeciwnik"};
 
-    // Samobój: 1% bazowej szansy.
-    candidates.push(["own", "OWN", 1]);
-
-    if (!candidates.length) return {type:"opponent", name:"Przeciwnik"};
-
-    const total = candidates.reduce((sum, x) => sum + x[2], 0);
-    let roll = Math.random() * total;
-    for (const [side, cat, weight] of candidates) {
-        roll -= weight;
-        if (roll <= 0) {
-            if (side === "own") return {type:"own", name:"Samobój"};
-            const pool = side === "starter" ? starterPools[cat] : benchPools[cat];
-            const player = pool[Math.floor(Math.random() * pool.length)];
-            return {type:"widzew", player, name:`${player.row["Imię"]} ${player.row["Nazwisko"]}`};
+    const total=candidates.reduce((sum,x)=>sum+x[2],0);
+    let roll=Math.random()*total;
+    for(const [side,cat,weight] of candidates) {
+        roll-=weight;
+        if(roll<=0) {
+            if(side==="own") return {type:"own",name:"Samobój"};
+            const pool=side==="starter" ? starterPools[cat] : benchPools[cat];
+            if(pool.length) {
+                const player=pool[Math.floor(Math.random()*pool.length)];
+                const first=player.row?.["Imię"] || "";
+                const last=player.row?.["Nazwisko"] || "";
+                return {type:"widzew",player,name:`${first} ${last}`.trim()};
+            }
         }
     }
-    return {type:"opponent", name:"Przeciwnik"};
+    const player=fallback[Math.floor(Math.random()*fallback.length)];
+    return {type:"widzew",player,name:`${player.row?.["Imię"] || ""} ${player.row?.["Nazwisko"] || ""}`.trim()};
 }
 function makeMatchScorers(widzewGoals, opponentGoals) {
     const usedMinutes=new Set();
     const minute=()=>{
-        let m;
-        do { m=1+Math.floor(Math.random()*90); } while(usedMinutes.has(m) && usedMinutes.size<90);
+        let m=1+Math.floor(Math.random()*90);
+        while(usedMinutes.has(m) && usedMinutes.size<90) m=1+Math.floor(Math.random()*90);
         usedMinutes.add(m); return m;
     };
     const scorers=[];
-    for(let i=0;i<widzewGoals;i++) {
+    for(let i=0;i<Number(widzewGoals||0);i++) {
         const s=chooseWeightedScorer();
-        scorers.push({minute:minute(), type:s.type, name:s.name, player:s.player||null});
+        scorers.push({minute:minute(),type:s.type,name:s.name,player:s.player||null});
     }
-    for(let i=0;i<opponentGoals;i++) scorers.push({minute:minute(), type:"opponent", name:"Przeciwnik", player:null});
+    for(let i=0;i<Number(opponentGoals||0);i++) {
+        scorers.push({minute:minute(),type:"opponent",name:"Przeciwnik",player:null});
+    }
     return scorers.sort((a,b)=>a.minute-b.minute);
 }
 function updateTopScorersFromMatch(match) {
@@ -1541,6 +1536,14 @@ function renderLeagueTable(round, final=false) {
     document.getElementById("leagueTableTitle").textContent = final ? "TABELA KOŃCOWA" : "PKO EKSTRAKLASA";
     renderTopScorers();
 }
+function renderMatchScorers(scorers) {
+    const list = Array.isArray(scorers) ? scorers : [];
+    return list
+        .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0))
+        .map(s => `<span>${Number(s.minute) || 1}' ${seasonSafe(s.name || (s.type === "opponent" ? "Przeciwnik" : "Samobój"))}</span>`)
+        .join("");
+}
+
 function renderRound(round) {
     const f=getWidzewFixture(round);
     const others=seasonGameState.fixtures.filter(x=>Number(x.kolejka)===Number(round) &&
@@ -1560,7 +1563,7 @@ function renderRound(round) {
         const result=isW ? (widzewPlayed ? (widzewPlayed.home ? `${widzewPlayed.gf}:${widzewPlayed.ga}` : `${widzewPlayed.ga}:${widzewPlayed.gf}`) : "—") : seasonOtherResult(x);
         return `<div class="round-match ${isW?"widzew-match":""}">
             <div class="round-team home">${seasonLogo(seasonTeamName(x.gospodarz))}<span>${seasonSafe(seasonTeamName(x.gospodarz))}</span></div>
-            <div class="round-score-wrap"><strong class="round-score">${result}</strong>${isW && widzewPlayed ? `<div class="match-scorers">${(widzewPlayed.scorers||[]).map(s=>`<span>${s.minute}' ${seasonSafe(s.name)}</span>`).join("")}</div>` : ""}</div>
+            <div class="round-score-wrap"><strong class="round-score">${result}</strong>${isW && widzewPlayed ? `<div class="match-scorers">${renderMatchScorers(widzewPlayed.scorers)}</div>` : ""}</div>
             <div class="round-team away"><span>${seasonSafe(seasonTeamName(x.gosc))}</span>${seasonLogo(seasonTeamName(x.gosc))}</div>
         </div>`;
     }).join("");
@@ -1678,9 +1681,7 @@ function renderFinalSeason() {
             const homeTeam = r.home ? "Widzew Łódź" : r.opponent;
             const awayTeam = r.home ? r.opponent : "Widzew Łódź";
             const score = r.home ? `${r.gf}:${r.ga}` : `${r.ga}:${r.gf}`;
-            const scorerHtml = (r.scorers || []).map(s =>
-                `<span>${s.minute}' ${seasonSafe(s.name)}</span>`
-            ).join("");
+            const scorerHtml = renderMatchScorers(r.scorers);
             return `<div class="round-match widzew-match">
                 <div class="round-team home">${seasonLogo(homeTeam)}<span>${seasonSafe(homeTeam)}</span></div>
                 <div class="round-score-wrap"><strong class="round-score">${score}</strong>${scorerHtml ? `<div class="match-scorers">${scorerHtml}</div>` : ""}</div>
