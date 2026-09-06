@@ -9,7 +9,9 @@
             home: !!match.home,
             gf: Number(match.gf),
             ga: Number(match.ga),
-            scorers: Array.isArray(match.scorers) ? match.scorers.map(s => ({ ...s })) : []
+            scorers: Array.isArray(match.scorers)
+                ? match.scorers.map(s => ({ ...s }))
+                : []
         };
     }
 
@@ -29,6 +31,67 @@
         return preparedResults;
     }
 
+    function scorerClass(scorer) {
+        return scorer && scorer.type === "opponent"
+            ? "scorer-opponent"
+            : "scorer-widzew";
+    }
+
+    function scorerName(scorer) {
+        if (!scorer) return "";
+        if (scorer.type === "opponent") return "Przeciwnik";
+        if (scorer.type === "own") return "Samobój";
+        return scorer.name || "Zawodnik Widzewa";
+    }
+
+    function decorateVisibleScorers(match) {
+        const containers = document.querySelectorAll(".match-scorers");
+        containers.forEach(container => {
+            container.innerHTML = "";
+        });
+
+        if (!match || !Array.isArray(match.scorers) || !match.scorers.length) return;
+
+        const container = document.querySelector(".round-match.widzew-match .match-scorers");
+        if (!container) return;
+
+        // Każdy gol dostaje osobny wpis. Nie grupujemy strzelców — jeśli zawodnik
+        // strzeli dwa gole, pojawią się dwie pozycje z dwiema minutami.
+        container.innerHTML = match.scorers
+            .slice()
+            .sort((a, b) => Number(a.minute || 0) - Number(b.minute || 0))
+            .map(s => {
+                const minute = Math.max(1, Math.min(90, Number(s.minute) || 1));
+                return `<span class="${scorerClass(s)}">${minute}' ${seasonSafe(scorerName(s))}</span>`;
+            })
+            .join("");
+    }
+
+    function addScorerStyles() {
+        if (document.getElementById("seasonScorerFixStyles")) return;
+        const style = document.createElement("style");
+        style.id = "seasonScorerFixStyles";
+        style.textContent = `
+            .match-scorers {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 3px;
+                margin-top: 7px;
+                font-size: 13px;
+                font-weight: 800;
+                line-height: 1.25;
+            }
+            .match-scorers span.scorer-widzew {
+                color: #39d353;
+            }
+            .match-scorers span.scorer-opponent {
+                color: #ff4d4f;
+            }
+        `;
+        document.head.appendChild(style);
+    }
+
     function revealCurrentRound() {
         const round = Number(seasonGameState.currentRound);
         if ((seasonGameState.widzewResults || []).some(m => Number(m.round) === round)) return;
@@ -44,7 +107,10 @@
         if (typeof renderPlayableSeason === "function") {
             renderPlayableSeason();
         }
+        decorateVisibleScorers(revealed);
     }
+
+    addScorerStyles();
 
     const originalInitSeasonMode = window.initSeasonMode;
     if (typeof originalInitSeasonMode === "function") {
