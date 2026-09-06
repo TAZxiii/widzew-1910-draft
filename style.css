@@ -1935,3 +1935,53 @@ h1 span {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
 }
+
+/* ===== V17 – zamiany tylko na ekranie końcowym ===== */
+.swap-instruction-final {
+    margin: 0 auto 12px;
+    padding: 7px 10px;
+    width: fit-content;
+    max-width: 90%;
+    border-radius: 8px;
+    background: rgba(255,255,255,.04);
+    color: #aaa;
+    font-size: 12px;
+    text-align: center;
+}
+
+.swap-player {
+    cursor: pointer;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+
+.swap-player.swap-selected {
+    box-shadow: 0 0 0 2px var(--red), 0 0 14px rgba(227,6,19,.25);
+    transform: translateY(-1px);
+}
+
+.swap-player.swap-target {
+    box-shadow: 0 0 0 2px rgba(255,255,255,.45);
+}
+
+.swap-message {
+    position: fixed;
+    left: 50%;
+    bottom: 28px;
+    transform: translateX(-50%) translateY(10px);
+    opacity: 0;
+    z-index: 10000;
+    pointer-events: none;
+    padding: 11px 16px;
+    max-width: 90vw;
+    border-radius: 9px;
+    background: #171717;
+    border: 1px solid #555;
+    color: #fff;
+    font-size: 13px;
+    text-align: center;
+    transition: .2s ease;
+}
+.swap-message.visible {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}
