@@ -638,6 +638,12 @@ function formatSquadValue(value) {
 
     async function startDraft() {
         draft.mode = selectedTrainer ? "trainer" : "player";
+        if (selectedTrainer) {
+            draft.gameSeason = selectedTrainer.season || selectedTrainer.Sezon ||
+                selectedTrainer.seasonName || selectedTrainer["Sezon"] || null;
+        } else {
+            draft.gameSeason = "22/23";
+        }
         if (selectedTrainer && !formationRows.length) {
             formationRows = await getCSV("data/formacje.csv");
         }
@@ -960,11 +966,16 @@ function formatSquadValue(value) {
 
         position.textContent = "SKŁAD GOTOWY";
         instruction.textContent = "Twój 20-osobowy skład Widzewa.";
-        progress.innerHTML = `Cały skład: 20/20<br><span class="final-coach-name">Trener: ${safe(
-            selectedTrainer
-                ? `${selectedTrainer.first} ${selectedTrainer.last}`
-                : (draft.playerName || playerName)
-        )}</span>`;
+        const finalCoachName = selectedTrainer
+            ? `${selectedTrainer.first} ${selectedTrainer.last}`
+            : (draft.playerName || playerName);
+        const finalSeason = selectedTrainer
+            ? (selectedTrainer.season || selectedTrainer.Sezon || selectedTrainer.seasonName || draft.gameSeason || "")
+            : "22/23";
+
+        progress.innerHTML = `Cały skład: 20/20<br>
+            <span class="final-coach-name">Trener: ${safe(finalCoachName)}</span><br>
+            <span class="final-season">Sezon: ${safe(finalSeason)}</span>`;
 
         const starters = draft.selected.filter(p => !String(p.role).startsWith("bench-"));
         const bench = draft.selected.filter(p => String(p.role).startsWith("bench-"));
