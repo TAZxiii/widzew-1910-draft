@@ -1446,9 +1446,16 @@ async function initSeasonMode(mode) {
     if(loading) {loading.classList.remove("hidden"); loading.textContent="Wczytywanie baz sezonu...";}
     if(content) content.classList.add("hidden");
     try {
+        const fixtureFiles = {'25/26': 'fixtures_25-26.csv', '22/23': 'fixtures_22-23.csv', '26/27': 'fixtures_26-27.csv', '23/24': 'fixtures_23-24.csv', '24/25': 'fixtures_24-25.csv'};
+        const teamFiles = {'26/27': 'Book 1(teams(26-27)).csv', '22/23': 'Book 1(teams(22-23)).csv', '24/25': 'Book 1(teams(24-25)).csv', '25/26': 'Book 1(teams(25-26)).csv', '23/24': 'Book 1(teams(23-24)).csv'};
+        const fixtureFile = fixtureFiles[season];
+        const teamFile = teamFiles[season];
+        if (!fixtureFile || !teamFile) {
+            throw new Error(`Brak pliku sezonu ${season}: fixtures=${fixtureFile || "BRAK"}, teams=${teamFile || "BRAK"}`);
+        }
         const [fixtures,teams]=await Promise.all([
-            loadSeasonCSV(`data/fixtures/fixtures_${season.replace("/","-")}.csv`),
-            loadSeasonCSV(`data/teams/Book 1(teams(${season.replace("/","-")})).csv`)
+            loadSeasonCSV(`data/fixtures/${fixtureFile}`),
+            loadSeasonCSV(`data/teams/${teamFile}`)
         ]);
         seasonGameState.fixtures=fixtures;
         seasonGameState.teams=teams;
@@ -1460,7 +1467,7 @@ async function initSeasonMode(mode) {
         else renderPlayableSeason();
     } catch(err) {
         console.error("Błąd ładowania sezonu:",err);
-        if(loading) loading.textContent="Nie udało się wczytać baz sezonu. Sprawdź folder data.";
+        if(loading) loading.textContent=`Nie udało się wczytać baz sezonu: ${err.message || err}.`;
     }
 }
 function openSeasonMode(mode) {
