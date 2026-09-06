@@ -92,17 +92,33 @@ function formatSquadValue(value) {
         const clean = text.replace(/^\uFEFF/, "").trim();
         if (!clean) return [];
 
-        const lines = clean.split(/\r?\n/);
-        const first = lines[0] || "";
-        const delimiter = (first.split(";").length > first.split(",").length) ? ";" : ",";
-        const headers = lines.shift().split(delimiter).map(h => h.trim());
+        const firstLine = clean.split(/\r?\n/, 1)[0] || "";
+        const delimiter = (firstLine.split(";").length > firstLine.split(",").length) ? ";" : ",";
 
-        return lines.filter(line => line.trim()).map(line => {
-            const values = line.split(delimiter);
-            return Object.fromEntries(
-                headers.map((header, i) => [header, (values[i] || "").trim()])
-            );
-        });
+        const rows = [];
+        let row = [], field = "", quoted = false;
+        for (let i = 0; i < clean.length; i++) {
+            const ch = clean[i];
+            const next = clean[i + 1];
+            if (ch === '"' && quoted && next === '"') { field += '"'; i++; continue; }
+            if (ch === '"') { quoted = !quoted; continue; }
+            if (ch === delimiter && !quoted) { row.push(field.trim()); field = ""; continue; }
+            if ((ch === "\n" || ch === "\r") && !quoted) {
+                if (ch === "\r" && next === "\n") i++;
+                row.push(field.trim()); field = "";
+                if (row.some(v => v !== "")) rows.push(row);
+                row = [];
+                continue;
+            }
+            field += ch;
+        }
+        row.push(field.trim());
+        if (row.some(v => v !== "")) rows.push(row);
+
+        const headers = rows.shift() || [];
+        return rows.map(values => Object.fromEntries(
+            headers.map((header, i) => [header.replace(/^\uFEFF/, "").trim(), (values[i] || "").trim()])
+        ));
     }
 
     async function getCSV(path) {
@@ -1239,7 +1255,9 @@ async function loadSeasonCSV(path) {
     const response = await fetch(`${path}?v=${Date.now()}`, {cache:"no-store"});
     if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
     const text = await response.text();
-    return parseCSV(text);
+    const rows = parseCSV(text);
+    if (!rows.length) throw new Error(`${path}: pusty plik lub nieprawidłowy CSV`);
+    return rows;
 }
 function seasonTeamName(name) {
     const n = String(name || "").trim();
