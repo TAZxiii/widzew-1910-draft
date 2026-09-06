@@ -3,21 +3,15 @@
     let preparedResults = null;
 
     function cloneMatch(match) {
-        return {
-            round: Number(match.round),
-            opponent: match.opponent,
-            home: !!match.home,
-            gf: Number(match.gf),
-            ga: Number(match.ga),
-            scorers: Array.isArray(match.scorers) ? match.scorers.map(s => ({ ...s })) : []
-        };
+        // JSON clone zachowuje dokładnie strukturę obiektów strzelców
+        // (w tym minute/type/name/player), zamiast rozbijać np. stringi na znaki.
+        return JSON.parse(JSON.stringify(match));
     }
 
     function prepareResults() {
         if (preparedResults) return preparedResults;
         const originalRenderFinalSeason = window.renderFinalSeason;
         try {
-            // Use the existing whole-season simulator unchanged. Suppress only its final render.
             window.renderFinalSeason = function () {};
             window.simulateWholeSeason();
             preparedResults = (seasonGameState.widzewResults || []).map(cloneMatch);
@@ -47,7 +41,6 @@
         }
     }
 
-    // Reset precomputed results whenever a new playable season is initialized.
     const originalInitSeasonMode = window.initSeasonMode;
     if (typeof originalInitSeasonMode === "function") {
         window.initSeasonMode = async function (mode) {
@@ -60,9 +53,12 @@
 
     window.simulateCurrentWidzewMatch = revealCurrentRound;
 
+    // Tylko SYMULUJ MECZ jest obsługiwany przez tę poprawkę.
+    // ZAGRAJ MECZ pozostaje osobną funkcją — obecnie w głównym kodzie
+    // nie istnieje jeszcze właściwy ekran/interakcja rozegrania meczu.
     document.addEventListener("click", function (event) {
         const button = event.target && event.target.closest
-            ? event.target.closest("#playMatchButton, #simulateMatchButton")
+            ? event.target.closest("#simulateMatchButton")
             : null;
         if (!button) return;
         event.preventDefault();
