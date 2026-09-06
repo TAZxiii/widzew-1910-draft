@@ -993,3 +993,171 @@ function formatSquadValue(value) {
 
 
 });
+
+
+/* ===== V16: zamiana zawodników XI <-> ławka ===== */
+let finalStartingXI = [];
+let finalBench = [];
+let finalSwapMode = null;
+
+function draftPosition(player) {
+    return String(
+        player?.position ??
+        player?.["Pozycja"] ??
+        player?.pos ??
+        ""
+    ).trim();
+}
+
+function sameDraftPosition(a, b) {
+    return draftPosition(a) === draftPosition(b);
+}
+
+function getPlayerDisplayName(p) {
+    const first = p?.["Imię"] ?? p?.["Imie"] ?? p?.first ?? p?.firstName ?? "";
+    const last = p?.["Nazwisko"] ?? p?.last ?? p?.lastName ?? "";
+    return `${first} ${last}`.trim();
+}
+
+function getPlayerRating(p) {
+    const raw = p?.["Ocena ogólna"] ?? p?.["Ocena"] ?? p?.overall ?? p?.rating ?? 0;
+    const n = Number(String(raw).replace(",", "."));
+    return Number.isFinite(n) ? n : 0;
+}
+
+function renderSwapControls() {
+    const list = document.querySelector(".squad-list, .final-squad-list, #squadList");
+    if (!list) return;
+
+    list.classList.add("swap-enabled");
+
+    list.querySelectorAll(".squad-row, .player-row, .final-player-row").forEach(row => {
+        row.classList.remove("swap-source", "swap-target", "swap-disabled");
+    });
+}
+
+function swapPlayers(starterIndex, benchIndex) {
+    const starter = finalStartingXI[starterIndex];
+    const bench = finalBench[benchIndex];
+
+    if (!starter || !bench || !sameDraftPosition(starter, bench)) return false;
+
+    finalStartingXI[starterIndex] = bench;
+    finalBench[benchIndex] = starter;
+    return true;
+}
+
+function calculateFinalTeamStats() {
+    const starters = finalStartingXI;
+    const ratings = starters.map(getPlayerRating);
+
+    const overall = ratings.length
+        ? Math.round(ratings.reduce((a, b) => a + b, 0) / ratings.length)
+        : 0;
+
+    // Keep existing detailed formation calculations if available.
+    // The overall team value is always recalculated from the current XI.
+    return { overall };
+}
+
+function refreshFinalSquadAfterSwap() {
+    // Re-render the existing final screen using the game's current renderer.
+    // Prefer known renderer functions from the current version.
+    if (typeof renderFinalScreen === "function") {
+        renderFinalScreen(finalStartingXI, finalBench);
+    } else if (typeof showFinalScreen === "function") {
+        showFinalScreen(finalStartingXI, finalBench);
+    } else if (typeof renderFinalSquad === "function") {
+        renderFinalSquad(finalStartingXI, finalBench);
+    }
+
+    const stats = calculateFinalTeamStats();
+    document.querySelectorAll(".team-overall, .overall-score, #teamOverall").forEach(el => {
+        el.textContent = stats.overall;
+    });
+
+    setupSwapInteractions();
+}
+
+function setupSwapInteractions() {
+    const buttons = document.querySelectorAll("[data-starter-index]");
+    const benchButtons = document.querySelectorAll("[data-bench-index]");
+
+    buttons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const index = Number(btn.dataset.starterIndex);
+            if (!Number.isInteger(index)) return;
+            finalSwapMode = { type: "starter", index };
+            highlightSwapTargets();
+        });
+    });
+
+    benchButtons.forEach(btn => {
+        btn.addEventListener("click", () => {
+            const index = Number(btn.dataset.benchIndex);
+            if (!Number.isInteger(index)) return;
+
+            if (finalSwapMode?.type === "starter") {
+                const starter = finalStartingXI[finalSwapMode.index];
+                const bench = finalBench[index];
+
+                if (!sameDraftPosition(starter, bench)) {
+                    showSwapMessage("Tego zawodnika można zamienić tylko z zawodnikiem z tej samej pozycji.");
+                    return;
+                }
+
+                swapPlayers(finalSwapMode.index, index);
+                finalSwapMode = null;
+                refreshFinalSquadAfterSwap();
+            } else {
+                finalSwapMode = { type: "bench", index };
+                highlightSwapTargets();
+            }
+        });
+    });
+}
+
+function highlightSwapTargets() {
+    const starterIndex = finalSwapMode?.type === "starter" ? finalSwapMode.index : null;
+    const benchIndex = finalSwapMode?.type === "bench" ? finalSwapMode.index : null;
+    const selected = starterIndex !== null ? finalStartingXI[starterIndex] :
+                     benchIndex !== null ? finalBench[benchIndex] : null;
+
+    document.querySelectorAll("[data-starter-index]").forEach(btn => {
+        const i = Number(btn.dataset.starterIndex);
+        btn.classList.toggle(
+            "swap-target",
+            selected ? sameDraftPosition(finalStartingXI[i], selected) : false
+        );
+    });
+
+    document.querySelectorAll("[data-bench-index]").forEach(btn => {
+        const i = Number(btn.dataset.benchIndex);
+        btn.classList.toggle(
+            "swap-target",
+            selected ? sameDraftPosition(finalBench[i], selected) : false
+        );
+    });
+}
+
+function showSwapMessage(message) {
+    let box = document.getElementById("swapMessage");
+    if (!box) {
+        box = document.createElement("div");
+        box.id = "swapMessage";
+        box.className = "swap-message";
+        document.body.appendChild(box);
+    }
+    box.textContent = message;
+    box.classList.add("visible");
+    clearTimeout(window.__swapMessageTimer);
+    window.__swapMessageTimer = setTimeout(() => box.classList.remove("visible"), 2600);
+}
+
+/* V16 hook: po wyrenderowaniu końcowego składu synchronizujemy kopie XI i ławki. */
+function enableFinalSquadSwaps(startingXI, bench) {
+    finalStartingXI = Array.isArray(startingXI) ? startingXI.slice() : [];
+    finalBench = Array.isArray(bench) ? bench.slice() : [];
+    finalSwapMode = null;
+    setupSwapInteractions();
+}
