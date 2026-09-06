@@ -1266,7 +1266,15 @@ function seasonNum(v) {
 async function loadSeasonCSV(path) {
     const response = await fetch(`${path}?v=${Date.now()}`, {cache:"no-store"});
     if (!response.ok) throw new Error(`${path}: HTTP ${response.status}`);
-    const text = await response.text();
+    const buffer = await response.arrayBuffer();
+
+    // Bazy drużyn są zapisane w Windows-1250, natomiast terminarze w UTF-8.
+    // Najpierw próbujemy UTF-8; jeśli pojawią się znaki zastępcze, dekodujemy CP1250.
+    let text = new TextDecoder("utf-8", {fatal:false}).decode(buffer);
+    if (text.includes("\uFFFD")) {
+        text = new TextDecoder("windows-1250").decode(buffer);
+    }
+
     const rows = parseCSV(text);
     if (!rows.length) throw new Error(`${path}: pusty plik lub nieprawidłowy CSV`);
     return rows;
