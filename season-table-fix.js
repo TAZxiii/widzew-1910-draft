@@ -9,7 +9,7 @@
     };
 
     function getSeason() {
-        const text = document.getElementById("seasonTitle")?.textContent || document.body.textContent || "";
+        const text = document.getElementById("seasonTitle")?.textContent || "";
         const m = text.match(/(22\/23|23\/24|24\/25|25\/26|26\/27)/);
         if (m) return m[1];
         const intro = document.getElementById("seasonIntro")?.textContent || "";
@@ -74,12 +74,25 @@
     }
 
     function renderLegend(table, season, rules) {
-        const old = table.parentElement?.querySelector(".league-table-legend");
-        if (old) old.remove();
-        if (!season || !rules) return;
+        if (!table.parentElement) return;
+        let legend = table.parentElement.querySelector(".league-table-legend");
+        if (!season || !rules) {
+            if (legend) legend.remove();
+            return;
+        }
 
-        const legend = document.createElement("div");
-        legend.className = "league-table-legend";
+        const signature = JSON.stringify(rules) + "|" + season;
+        if (legend?.dataset.signature === signature) return;
+
+        if (!legend) {
+            legend = document.createElement("div");
+            legend.className = "league-table-legend";
+            table.parentElement.appendChild(legend);
+        }
+
+        legend.dataset.signature = signature;
+        legend.innerHTML = "";
+
         const items = [];
         if (rules.green?.length) items.push(["green", "Awans - Liga Mistrzów (kwalifikacje)"]);
         if (rules.yellow?.length || rules.legiaYellow) items.push(["yellow", "Awans - Liga Europy (kwalifikacje)"]);
@@ -92,7 +105,6 @@
             item.innerHTML = `<span class="league-legend-square table-marker-${type}"></span><span>${text}</span>`;
             legend.appendChild(item);
         });
-        table.parentElement.appendChild(legend);
     }
 
     function addStyles() {
@@ -125,7 +137,15 @@
         addStyles();
         enhanceLeagueTable();
         const board = document.getElementById("seasonBoardContent") || document.body;
-        const observer = new MutationObserver(() => enhanceLeagueTable());
+        const observer = new MutationObserver((mutations) => {
+            const relevant = mutations.some(mutation => {
+                if (mutation.type !== "childList") return false;
+                const target = mutation.target;
+                if (target.closest?.(".league-table-legend")) return false;
+                return true;
+            });
+            if (relevant) enhanceLeagueTable();
+        });
         observer.observe(board, { childList:true, subtree:true });
     }
 
