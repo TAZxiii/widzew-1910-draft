@@ -64,6 +64,12 @@
         return String(originalPosition || "").trim();
     }
 
+    function readSeasonFromButton(button) {
+        const text = String(button?.textContent || "");
+        const match = text.match(/ROZEGRAJ\s+SEZON\s+(.+)/i);
+        return match ? match[1].trim() : "";
+    }
+
     function readVisibleSquad() {
         const players = [];
         const starters = Array.from(document.querySelectorAll(".squad-list-player"));
@@ -71,32 +77,30 @@
 
         starters.forEach((el, index) => {
             const info = el.querySelector(".squad-player-info");
-            const strong = info?.querySelector("strong");
-            const small = info?.querySelector("small");
-            const name = String(strong?.textContent || "").trim();
+            const name = String(info?.querySelector("strong")?.textContent || "").trim();
+            const roleLabel = String(info?.querySelector("small")?.textContent || "").trim();
             const parts = name.split(/\s+/);
             if (parts.length < 2) return;
             players.push({
                 first: parts.shift(),
                 last: parts.join(" "),
                 slot: "starter",
-                roleLabel: String(small?.textContent || "").trim(),
+                roleLabel,
                 index
             });
         });
 
         bench.forEach((el, index) => {
             const info = el.querySelector(".bench-info");
-            const strong = info?.querySelector("strong");
-            const small = info?.querySelector("small");
-            const name = String(strong?.textContent || "").trim();
+            const name = String(info?.querySelector("strong")?.textContent || "").trim();
+            const roleLabel = String(info?.querySelector("small")?.textContent || "").trim();
             const parts = name.split(/\s+/);
             if (parts.length < 2) return;
             players.push({
                 first: parts.shift(),
                 last: parts.join(" "),
                 slot: "bench",
-                roleLabel: String(small?.textContent || "").trim(),
+                roleLabel,
                 index
             });
         });
@@ -104,10 +108,11 @@
         return players;
     }
 
-    async function buildTemporaryDatabase() {
+    async function buildTemporaryDatabase(button) {
         if (databasePromise) return databasePromise;
 
         databasePromise = (async () => {
+            const season = readSeasonFromButton(button);
             const loaded = await Promise.all(Object.entries(files).map(async ([category, path]) => {
                 const rows = await loadCSV(path);
                 return [category, rows];
@@ -118,49 +123,59 @@
             const selected = visibleSquad.map((picked, order) => {
                 const first = normalize(picked.first);
                 const last = normalize(picked.last);
-                const matches = allRows.filter(({ row }) =>
+                const nameMatches = allRows.filter(({ row }) =>
                     normalize(row["Imię"]) === first &&
                     normalize(row["Nazwisko"]) === last
                 );
+                const seasonMatches = season
+                    ? nameMatches.filter(({ row }) => normalize(row["Sezon"]) === normalize(season))
+                    : nameMatches;
+                const exact = seasonMatches[0] || nameMatches[0];
 
-                // The same player can have multiple season cards. The season shown
-                // on the final squad is not rendered, so prefer a unique match;
-                // otherwise keep all matching records as a diagnostic fallback.
-                const exact = matches.length === 1 ? matches[0] : matches[0];
                 if (!exact) {
                     return {
                         order,
                         first: picked.first,
                         last: picked.last,
                         slot: picked.slot,
-                        roleLabel: picked.roleLabel,
+                        role: picked.roleLabel,
                         position: picked.roleLabel,
+                        season,
                         stats: null,
                         found: false
                     };
                 }
+
+                const row = { ...exact.row };
+                const originalPosition = String(row["Pozycja"] || "").trim();
+                const role = picked.slot === "starter"
+                    ? ({
+                        "BR":"br",
+                        "LO/PO":"loPo",
+                        "ŚO":"so",
+                        "ŚPD/ŚP/OP":"pomoc",
+                        "LS/LP/PS/PP":"skrzydlowi",
+                        "N":"napastnicy"
+                    }[picked.roleLabel] || "")
+                    : "";
 
                 return {
                     order,
                     first: picked.first,
                     last: picked.last,
                     slot: picked.slot,
-                    roleLabel: picked.roleLabel,
-                    position: positionFromRole(
-                        picked.slot === "starter" ? {
-                            "BR":"br", "LO/PO":"loPo", "ŚO":"so",
-                            "ŚPD/ŚP/OP":"pomoc", "LS/LP/PS/PP":"skrzydlowi", "N":"napastnicy"
-                        }[picked.roleLabel] : "",
-                        exact.row["Pozycja"]
-                    ),
+                    role: picked.roleLabel,
+                    position: originalPosition || positionFromRole(role, originalPosition),
+                    season: row["Sezon"] || season,
                     category: exact.category,
-                    stats: { ...exact.row },
+                    stats: row,
                     found: true
                 };
             });
 
             return {
                 createdAt: new Date().toISOString(),
+                season,
                 count: selected.length,
                 players: selected
             };
@@ -175,7 +190,7 @@
     document.addEventListener("click", event => {
         const button = event.target?.closest?.("#playSeasonButton");
         if (!button) return;
-        buildTemporaryDatabase()
+        buildTemporaryDatabase(button)
             .then(db => {
                 window.widzewSeasonPlayerDB = db;
                 console.info("[Widzew Draft] Tymczasowa baza sezonowa utworzona:", db);
