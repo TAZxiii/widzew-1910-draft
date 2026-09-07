@@ -2,37 +2,20 @@
    Stage 1: draw a position group using the requested weights.
    Stage 2: draw a player from that group, weighted by Overall rating. */
 (function () {
-    const STARTER_WEIGHTS = {
-        N: 33,
-        MID: 12,
-        WING: 9,
-        DEF: 7,
-        CB: 5
-    };
-
-    const BENCH_WEIGHTS = {
-        N: 18,
-        MID: 6,
-        WING: 5,
-        DEF: 3,
-        CB: 1
-    };
+    const STARTER_WEIGHTS = { N: 33, MID: 12, WING: 9, DEF: 7, CB: 5 };
+    const BENCH_WEIGHTS = { N: 18, MID: 6, WING: 5, DEF: 3, CB: 1 };
 
     function normalizePosition(value) {
-        return String(value || "")
-            .toUpperCase()
-            .replace(/\s+/g, "");
+        return String(value || "").toUpperCase().replace(/\s+/g, "");
     }
 
     function getPositionGroup(player) {
         const position = normalizePosition(player?.position || player?.role);
-
         if (position === "N") return "N";
         if (position === "ŚO" || position === "SO") return "CB";
         if (position === "LO/PO" || position === "LOPO") return "DEF";
         if (position.includes("ŚPD") || position.includes("ŚP") || position.includes("OP")) return "MID";
         if (position.includes("LS") || position.includes("LP") || position.includes("PS") || position.includes("PP")) return "WING";
-
         return null;
     }
 
@@ -46,13 +29,11 @@
         const valid = items.filter(item => Number(item.weight) > 0);
         const total = valid.reduce((sum, item) => sum + Number(item.weight), 0);
         if (!total) return null;
-
         let roll = Math.random() * total;
         for (const item of valid) {
             roll -= Number(item.weight);
             if (roll < 0) return item;
         }
-
         return valid[valid.length - 1];
     }
 
@@ -66,11 +47,9 @@
         const db = typeof window.getWidzewSeasonPlayerDB === "function"
             ? window.getWidzewSeasonPlayerDB()
             : window.widzewSeasonPlayerDB;
-
         if (!db || !Array.isArray(db.players)) {
             throw new Error("Tymczasowa baza zawodników Widzewa nie została jeszcze utworzona.");
         }
-
         return db.players.filter(player => player && player.found !== false);
     }
 
@@ -79,15 +58,12 @@
             starter: { N: [], MID: [], WING: [], DEF: [], CB: [] },
             bench: { N: [], MID: [], WING: [], DEF: [], CB: [] }
         };
-
         players.forEach(player => {
             const group = getPositionGroup(player);
             if (!group) return;
-
             const slot = player.slot === "starter" ? "starter" : "bench";
             groups[slot][group].push(player);
         });
-
         return groups;
     }
 
@@ -95,90 +71,46 @@
         const weights = { ...STARTER_WEIGHTS };
         const available = Object.keys(STARTER_WEIGHTS).filter(group => groups.starter[group].length > 0);
         const missing = Object.keys(STARTER_WEIGHTS).filter(group => groups.starter[group].length === 0);
-
-        // For every missing starter position, its original weight is divided by 4
-        // and that quarter is added to every remaining starter position.
         missing.forEach(group => {
             const redistributed = STARTER_WEIGHTS[group] / 4;
-            available.forEach(target => {
-                weights[target] += redistributed;
-            });
+            available.forEach(target => weights[target] += redistributed);
             weights[group] = 0;
         });
-
         return weights;
     }
 
     function drawWidzewScorer() {
-        const players = getDatabasePlayers();
-        const groups = buildGroups(players);
+        const groups = buildGroups(getDatabasePlayers());
         const starterWeights = buildStarterWeights(groups);
-
         const firstStage = [];
 
         Object.keys(STARTER_WEIGHTS).forEach(group => {
             if (groups.starter[group].length > 0 && starterWeights[group] > 0) {
-                firstStage.push({
-                    key: `starter-${group}`,
-                    slot: "starter",
-                    group,
-                    weight: starterWeights[group]
-                });
+                firstStage.push({ key: `starter-${group}`, slot: "starter", group, weight: starterWeights[group] });
             }
         });
-
         Object.keys(BENCH_WEIGHTS).forEach(group => {
             if (groups.bench[group].length > 0 && BENCH_WEIGHTS[group] > 0) {
-                firstStage.push({
-                    key: `bench-${group}`,
-                    slot: "bench",
-                    group,
-                    weight: BENCH_WEIGHTS[group]
-                });
+                firstStage.push({ key: `bench-${group}`, slot: "bench", group, weight: BENCH_WEIGHTS[group] });
             }
         });
-
-        // Own goal is always a possible result and has a fixed 1% weight.
-        firstStage.push({
-            key: "own-goal",
-            slot: "own",
-            group: "OWN",
-            weight: 1
-        });
+        firstStage.push({ key: "own-goal", slot: "own", group: "OWN", weight: 1 });
 
         const selectedGroup = weightedPick(firstStage);
-        if (!selectedGroup) {
-            throw new Error("Nie udało się utworzyć puli losowania strzelca Widzewa.");
-        }
-
+        if (!selectedGroup) throw new Error("Nie udało się utworzyć puli losowania strzelca Widzewa.");
         const firstStageTotal = firstStage.reduce((sum, item) => sum + item.weight, 0);
         const groupProbability = selectedGroup.weight / firstStageTotal;
 
         if (selectedGroup.slot === "own") {
-            return {
-                type: "own-goal",
-                name: "Samobój",
-                player: null,
-                group: "OWN",
-                slot: "own",
-                groupWeight: selectedGroup.weight,
-                groupProbability
-            };
+            return { type: "own-goal", name: "Samobój", player: null, group: "OWN", slot: "own", groupWeight: selectedGroup.weight, groupProbability };
         }
 
         const playerPool = groups[selectedGroup.slot][selectedGroup.group];
-        const secondStage = playerPool.map(player => ({
-            player,
-            weight: getOverall(player)
-        }));
+        const secondStage = playerPool.map(player => ({ player, weight: getOverall(player) }));
         const selectedPlayer = weightedPick(secondStage);
-        if (!selectedPlayer) {
-            throw new Error("Nie udało się wylosować zawodnika z wybranej grupy.");
-        }
+        if (!selectedPlayer) throw new Error("Nie udało się wylosować zawodnika z wybranej grupy.");
 
         const secondStageTotal = secondStage.reduce((sum, item) => sum + item.weight, 0);
-        const playerProbability = selectedPlayer.weight / secondStageTotal;
-
         return {
             type: "widzew",
             name: getPlayerName(selectedPlayer.player),
@@ -189,11 +121,62 @@
             groupProbability,
             overall: getOverall(selectedPlayer.player),
             playerWeight: selectedPlayer.weight,
-            playerProbability
+            playerProbability: selectedPlayer.weight / secondStageTotal
         };
     }
 
-    // Public API for the next season-simulation step.
+    /* The match generator now uses the actual result of drawWidzewScorer(). */
+    function makeMatchScorersUsingDraw(widzewGoals, opponentGoals) {
+        const usedMinutes = new Set();
+        const minute = () => {
+            let m = 1 + Math.floor(Math.random() * 90);
+            while (usedMinutes.has(m) && usedMinutes.size < 90) m = 1 + Math.floor(Math.random() * 90);
+            usedMinutes.add(m);
+            return m;
+        };
+        const scorers = [];
+        for (let i = 0; i < Number(widzewGoals || 0); i++) {
+            const draw = drawWidzewScorer();
+            scorers.push({ minute: minute(), type: draw.type, name: draw.name, player: draw.player || null, draw: { ...draw } });
+        }
+        for (let i = 0; i < Number(opponentGoals || 0); i++) {
+            scorers.push({ minute: minute(), type: "opponent", name: "Przeciwnik", player: null });
+        }
+        return scorers.sort((a, b) => a.minute - b.minute);
+    }
+
     window.drawWidzewScorer = drawWidzewScorer;
     window.losujStrzelcaWidzewa = drawWidzewScorer;
+    window.makeMatchScorers = makeMatchScorersUsingDraw;
+
+    /* season-play-fix.js currently renders a placeholder name in the visible
+       scorer block. Replace only that text with the already generated name. */
+    function refreshDisplayedScorerNames() {
+        const results = typeof seasonGameState !== "undefined" && Array.isArray(seasonGameState.widzewResults)
+            ? seasonGameState.widzewResults
+            : [];
+        if (!results.length) return;
+
+        const matches = Array.from(document.querySelectorAll(".round-match.widzew-match"));
+        matches.forEach((matchElement, index) => {
+            const match = results[index];
+            if (!match || !Array.isArray(match.scorers)) return;
+            const rows = Array.from(matchElement.querySelectorAll(".match-scorers .scorer-widzew"));
+            const widzewScorers = match.scorers.filter(s => s.type !== "opponent");
+            rows.forEach((row, scorerIndex) => {
+                const scorer = widzewScorers[scorerIndex];
+                if (!scorer?.name) return;
+                const minuteMatch = row.textContent.match(/^\s*\d+'\s*/);
+                const minuteText = minuteMatch ? minuteMatch[0] : "";
+                row.textContent = `${minuteText}${scorer.name}`;
+            });
+        });
+    }
+
+    if (typeof MutationObserver !== "undefined") {
+        const observer = new MutationObserver(() => refreshDisplayedScorerNames());
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+    document.addEventListener("DOMContentLoaded", refreshDisplayedScorerNames);
+    setTimeout(refreshDisplayedScorerNames, 0);
 })();
