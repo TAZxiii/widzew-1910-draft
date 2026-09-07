@@ -7,7 +7,6 @@
         const pool = [];
         const starters = Array.from(document.querySelectorAll(".squad-list-player"));
         const bench = Array.from(document.querySelectorAll(".bench-player"));
-
         const starterRole = {"BR":"br","LO/PO":"loPo","ŚO":"so","ŚPD/ŚP/OP":"pomoc","LS/LP/PS/PP":"skrzydlowi","N":"napastnicy"};
         const makePlayer = (name, role, position) => { const parts = String(name || "").trim().split(/\s+/); if (parts.length < 2 || !role) return null; const first = parts.shift(); const last = parts.join(" "); return { row: { "Imię": first, "Nazwisko": last }, role, position }; };
         starters.forEach(el => { const info = el.querySelector(".squad-player-info"); const name = info?.querySelector("strong")?.textContent || ""; const position = info?.querySelector("small")?.textContent.trim() || ""; const p = makePlayer(name, starterRole[position], position); if (p) pool.push(p); });
@@ -53,13 +52,49 @@
     function decorateVisibleScorers(match){const matchElement=document.querySelector(".round-match.widzew-match");renderScorers(getOrCreateScorerContainer(matchElement),match);}
     function decorateAllFinalScorers(){const matches=Array.from(document.querySelectorAll(".round-match.widzew-match"));const results=Array.isArray(seasonGameState.widzewResults)?seasonGameState.widzewResults:[];if(!matches.length||!results.length)return;matches.forEach((el,index)=>{const match=results[index];if(!match)return;renderScorers(getOrCreateScorerContainer(el),match);});}
 
-    function addStyles(){if(document.getElementById("seasonScorerFixStyles"))return;const style=document.createElement("style");style.id="seasonScorerFixStyles";style.textContent=`.match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}.match-scorers .scorer-widzew{color:#39d353}.match-scorers .scorer-opponent{color:#ff4d4f}`;document.head.appendChild(style);}
+    function enhanceLeagueTable(){
+        const table=document.getElementById("leagueTable");
+        if(!table) return;
+        const panel=table.closest(".league-table-panel");
+        if(panel && !panel.querySelector(".league-competition-logo")){
+            const logo=document.createElement("img");
+            logo.className="league-competition-logo";
+            logo.src="data/logos/ekstraklasa.png";
+            logo.alt="Ekstraklasa";
+            panel.appendChild(logo);
+        }
+        const oldHeader=table.querySelector(".league-table-header");
+        if(oldHeader) oldHeader.remove();
+        const header=document.createElement("div");
+        header.className="league-table-header";
+        ["#","Drużyna","M","Z","R","P","B","Pkt"].forEach(label=>{
+            const cell=document.createElement("span");
+            cell.textContent=label;
+            header.appendChild(cell);
+        });
+        table.insertBefore(header,table.firstChild);
+    }
 
-    function revealCurrentRound(){const round=Number(seasonGameState.currentRound);if((seasonGameState.widzewResults||[]).some(m=>Number(m.round)===round))return;const match=prepareResults().find(m=>Number(m.round)===round);if(!match)return;const revealed=cloneMatch(match);seasonGameState.widzewResults.push(revealed);updateTopScorersFromMatch(revealed);renderPlayableSeason();decorateVisibleScorers(revealed);}
+    function addStyles(){if(document.getElementById("seasonScorerFixStyles"))return;const style=document.createElement("style");style.id="seasonScorerFixStyles";style.textContent=`
+        .match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}
+        .match-scorers .scorer-widzew{color:#39d353}
+        .match-scorers .scorer-opponent{color:#ff4d4f}
+        .league-table-panel{position:relative}
+        .league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}
+        .league-table-panel .season-panel-title{padding-left:88px}
+        .league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}
+        .league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}
+        .league-table-header span:nth-child(2){text-align:left}
+        @media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}
+    `;document.head.appendChild(style);}
+
+    function revealCurrentRound(){const round=Number(seasonGameState.currentRound);if((seasonGameState.widzewResults||[]).some(m=>Number(m.round)===round))return;const match=prepareResults().find(m=>Number(m.round)===round);if(!match)return;const revealed=cloneMatch(match);seasonGameState.widzewResults.push(revealed);updateTopScorersFromMatch(revealed);renderPlayableSeason();enhanceLeagueTable();decorateVisibleScorers(revealed);}
     addStyles();
 
-    const originalRenderFinalSeasonForScorers=window.renderFinalSeason;if(typeof originalRenderFinalSeasonForScorers==="function"){window.renderFinalSeason=function(){const result=originalRenderFinalSeasonForScorers.apply(this,arguments);decorateAllFinalScorers();return result;};}
+    const originalRenderLeagueTable=window.renderLeagueTable;if(typeof originalRenderLeagueTable==="function"){window.renderLeagueTable=function(){const result=originalRenderLeagueTable.apply(this,arguments);enhanceLeagueTable();return result;};}
+    const originalRenderFinalSeasonForScorers=window.renderFinalSeason;if(typeof originalRenderFinalSeasonForScorers==="function"){window.renderFinalSeason=function(){const result=originalRenderFinalSeasonForScorers.apply(this,arguments);enhanceLeagueTable();decorateAllFinalScorers();return result;};}
     const originalInitSeasonMode=window.initSeasonMode;if(typeof originalInitSeasonMode==="function"){window.initSeasonMode=async function(mode){preparedResults=null;if(!capturedSquad)capturedSquad=readFinalSquadFromDOM();return await originalInitSeasonMode.call(this,mode);};}
     window.simulateCurrentWidzewMatch=revealCurrentRound;
     document.addEventListener("click",function(event){const button=event.target?.closest?.("#playMatchButton,#simulateMatchButton");if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(button.id==="simulateMatchButton")revealCurrentRound();},true);
+    setTimeout(enhanceLeagueTable,0);
 })();
