@@ -42,7 +42,8 @@
                 row.dataset.lechiaOriginalPoints = String(numberFromCell(pointsCell));
             }
             const original = Number(row.dataset.lechiaOriginalPoints);
-            pointsCell.textContent = String(original - 5);
+            const corrected = String(original - 5);
+            if (pointsCell.textContent !== corrected) pointsCell.textContent = corrected;
         });
 
         const sortedRows = rows.map((row, index) => ({ row, index }))
@@ -52,9 +53,16 @@
                 if (bp !== ap) return bp - ap;
                 return a.index - b.index;
             });
-        sortedRows.forEach(({ row }) => table.appendChild(row));
+
+        const currentRows = rows.slice();
+        const needsReorder = sortedRows.some((item, index) => currentRows[index] !== item.row);
+        if (needsReorder) sortedRows.forEach(({ row }) => table.appendChild(row));
+
         sortedRows.forEach(({ row }, index) => {
-            if (row.children[0]) row.children[0].textContent = String(index + 1);
+            if (row.children[0]) {
+                const position = String(index + 1);
+                if (row.children[0].textContent !== position) row.children[0].textContent = position;
+            }
         });
     }
 
@@ -94,11 +102,9 @@
             if (!positionCell) return;
             const position = Number.parseInt(positionCell.textContent.trim(), 10);
             if (!Number.isFinite(position)) return;
-
             const teamCell = row.children[1];
             const teamName = teamCell?.textContent?.trim() || "";
             const type = markerType(position, teamName, rules);
-
             positionCell.classList.remove("table-marker-green","table-marker-yellow","table-marker-blue","table-marker-red");
             if (type) positionCell.classList.add(`table-marker-${type}`);
         });
@@ -113,19 +119,15 @@
             if (legend) legend.remove();
             return;
         }
-
         const signature = JSON.stringify(rules) + "|" + season;
         if (legend?.dataset.signature === signature) return;
-
         if (!legend) {
             legend = document.createElement("div");
             legend.className = "league-table-legend";
             table.parentElement.appendChild(legend);
         }
-
         legend.dataset.signature = signature;
         legend.innerHTML = "";
-
         const items = [];
         if (rules.green?.length) items.push(["green", "Awans - Liga Mistrzów (kwalifikacje)"]);
         if (rules.yellow?.length || rules.legiaYellow) items.push(["yellow", "Awans - Liga Europy (kwalifikacje)"]);
@@ -177,12 +179,7 @@
         enhanceLeagueTable();
         const board = document.getElementById("seasonBoardContent") || document.body;
         const observer = new MutationObserver((mutations) => {
-            const relevant = mutations.some(mutation => {
-                if (mutation.type !== "childList") return false;
-                const target = mutation.target;
-                if (target.closest?.(".league-table-legend")) return false;
-                return true;
-            });
+            const relevant = mutations.some(mutation => mutation.type === "childList" && !mutation.target.closest?.(".league-table-legend"));
             if (relevant) enhanceLeagueTable();
         });
         observer.observe(board, { childList:true, subtree:true });
