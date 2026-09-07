@@ -63,7 +63,12 @@
 
     function getOrCreateScorerContainer(matchElement){if(!matchElement)return null;let container=matchElement.querySelector(".match-scorers");if(!container){container=document.createElement("div");container.className="match-scorers";matchElement.appendChild(container);}return container;}
     function decorateVisibleScorers(match){const matchElement=document.querySelector(".round-match.widzew-match");renderScorers(getOrCreateScorerContainer(matchElement),match);}
-    function decorateAllFinalScorers(){const matches=Array.from(document.querySelectorAll(".round-match.widzew-match"));const results=Array.isArray(seasonGameState.widzewResults)?seasonGameState.widzewResults:[];if(!matches.length||!results.length)return;matches.forEach((el,index)=>{const match=results[index];if(!match)return;renderScorers(getOrCreateScorerContainer(el),match);});}
+    function decorateAllFinalScorers(){
+        const matches=Array.from(document.querySelectorAll(".round-match.widzew-match"));
+        const results=Array.isArray(preparedResults)?preparedResults:[];
+        if(!matches.length||!results.length)return;
+        matches.forEach((el,index)=>{const match=results[index];if(match)renderScorers(getOrCreateScorerContainer(el),match);});
+    }
 
     function enhanceLeagueTable(){
         const table=document.getElementById("leagueTable");
@@ -84,6 +89,19 @@
     const originalRenderFinalSeasonForScorers=window.renderFinalSeason;if(typeof originalRenderFinalSeasonForScorers==="function"){window.renderFinalSeason=function(){const result=originalRenderFinalSeasonForScorers.apply(this,arguments);enhanceLeagueTable();decorateAllFinalScorers();return result;};}
     const originalInitSeasonMode=window.initSeasonMode;if(typeof originalInitSeasonMode==="function"){window.initSeasonMode=async function(mode){preparedResults=null;if(!capturedSquad)capturedSquad=readFinalSquadFromDOM();return await originalInitSeasonMode.call(this,mode);};}
     window.simulateCurrentWidzewMatch=revealCurrentRound;
-    document.addEventListener("click",function(event){const button=event.target?.closest?.("#playMatchButton,#simulateMatchButton");if(!button)return;event.preventDefault();event.stopImmediatePropagation();if(button.id==="simulateMatchButton")revealCurrentRound();},true);
+
+    // Do not block the game's own match handlers. The previous version stopped
+    // propagation here, which made both match buttons appear frozen. We only
+    // refresh scorer display after the original handler has finished.
+    document.addEventListener("click",function(event){
+        const button=event.target?.closest?.("#playMatchButton,#simulateMatchButton");
+        if(!button)return;
+        setTimeout(function(){
+            const round=Number(seasonGameState.currentRound);
+            const result=(seasonGameState.widzewResults||[]).find(m=>Number(m.round)===round);
+            if(result)decorateVisibleScorers(result);
+            enhanceLeagueTable();
+        },0);
+    },false);
     setTimeout(enhanceLeagueTable,0);
 })();
