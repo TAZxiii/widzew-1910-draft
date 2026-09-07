@@ -61,6 +61,16 @@
                 margin-bottom: 4px;
             }
             .league-table-header span:nth-child(2) { text-align: left; }
+
+            /* Strzelcy Widzewa zawsze jako osobny, pełnoszeroki wiersz pod wynikiem. */
+            .round-match .match-scorers {
+                grid-column: 1 / -1;
+                width: 100%;
+                justify-self: stretch;
+                align-items: center;
+                text-align: center;
+            }
+
             @media (max-width: 700px) {
                 .league-competition-logo { width: 56px; height: 56px; top: 12px; left: 12px; }
                 .league-table-panel .season-panel-title { padding-left: 70px; }
