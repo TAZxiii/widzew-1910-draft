@@ -30,7 +30,6 @@
         const player = fallback[Math.floor(Math.random()*fallback.length)]; return {type:"widzew",player,name:`${player.row["Imię"]} ${player.row["Nazwisko"]}`.trim()};
     }
 
-    /* Use the dedicated two-stage scorer draw for actual season results. */
     function makeScorersUsing20(widzewGoals, opponentGoals) {
         const usedMinutes = new Set(); const minute = () => { let m = 1+Math.floor(Math.random()*90); while (usedMinutes.has(m) && usedMinutes.size<90)m=1+Math.floor(Math.random()*90); usedMinutes.add(m); return m; };
         const scorers=[];
@@ -47,9 +46,19 @@
     function prepareResults(){if(preparedResults)return preparedResults;const originalRenderFinalSeason=window.renderFinalSeason;try{window.renderFinalSeason=function(){};window.simulateWholeSeason();preparedResults=(seasonGameState.widzewResults||[]).map(cloneMatch);}finally{window.renderFinalSeason=originalRenderFinalSeason;}seasonGameState.widzewResults=[];seasonGameState.scorers={};return preparedResults;}
 
     function renderScorers(container,match){
-        if(!container||!match)return; let scorers=Array.isArray(match.scorers)?match.scorers.slice():[]; const totalGoals=Number(match.gf||0)+Number(match.ga||0);
-        if(scorers.length!==totalGoals){scorers=[];const used=new Set();const makeMinute=()=>{let m=1+Math.floor(Math.random()*90);while(used.has(m)&&used.size<90)m=1+Math.floor(Math.random()*90);used.add(m);return m;};for(let i=0;i<Number(match.gf||0);i++)scorers.push({minute:makeMinute(),type:"widzew",name:"Zawodnik Widzewa"});for(let i=0;i<Number(match.ga||0);i++)scorers.push({minute:makeMinute(),type:"opponent",name:"Przeciwnik"});}
-        container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{const opponent=s.type==="opponent";const color=opponent?"scorer-opponent":"scorer-widzew";const name=opponent?"Przeciwnik":(s.name||"Zawodnik Widzewa");return `<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;}).join("");
+        if(!container||!match)return;
+        let scorers=Array.isArray(match.scorers)?match.scorers.slice():[];
+        const totalGoals=Number(match.gf||0)+Number(match.ga||0);
+        if(scorers.length!==totalGoals){
+            scorers = makeScorersUsing20(match.gf, match.ga);
+            match.scorers = scorers.map(s => ({...s}));
+        }
+        container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{
+            const opponent=s.type==="opponent";
+            const color=opponent?"scorer-opponent":"scorer-widzew";
+            const name=opponent?"Przeciwnik":(s.name||"Samobój");
+            return `<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;
+        }).join("");
     }
 
     function getOrCreateScorerContainer(matchElement){if(!matchElement)return null;let container=matchElement.querySelector(".match-scorers");if(!container){container=document.createElement("div");container.className="match-scorers";matchElement.appendChild(container);}return container;}
