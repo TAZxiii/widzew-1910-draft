@@ -5,21 +5,14 @@
 (function () {
     function escapeName(value) {
         if (typeof window.seasonSafe === "function") return window.seasonSafe(value);
-        return String(value ?? "")
-            .replace(/&/g, "&amp;")
-            .replace(/</g, "&lt;")
-            .replace(/>/g, "&gt;")
-            .replace(/"/g, "&quot;")
-            .replace(/'/g, "&#39;");
+        return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
-
     function ensureState() {
         if (!window.seasonGameState) return null;
         if (!seasonGameState.scorers || Array.isArray(seasonGameState.scorers)) seasonGameState.scorers = {};
         if (!Number.isFinite(Number(seasonGameState.ownGoals))) seasonGameState.ownGoals = 0;
         return seasonGameState;
     }
-
     function addScorer(name) {
         const state = ensureState();
         if (!state || !name) return;
@@ -29,7 +22,6 @@
         if (!state.scorers[key]) state.scorers[key] = { name: clean, goals: 0 };
         state.scorers[key].goals++;
     }
-
     function addMatchToTopScorers(match) {
         if (!match || !Array.isArray(match.scorers)) return;
         const state = ensureState();
@@ -43,64 +35,38 @@
             }
         });
     }
-
     function renderTopScorers() {
         const el = document.getElementById("topScorers");
         if (!el) return;
         const state = ensureState();
         if (!state) return;
-
-        const rows = Object.values(state.scorers || {})
-            .filter(row => Number(row.goals) > 0)
-            .sort((a, b) => Number(b.goals) - Number(a.goals) || a.name.localeCompare(b.name, "pl"));
-
-        const normalHtml = rows.map(row =>
-            `<div class="scorer-row"><b>${Number(row.goals)}</b><strong>${escapeName(row.name)}</strong></div>`
-        ).join("");
-
-        const ownHtml = Number(state.ownGoals) > 0
-            ? `<div class="scorer-own-divider"></div><div class="scorer-row scorer-own"><b>${Number(state.ownGoals)}</b><strong>Samobój</strong></div>`
-            : "";
-
-        el.innerHTML = normalHtml || ownHtml
-            ? normalHtml + ownHtml
-            : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
+        const rows = Object.values(state.scorers || {}).filter(row => Number(row.goals) > 0).sort((a, b) => Number(b.goals) - Number(a.goals) || a.name.localeCompare(b.name, "pl"));
+        const normalHtml = rows.map(row => `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong></div>`).join("");
+        const ownHtml = Number(state.ownGoals) > 0 ? `<div class="scorer-own-divider"></div><div class="scorer-row scorer-own"><b>${Number(state.ownGoals)}</b><span class="scorer-dash">-</span><strong>Samobój</strong></div>` : "";
+        el.innerHTML = normalHtml || ownHtml ? normalHtml + ownHtml : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
     }
-
-    // Replace the core updater so play mode also records own goals and uses
-    // exactly the displayed scorer names.
     window.updateTopScorersFromMatch = addMatchToTopScorers;
     window.renderTopScorers = renderTopScorers;
 
     function aggregateFinalSeasonFromDOM() {
         const matches = Array.from(document.querySelectorAll(".round-match.widzew-match"));
         if (!matches.length) return;
-
         const state = ensureState();
         if (!state) return;
         state.scorers = {};
         state.ownGoals = 0;
-
         matches.forEach(match => {
-            const spans = Array.from(match.querySelectorAll(".match-scorers span"));
-            spans.forEach(span => {
+            Array.from(match.querySelectorAll(".match-scorers span")).forEach(span => {
                 const text = String(span.textContent || "").trim();
                 const name = text.replace(/^\d+['’]?\s*/, "").trim();
-                if (!name) return;
-                if (name === "Przeciwnik") return;
-                if (name === "Samobój") {
-                    state.ownGoals++;
-                    return;
-                }
+                if (!name || name === "Przeciwnik") return;
+                if (name === "Samobój") { state.ownGoals++; return; }
                 addScorer(name);
             });
         });
-
         renderTopScorers();
     }
 
-    // The final-season scorer fix renders all 34 match scorers shortly after
-    // renderFinalSeason(), so aggregate after that rendering is complete.
     const originalRenderFinalSeason = window.renderFinalSeason;
     if (typeof originalRenderFinalSeason === "function") {
         window.renderFinalSeason = function () {
@@ -109,17 +75,16 @@
             return result;
         };
     }
-
     const style = document.createElement("style");
     style.id = "seasonTopScorersFixStyles";
     style.textContent = `
-        #topScorers .scorer-row { display:flex; align-items:center; gap:10px; }
+        #topScorers .scorer-row { display:flex; align-items:center; gap:8px; }
         #topScorers .scorer-row b { min-width:24px; text-align:right; }
         #topScorers .scorer-row strong { flex:1; }
+        #topScorers .scorer-dash { opacity:.75; }
         #topScorers .scorer-own-divider { height:1px; margin:8px 0; background:rgba(255,255,255,.2); }
         #topScorers .scorer-own { opacity:.9; }
     `;
     document.head.appendChild(style);
-
     setTimeout(renderTopScorers, 0);
 })();
