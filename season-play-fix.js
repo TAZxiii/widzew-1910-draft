@@ -30,9 +30,16 @@
         const player = fallback[Math.floor(Math.random()*fallback.length)]; return {type:"widzew",player,name:`${player.row["Imię"]} ${player.row["Nazwisko"]}`.trim()};
     }
 
+    /* Use the dedicated two-stage scorer draw for actual season results. */
     function makeScorersUsing20(widzewGoals, opponentGoals) {
         const usedMinutes = new Set(); const minute = () => { let m = 1+Math.floor(Math.random()*90); while (usedMinutes.has(m) && usedMinutes.size<90)m=1+Math.floor(Math.random()*90); usedMinutes.add(m); return m; };
-        const scorers=[]; for(let i=0;i<Number(widzewGoals||0);i++){const s=chooseWeightedScorerFrom20();scorers.push({minute:minute(),type:s.type,name:s.name,player:s.player||null});} for(let i=0;i<Number(opponentGoals||0);i++) scorers.push({minute:minute(),type:"opponent",name:"Przeciwnik",player:null}); return scorers.sort((a,b)=>a.minute-b.minute);
+        const scorers=[];
+        for(let i=0;i<Number(widzewGoals||0);i++){
+            const s = typeof window.drawWidzewScorer === "function" ? window.drawWidzewScorer() : chooseWeightedScorerFrom20();
+            scorers.push({minute:minute(),type:s.type,name:s.name,player:s.player||null});
+        }
+        for(let i=0;i<Number(opponentGoals||0);i++) scorers.push({minute:minute(),type:"opponent",name:"Przeciwnik",player:null});
+        return scorers.sort((a,b)=>a.minute-b.minute);
     }
     window.makeMatchScorers = makeScorersUsing20;
 
@@ -45,10 +52,7 @@
         container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{const opponent=s.type==="opponent";const color=opponent?"scorer-opponent":"scorer-widzew";const name=opponent?"Przeciwnik":(s.name||"Zawodnik Widzewa");return `<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;}).join("");
     }
 
-    function getOrCreateScorerContainer(matchElement){
-        if(!matchElement)return null; let container=matchElement.querySelector(".match-scorers"); if(!container){container=document.createElement("div");container.className="match-scorers";matchElement.appendChild(container);} return container;
-    }
-
+    function getOrCreateScorerContainer(matchElement){if(!matchElement)return null;let container=matchElement.querySelector(".match-scorers");if(!container){container=document.createElement("div");container.className="match-scorers";matchElement.appendChild(container);}return container;}
     function decorateVisibleScorers(match){const matchElement=document.querySelector(".round-match.widzew-match");renderScorers(getOrCreateScorerContainer(matchElement),match);}
     function decorateAllFinalScorers(){const matches=Array.from(document.querySelectorAll(".round-match.widzew-match"));const results=Array.isArray(seasonGameState.widzewResults)?seasonGameState.widzewResults:[];if(!matches.length||!results.length)return;matches.forEach((el,index)=>{const match=results[index];if(!match)return;renderScorers(getOrCreateScorerContainer(el),match);});}
 
@@ -57,41 +61,16 @@
         if(!table) return;
         const panel=table.closest(".league-table-panel");
         if(panel && !panel.querySelector(".league-competition-logo")){
-            const logo=document.createElement("img");
-            logo.className="league-competition-logo";
-            logo.src="data/logos/ekstraklasa.png";
-            logo.alt="Ekstraklasa";
-            logo.style.objectFit="contain";
-            panel.appendChild(logo);
+            const logo=document.createElement("img");logo.className="league-competition-logo";logo.src="data/logos/ekstraklasa.png";logo.alt="Ekstraklasa";logo.style.objectFit="contain";panel.appendChild(logo);
         }
-        const oldHeader=table.querySelector(".league-table-header");
-        if(oldHeader) oldHeader.remove();
-        const header=document.createElement("div");
-        header.className="league-table-header";
-        ["#","Drużyna","M","Z","R","P","B","Pkt"].forEach(label=>{
-            const cell=document.createElement("span");
-            cell.textContent=label;
-            header.appendChild(cell);
-        });
-        table.insertBefore(header,table.firstChild);
+        const oldHeader=table.querySelector(".league-table-header");if(oldHeader)oldHeader.remove();
+        const header=document.createElement("div");header.className="league-table-header";["#","Drużyna","M","Z","R","P","B","Pkt"].forEach(label=>{const cell=document.createElement("span");cell.textContent=label;header.appendChild(cell);});table.insertBefore(header,table.firstChild);
     }
 
-    function addStyles(){if(document.getElementById("seasonScorerFixStyles"))return;const style=document.createElement("style");style.id="seasonScorerFixStyles";style.textContent=`
-        .match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}
-        .match-scorers .scorer-widzew{color:#39d353}
-        .match-scorers .scorer-opponent{color:#ff4d4f}
-        .league-table-panel{position:relative}
-        .league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}
-        .league-table-panel .season-panel-title{padding-left:88px}
-        .league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}
-        .league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}
-        .league-table-header span:nth-child(2){text-align:left}
-        @media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}
-    `;document.head.appendChild(style);}
+    function addStyles(){if(document.getElementById("seasonScorerFixStyles"))return;const style=document.createElement("style");style.id="seasonScorerFixStyles";style.textContent=`.match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}.match-scorers .scorer-widzew{color:#39d353}.match-scorers .scorer-opponent{color:#ff4d4f}.league-table-panel{position:relative}.league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}.league-table-panel .season-panel-title{padding-left:88px}.league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}.league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}.league-table-header span:nth-child(2){text-align:left}@media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}`;document.head.appendChild(style);}
 
     function revealCurrentRound(){const round=Number(seasonGameState.currentRound);if((seasonGameState.widzewResults||[]).some(m=>Number(m.round)===round))return;const match=prepareResults().find(m=>Number(m.round)===round);if(!match)return;const revealed=cloneMatch(match);seasonGameState.widzewResults.push(revealed);updateTopScorersFromMatch(revealed);renderPlayableSeason();enhanceLeagueTable();decorateVisibleScorers(revealed);}
     addStyles();
-
     const originalRenderLeagueTable=window.renderLeagueTable;if(typeof originalRenderLeagueTable==="function"){window.renderLeagueTable=function(){const result=originalRenderLeagueTable.apply(this,arguments);enhanceLeagueTable();return result;};}
     const originalRenderFinalSeasonForScorers=window.renderFinalSeason;if(typeof originalRenderFinalSeasonForScorers==="function"){window.renderFinalSeason=function(){const result=originalRenderFinalSeasonForScorers.apply(this,arguments);enhanceLeagueTable();decorateAllFinalScorers();return result;};}
     const originalInitSeasonMode=window.initSeasonMode;if(typeof originalInitSeasonMode==="function"){window.initSeasonMode=async function(mode){preparedResults=null;if(!capturedSquad)capturedSquad=readFinalSquadFromDOM();return await originalInitSeasonMode.call(this,mode);};}
