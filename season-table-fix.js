@@ -4,7 +4,7 @@
         "22/23": { green:[1], blue:[2,3,4], red:[16,17,18] },
         "23/24": { green:[1], blue:[2,3], red:[16,17,18] },
         "24/25": { green:[1], blue:[2,3], red:[16,17,18], legiaYellow:true },
-        "25/26": { green:[1,2], yellow:[3], blue:[4,5], red:[16,17,18] },
+        "25/26": { green:[1,2], yellow:[3], blue:[4,5], red:[16,17,18], lechiaPenalty:true },
         "26/27": { green:[1,2], yellow:[3], blue:[4,5], red:[16,17,18] }
     };
 
@@ -25,6 +25,37 @@
         if (rules.blue?.includes(position)) return "blue";
         if (rules.red?.includes(position)) return "red";
         return null;
+    }
+
+    function numberFromCell(cell) {
+        return Number.parseInt(String(cell?.textContent || "").replace(/[^0-9-]/g, ""), 10) || 0;
+    }
+
+    function applyLechiaPenalty(table, season, rules) {
+        if (season !== "25/26" || !rules.lechiaPenalty) return;
+        const rows = Array.from(table.querySelectorAll(".league-row"));
+        rows.forEach(row => {
+            const teamCell = row.children[1];
+            const pointsCell = row.children[7];
+            if (!teamCell || !pointsCell || !/lechia gdańsk/i.test(teamCell.textContent || "")) return;
+            if (row.dataset.lechiaOriginalPoints === undefined) {
+                row.dataset.lechiaOriginalPoints = String(numberFromCell(pointsCell));
+            }
+            const original = Number(row.dataset.lechiaOriginalPoints);
+            pointsCell.textContent = String(original - 5);
+        });
+
+        const sortedRows = rows.map((row, index) => ({ row, index }))
+            .sort((a, b) => {
+                const ap = numberFromCell(a.row.children[7]);
+                const bp = numberFromCell(b.row.children[7]);
+                if (bp !== ap) return bp - ap;
+                return a.index - b.index;
+            });
+        sortedRows.forEach(({ row }) => table.appendChild(row));
+        sortedRows.forEach(({ row }, index) => {
+            if (row.children[0]) row.children[0].textContent = String(index + 1);
+        });
     }
 
     function enhanceLeagueTable() {
@@ -54,6 +85,8 @@
         const season = getSeason();
         const rules = RULES[season];
         if (!rules) return;
+
+        applyLechiaPenalty(table, season, rules);
 
         const rows = Array.from(table.querySelectorAll(".league-row"));
         rows.forEach(row => {
@@ -98,13 +131,18 @@
         if (rules.yellow?.length || rules.legiaYellow) items.push(["yellow", "Awans - Liga Europy (kwalifikacje)"]);
         if (rules.blue?.length) items.push(["blue", "Awans - Liga Konferencji Europy (kwalifikacje)"]);
         if (rules.red?.length) items.push(["red", "Spadek"]);
-
         items.forEach(([type, text]) => {
             const item = document.createElement("div");
             item.className = "league-legend-item";
             item.innerHTML = `<span class="league-legend-square table-marker-${type}"></span><span>${text}</span>`;
             legend.appendChild(item);
         });
+        if (season === "25/26") {
+            const note = document.createElement("div");
+            note.className = "league-legend-note";
+            note.textContent = "Lechia Gdańsk: −5 pkt za zaległości finansowe.";
+            legend.appendChild(note);
+        }
     }
 
     function addStyles() {
@@ -128,7 +166,8 @@
             .league-table-legend { display:flex; flex-direction:column; gap:7px; margin-top:14px; padding-top:12px; border-top:1px solid rgba(255,255,255,.14); font-size:11px; }
             .league-legend-item { display:flex; align-items:center; gap:8px; }
             .league-legend-square { flex:0 0 18px; width:18px; height:18px; border-radius:3px; }
-            @media (max-width:700px) { .league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}.league-row > :first-child.table-marker-green,.league-row > :first-child.table-marker-yellow,.league-row > :first-child.table-marker-blue,.league-row > :first-child.table-marker-red{width:22px;height:22px}.league-table-legend{font-size:10px} }
+            .league-legend-note { margin-top:4px; padding-top:7px; border-top:1px solid rgba(255,255,255,.10); font-size:10px; line-height:1.35; opacity:.72; }
+            @media (max-width:700px) { .league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}.league-row > :first-child.table-marker-green,.league-row > :first-child.table-marker-yellow,.league-row > :first-child.table-marker-blue,.league-row > :first-child.table-marker-red{width:22px;height:22px}.league-table-legend{font-size:10px}.league-legend-note{font-size:9px} }
         `;
         document.head.appendChild(style);
     }
