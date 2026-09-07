@@ -1,80 +1,121 @@
 /* Widzew top scorers.
-   Play mode: update after every revealed match.
-   Full-season simulation: aggregate the scorers displayed under all 34 matches.
-   This file does not alter match result generation or scorer drawing. */
+   This file only reads the scorer names already displayed for Widzew matches.
+   It does not change match results or scorer generation. */
 (function () {
+    const liveScorers = {};
+    let liveOwnGoals = 0;
+    const processedRounds = new Set();
+
     function escapeName(value) {
         if (typeof window.seasonSafe === "function") return window.seasonSafe(value);
-        return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;");
     }
-    function ensureState() {
-        if (!window.seasonGameState) return null;
-        if (!seasonGameState.scorers || Array.isArray(seasonGameState.scorers)) seasonGameState.scorers = {};
-        if (!Number.isFinite(Number(seasonGameState.ownGoals))) seasonGameState.ownGoals = 0;
-        return seasonGameState;
-    }
-    function addScorer(name) {
-        const state = ensureState();
-        if (!state || !name) return;
-        const clean = String(name).trim();
-        if (!clean) return;
+
+    function addName(target, name) {
+        const clean = String(name || "").trim();
+        if (!clean || clean === "Przeciwnik" || clean === "Samobój") return;
         const key = clean.toLocaleLowerCase("pl");
-        if (!state.scorers[key]) state.scorers[key] = { name: clean, goals: 0 };
-        state.scorers[key].goals++;
+        if (!target[key]) target[key] = { name: clean, goals: 0 };
+        target[key].goals++;
     }
-    function addMatchToTopScorers(match) {
-        if (!match || !Array.isArray(match.scorers)) return;
-        const state = ensureState();
-        if (!state) return;
-        match.scorers.forEach(scorer => {
-            if (scorer?.type === "widzew") {
-                const name = scorer.name || `${scorer.player?.row?.["Imię"] || ""} ${scorer.player?.row?.["Nazwisko"] || ""}`.trim();
-                addScorer(name);
-            } else if (scorer?.type === "own" || scorer?.type === "own-goal") {
-                state.ownGoals++;
-            }
-        });
-    }
-    function renderTopScorers() {
+
+    function renderRows(scorers, ownGoals) {
         const el = document.getElementById("topScorers");
         if (!el) return;
-        const state = ensureState();
-        if (!state) return;
-        const rows = Object.values(state.scorers || {}).filter(row => Number(row.goals) > 0).sort((a, b) => Number(b.goals) - Number(a.goals) || a.name.localeCompare(b.name, "pl"));
-        const normalHtml = rows.map(row => `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong></div>`).join("");
-        const ownHtml = Number(state.ownGoals) > 0 ? `<div class="scorer-own-divider"></div><div class="scorer-row scorer-own"><b>${Number(state.ownGoals)}</b><span class="scorer-dash">-</span><strong>Samobój</strong></div>` : "";
-        el.innerHTML = normalHtml || ownHtml ? normalHtml + ownHtml : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
+        const rows = Object.values(scorers)
+            .filter(row => Number(row.goals) > 0)
+            .sort((a, b) => Number(b.goals) - Number(a.goals) || a.name.localeCompare(b.name, "pl"));
+
+        const normalHtml = rows.map(row =>
+            `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong></div>`
+        ).join("");
+
+        const ownHtml = Number(ownGoals) > 0
+            ? `<div class="scorer-own-divider"></div><div class="scorer-row scorer-own"><b>${Number(ownGoals)}</b><span class="scorer-dash">-</span><strong>Samobój</strong></div>`
+            : "";
+
+        el.innerHTML = normalHtml || ownHtml
+            ? normalHtml + ownHtml
+            : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
     }
-    window.updateTopScorersFromMatch = addMatchToTopScorers;
-    window.renderTopScorers = renderTopScorers;
+
+    function scorerNameFromSpan(span) {
+        return String(span?.textContent || "")
+            .trim()
+            .replace(/^\d+['’]?\s*/, "")
+            .trim();
+    }
+
+    function readDisplayedScorers(matchElement) {
+        const result = { names: [], own: 0 };
+        if (!matchElement) return result;
+        matchElement.querySelectorAll(".match-scorers span").forEach(span => {
+            const name = scorerNameFromSpan(span);
+            if (!name || name === "Przeciwnik") return;
+            if (name === "Samobój") result.own++;
+            else result.names.push(name);
+        });
+        return result;
+    }
+
+    function updateLiveFromCurrentMatch() {
+        const match = document.querySelector("#roundMatches .round-match.widzew-match");
+        if (!match) return;
+
+        const roundLabel = document.getElementById("roundLabel")?.textContent || "";
+        const roundMatch = roundLabel.match(/(\d+)/);
+        const round = roundMatch ? Number(roundMatch[1]) : null;
+        const key = round ?? match;
+        if (processedRounds.has(key)) return;
+
+        const displayed = readDisplayedScorers(match);
+        const totalDisplayed = displayed.names.length + displayed.own;
+        if (!totalDisplayed) return;
+
+        displayed.names.forEach(name => addName(liveScorers, name));
+        liveOwnGoals += displayed.own;
+        processedRounds.add(key);
+        renderRows(liveScorers, liveOwnGoals);
+    }
+
+    // In play mode the game's own render functions are lexical/local functions,
+    // so replacing window.updateTopScorersFromMatch cannot intercept them.
+    // Instead read the scorer list after the match has finished rendering.
+    document.addEventListener("click", function (event) {
+        const button = event.target?.closest?.("#playMatchButton,#simulateMatchButton");
+        if (!button) return;
+        [80, 180, 350].forEach(delay => setTimeout(updateLiveFromCurrentMatch, delay));
+    }, false);
 
     function aggregateFinalSeasonFromDOM() {
         const matches = Array.from(document.querySelectorAll(".round-match.widzew-match"));
         if (!matches.length) return;
-        const state = ensureState();
-        if (!state) return;
-        state.scorers = {};
-        state.ownGoals = 0;
+
+        const scorers = {};
+        let ownGoals = 0;
+        let foundScorerContainer = false;
+
         matches.forEach(match => {
-            Array.from(match.querySelectorAll(".match-scorers span")).forEach(span => {
-                const text = String(span.textContent || "").trim();
-                const name = text.replace(/^\d+['’]?\s*/, "").trim();
-                if (!name || name === "Przeciwnik") return;
-                if (name === "Samobój") { state.ownGoals++; return; }
-                addScorer(name);
-            });
+            const containers = match.querySelectorAll(".match-scorers");
+            if (containers.length) foundScorerContainer = true;
+            const displayed = readDisplayedScorers(match);
+            displayed.names.forEach(name => addName(scorers, name));
+            ownGoals += displayed.own;
         });
-        renderTopScorers();
+
+        if (!foundScorerContainer) return;
+        renderRows(scorers, ownGoals);
     }
 
     const originalRenderFinalSeason = window.renderFinalSeason;
     if (typeof originalRenderFinalSeason === "function") {
         window.renderFinalSeason = function () {
             const result = originalRenderFinalSeason.apply(this, arguments);
-            [400, 550, 750].forEach(delay => setTimeout(aggregateFinalSeasonFromDOM, delay));
+            [100, 250, 450, 700, 1000].forEach(delay => setTimeout(aggregateFinalSeasonFromDOM, delay));
             return result;
         };
     }
+
     const style = document.createElement("style");
     style.id = "seasonTopScorersFixStyles";
     style.textContent = `
@@ -86,5 +127,4 @@
         #topScorers .scorer-own { opacity:.9; }
     `;
     document.head.appendChild(style);
-    setTimeout(renderTopScorers, 0);
 })();
