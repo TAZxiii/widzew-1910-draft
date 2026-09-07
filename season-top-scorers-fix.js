@@ -29,8 +29,8 @@
 
         const headerHtml = `
             <div class="scorer-table-header">
-                <span>Liczba zdobytych bramek</span>
-                <span>Imię i nazwisko</span>
+                <span class="scorer-goals-header">Liczba zdobytych bramek</span>
+                <span class="scorer-name-header">Imię i nazwisko</span>
             </div>`;
 
         const normalHtml = rows.map(row =>
@@ -41,9 +41,9 @@
             ? `<div class="scorer-own-divider"></div><div class="scorer-row scorer-own"><b>${Number(ownGoals)}</b><span class="scorer-dash">-</span><strong>Samobój</strong></div>`
             : "";
 
-        el.innerHTML = (normalHtml || ownHtml)
-            ? headerHtml + normalHtml + ownHtml
-            : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
+        el.innerHTML = headerHtml + (normalHtml || ownHtml
+            ? normalHtml + ownHtml
+            : `<div class="scorer-empty">Brak bramek Widzewa.</div>`);
     }
 
     function scorerNameFromSpan(span) {
@@ -56,7 +56,6 @@
     function readDisplayedScorers(matchElement) {
         const result = { names: [], own: 0 };
         if (!matchElement) return result;
-
         matchElement.querySelectorAll(".match-scorers span").forEach(span => {
             const name = scorerNameFromSpan(span);
             if (!name || name === "Przeciwnik") return;
@@ -86,25 +85,27 @@
         renderRows(liveScorers, liveOwnGoals);
     }
 
-    // After a match is played/simulated, read the scorers that are actually
-    // displayed on the board and add them to the running season total.
+    function restoreLiveRows() {
+        if (Object.keys(liveScorers).length || liveOwnGoals > 0) {
+            renderRows(liveScorers, liveOwnGoals);
+        }
+    }
+
     document.addEventListener("click", function (event) {
         const button = event.target?.closest?.("#playMatchButton,#simulateMatchButton");
-        if (!button) return;
-        [80, 180, 350].forEach(delay => setTimeout(updateLiveFromCurrentMatch, delay));
-    }, false);
+        if (button) {
+            [80, 180, 350].forEach(delay => setTimeout(updateLiveFromCurrentMatch, delay));
+            return;
+        }
 
-    // renderPlayableSeason() redraws the board when moving to the next round.
-    // The running scorer totals live in this file, so redraw them after that
-    // render instead of waiting for the next match to be played.
-    document.addEventListener("click", function (event) {
-        const button = event.target?.closest?.("#roundActions button");
-        if (!button) return;
-        if (button.id === "playMatchButton" || button.id === "simulateMatchButton") return;
+        const nextButton = event.target?.closest?.("#roundActions button");
+        if (!nextButton) return;
+        if (nextButton.id === "playMatchButton" || nextButton.id === "simulateMatchButton") return;
 
-        [50, 150, 300].forEach(delay => {
-            setTimeout(() => renderRows(liveScorers, liveOwnGoals), delay);
-        });
+        // The core game redraws the whole board when going to the next round
+        // and clears #topScorers. Restore the already accumulated season total
+        // after that redraw, without waiting for the next match.
+        [50, 150, 300, 600, 1000].forEach(delay => setTimeout(restoreLiveRows, delay));
     }, false);
 
     function aggregateFinalSeasonFromDOM() {
@@ -141,23 +142,39 @@
     style.textContent = `
         #topScorers .scorer-table-header {
             display:grid;
-            grid-template-columns: 145px 1fr;
-            align-items:center;
+            grid-template-columns:50px 18px minmax(0,1fr);
+            align-items:end;
             gap:8px;
             margin-bottom:8px;
-            padding-bottom:6px;
+            padding:0 10px 7px;
             border-bottom:1px solid rgba(255,255,255,.18);
             font-size:11px;
             font-weight:800;
             text-transform:uppercase;
+            line-height:1.15;
             opacity:.72;
         }
-        #topScorers .scorer-table-header span:first-child { text-align:center; }
-        #topScorers .scorer-table-header span:last-child { text-align:left; }
-        #topScorers .scorer-row { display:grid; grid-template-columns:24px 18px 1fr; align-items:center; gap:8px; }
+        #topScorers .scorer-goals-header {
+            grid-column:1 / 3;
+            width:150px;
+            justify-self:start;
+            text-align:center;
+        }
+        #topScorers .scorer-name-header {
+            grid-column:3;
+            padding-left:58px;
+            text-align:left;
+        }
+        #topScorers .scorer-row {
+            display:grid;
+            grid-template-columns:50px 18px minmax(0,1fr);
+            align-items:center;
+            gap:8px;
+            padding:4px 10px;
+        }
         #topScorers .scorer-row b { text-align:right; }
-        #topScorers .scorer-row strong { min-width:0; }
-        #topScorers .scorer-dash { opacity:.75; text-align:center; }
+        #topScorers .scorer-dash { text-align:center; opacity:.75; }
+        #topScorers .scorer-row strong { min-width:0; text-align:left; }
         #topScorers .scorer-own-divider { height:1px; margin:8px 0; background:rgba(255,255,255,.2); }
         #topScorers .scorer-own { opacity:.9; }
     `;
