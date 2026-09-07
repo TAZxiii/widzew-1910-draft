@@ -125,7 +125,6 @@
         };
     }
 
-    /* The match generator now uses the actual result of drawWidzewScorer(). */
     function makeMatchScorersUsingDraw(widzewGoals, opponentGoals) {
         const usedMinutes = new Set();
         const minute = () => {
@@ -148,35 +147,4 @@
     window.drawWidzewScorer = drawWidzewScorer;
     window.losujStrzelcaWidzewa = drawWidzewScorer;
     window.makeMatchScorers = makeMatchScorersUsingDraw;
-
-    /* season-play-fix.js currently renders a placeholder name in the visible
-       scorer block. Replace only that text with the already generated name. */
-    function refreshDisplayedScorerNames() {
-        const results = typeof seasonGameState !== "undefined" && Array.isArray(seasonGameState.widzewResults)
-            ? seasonGameState.widzewResults
-            : [];
-        if (!results.length) return;
-
-        const matches = Array.from(document.querySelectorAll(".round-match.widzew-match"));
-        matches.forEach((matchElement, index) => {
-            const match = results[index];
-            if (!match || !Array.isArray(match.scorers)) return;
-            const rows = Array.from(matchElement.querySelectorAll(".match-scorers .scorer-widzew"));
-            const widzewScorers = match.scorers.filter(s => s.type !== "opponent");
-            rows.forEach((row, scorerIndex) => {
-                const scorer = widzewScorers[scorerIndex];
-                if (!scorer?.name) return;
-                const minuteMatch = row.textContent.match(/^\s*\d+'\s*/);
-                const minuteText = minuteMatch ? minuteMatch[0] : "";
-                row.textContent = `${minuteText}${scorer.name}`;
-            });
-        });
-    }
-
-    if (typeof MutationObserver !== "undefined") {
-        const observer = new MutationObserver(() => refreshDisplayedScorerNames());
-        observer.observe(document.body, { childList: true, subtree: true });
-    }
-    document.addEventListener("DOMContentLoaded", refreshDisplayedScorerNames);
-    setTimeout(refreshDisplayedScorerNames, 0);
 })();
