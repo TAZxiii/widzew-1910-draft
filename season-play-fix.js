@@ -49,8 +49,6 @@
         return pool.length === 20 ? pool : null;
     }
 
-    // Capture the squad while the final squad screen is still active.
-    // This is more reliable than looking for it after the season screen opens.
     document.addEventListener("click", function (event) {
         const button = event.target?.closest?.("#playSeasonButton");
         if (!button) return;
@@ -93,8 +91,6 @@
         const sw = { ...base };
         const available = Object.keys(base).filter(c => sp[c].length);
 
-        // Missing starting categories redistribute 1/4 of their weight
-        // to every available starting category, exactly as specified.
         Object.keys(base).forEach(c => {
             if (!sp[c].length && available.length) {
                 const bonus = base[c] / 4;
@@ -110,8 +106,6 @@
         });
         candidates.push(["own", "OWN", 1]);
 
-        // Never turn a Widzew goal into an opponent goal just because the
-        // visual squad could not be parsed. Use the captured 20-player squad.
         const fallback = [...starters, ...bench].filter(p => category(p) !== "GK");
         if (!fallback.length) return { type: "widzew", name: "Zawodnik Widzewa", player: null };
 
@@ -163,7 +157,6 @@
         return scorers.sort((a, b) => a.minute - b.minute);
     }
 
-    // script.js uses this global generator for both playable and full-season modes.
     window.makeMatchScorers = makeScorersUsing20;
 
     function cloneMatch(match) {
@@ -192,17 +185,59 @@
         return preparedResults;
     }
 
-    function decorateVisibleScorers(match) {
-        const container = document.querySelector(".round-match.widzew-match .match-scorers");
-        if (!container || !match?.scorers) return;
-        container.innerHTML = match.scorers
-            .slice()
+    function renderScorers(container, match) {
+        if (!container || !match) return;
+        let scorers = Array.isArray(match.scorers) ? match.scorers.slice() : [];
+
+        const totalGoals = Number(match.gf || 0) + Number(match.ga || 0);
+        if (scorers.length !== totalGoals) {
+            scorers = [];
+            const used = new Set();
+            const makeMinute = () => {
+                let m = 1 + Math.floor(Math.random() * 90);
+                while (used.has(m) && used.size < 90) m = 1 + Math.floor(Math.random() * 90);
+                used.add(m);
+                return m;
+            };
+            for (let i = 0; i < Number(match.gf || 0); i++) {
+                scorers.push({ minute: makeMinute(), type: "widzew" });
+            }
+            for (let i = 0; i < Number(match.ga || 0); i++) {
+                scorers.push({ minute: makeMinute(), type: "opponent" });
+            }
+        }
+
+        container.innerHTML = scorers
             .sort((a, b) => Number(a.minute || 0) - Number(b.minute || 0))
             .map(s => {
-                const color = s.type === "opponent" ? "scorer-opponent" : "scorer-widzew";
-                const name = s.type === "opponent" ? "Przeciwnik" : (s.type === "own" ? "Samobój" : s.name);
-                return `<span class="${color}">${Math.max(1, Math.min(90, Number(s.minute) || 1))}' ${seasonSafe(name)}</span>`;
+                const opponent = s.type === "opponent";
+                const color = opponent ? "scorer-opponent" : "scorer-widzew";
+                const name = opponent ? "Przeciwnik" : "Zawodnik Widzewa";
+                return `<span class="${color}">${Math.max(1, Math.min(90, Number(s.minute) || 1))}' ${name}</span>`;
             }).join("");
+    }
+
+    function decorateVisibleScorers(match) {
+        const container = document.querySelector(".round-match.widzew-match .match-scorers");
+        renderScorers(container, match);
+    }
+
+    function decorateAllFinalScorers() {
+        const matches = Array.from(document.querySelectorAll(".round-match.widzew-match"));
+        const results = Array.isArray(seasonGameState.widzewResults) ? seasonGameState.widzewResults : [];
+        if (!matches.length || !results.length) return;
+
+        matches.forEach((el, index) => {
+            const match = results[index];
+            if (!match) return;
+            let container = el.querySelector(".match-scorers");
+            if (!container) {
+                container = document.createElement("div");
+                container.className = "match-scorers";
+                el.appendChild(container);
+            }
+            renderScorers(container, match);
+        });
     }
 
     function addStyles() {
@@ -231,12 +266,21 @@
 
     addStyles();
 
+    // The full-season view renders all 34 Widzew matches at once.
+    // Decorate them only after the original renderer has finished.
+    const originalRenderFinalSeasonForScorers = window.renderFinalSeason;
+    if (typeof originalRenderFinalSeasonForScorers === "function") {
+        window.renderFinalSeason = function () {
+            const result = originalRenderFinalSeasonForScorers.apply(this, arguments);
+            decorateAllFinalScorers();
+            return result;
+        };
+    }
+
     const originalInitSeasonMode = window.initSeasonMode;
     if (typeof originalInitSeasonMode === "function") {
         window.initSeasonMode = async function (mode) {
             preparedResults = null;
-            // New season = new captured squad only when the user has not yet
-            // captured one from the current final-squad screen.
             if (!capturedSquad) capturedSquad = readFinalSquadFromDOM();
             return await originalInitSeasonMode.call(this, mode);
         };
