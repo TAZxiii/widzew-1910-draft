@@ -31,7 +31,7 @@
     }
 
     function makeScorersUsing20(widzewGoals, opponentGoals) {
-        const usedMinutes = new Set(); const minute = () => { let m = 1+Math.floor(Math.random()*90); while (usedMinutes.has(m) && usedMinutes.size < 90) m = 1+Math.floor(Math.random()*90); usedMinutes.add(m); return m; };
+        const usedMinutes = new Set(); const minute = () => { let m = 1+Math.floor(Math.random()*90); while (usedMinutes.has(m) && usedMinutes.size<90)m=1+Math.floor(Math.random()*90); usedMinutes.add(m); return m; };
         const scorers=[]; for(let i=0;i<Number(widzewGoals||0);i++){const s=chooseWeightedScorerFrom20();scorers.push({minute:minute(),type:s.type,name:s.name,player:s.player||null});} for(let i=0;i<Number(opponentGoals||0);i++) scorers.push({minute:minute(),type:"opponent",name:"Przeciwnik",player:null}); return scorers.sort((a,b)=>a.minute-b.minute);
     }
     window.makeMatchScorers = makeScorersUsing20;
@@ -41,8 +41,8 @@
 
     function renderScorers(container,match){
         if(!container||!match)return; let scorers=Array.isArray(match.scorers)?match.scorers.slice():[]; const totalGoals=Number(match.gf||0)+Number(match.ga||0);
-        if(scorers.length!==totalGoals){scorers=[];const used=new Set();const makeMinute=()=>{let m=1+Math.floor(Math.random()*90);while(used.has(m)&&used.size<90)m=1+Math.floor(Math.random()*90);used.add(m);return m;};for(let i=0;i<Number(match.gf||0);i++)scorers.push({minute:makeMinute(),type:"widzew"});for(let i=0;i<Number(match.ga||0);i++)scorers.push({minute:makeMinute(),type:"opponent"});}
-        container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{const opponent=s.type==="opponent";const color=opponent?"scorer-opponent":"scorer-widzew";const name=opponent?"Przeciwnik":"Zawodnik Widzewa";return `<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;}).join("");
+        if(scorers.length!==totalGoals){scorers=[];const used=new Set();const makeMinute=()=>{let m=1+Math.floor(Math.random()*90);while(used.has(m)&&used.size<90)m=1+Math.floor(Math.random()*90);used.add(m);return m;};for(let i=0;i<Number(match.gf||0);i++)scorers.push({minute:makeMinute(),type:"widzew",name:"Zawodnik Widzewa"});for(let i=0;i<Number(match.ga||0);i++)scorers.push({minute:makeMinute(),type:"opponent",name:"Przeciwnik"});}
+        container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{const opponent=s.type==="opponent";const color=opponent?"scorer-opponent":"scorer-widzew";const name=opponent?"Przeciwnik":(s.name||"Zawodnik Widzewa");return `<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;}).join("");
     }
 
     function getOrCreateScorerContainer(matchElement){
@@ -61,6 +61,7 @@
             logo.className="league-competition-logo";
             logo.src="data/logos/ekstraklasa.png";
             logo.alt="Ekstraklasa";
+            logo.style.objectFit="contain";
             panel.appendChild(logo);
         }
         const oldHeader=table.querySelector(".league-table-header");
