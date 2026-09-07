@@ -97,12 +97,6 @@
             [80, 180, 350].forEach(delay => setTimeout(updateLiveFromCurrentMatch, delay));
             return;
         }
-
-        const nextButton = event.target?.closest?.("#roundActions button");
-        if (!nextButton) return;
-        if (nextButton.id === "playMatchButton" || nextButton.id === "simulateMatchButton") return;
-
-        [50, 150, 300, 600, 1000].forEach(delay => setTimeout(restoreLiveRows, delay));
     }, false);
 
     function aggregateFinalSeasonFromDOM() {
@@ -133,6 +127,38 @@
             return result;
         };
     }
+
+    /*
+       renderPlayableSeason() redraws #topScorers and the core game can clear it
+       after the click handler has already run. Watch only this small container.
+       When the core renderer removes our rows, immediately restore the already
+       accumulated totals. The observer is disconnected while restoring so it
+       cannot recurse or cause the game to freeze.
+    */
+    function installTopScorersGuard() {
+        const el = document.getElementById("topScorers");
+        if (!el || typeof MutationObserver === "undefined") return;
+
+        const observer = new MutationObserver(function () {
+            if (!Object.keys(liveScorers).length && liveOwnGoals <= 0) return;
+            if (el.querySelector(".scorer-row")) return;
+
+            observer.disconnect();
+            restoreLiveRows();
+            observer.observe(el, { childList: true, subtree: true });
+        });
+
+        observer.observe(el, { childList: true, subtree: true });
+    }
+
+    function startGuardWhenReady() {
+        if (document.getElementById("topScorers")) {
+            installTopScorersGuard();
+            return;
+        }
+        setTimeout(startGuardWhenReady, 100);
+    }
+    startGuardWhenReady();
 
     const style = document.createElement("style");
     style.id = "seasonTopScorersFixStyles";
