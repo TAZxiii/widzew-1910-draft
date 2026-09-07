@@ -27,6 +27,12 @@
             .filter(row => Number(row.goals) > 0)
             .sort((a, b) => Number(b.goals) - Number(a.goals) || a.name.localeCompare(b.name, "pl"));
 
+        const hasGoals = rows.length || Number(ownGoals) > 0;
+        if (!hasGoals) {
+            el.innerHTML = `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
+            return;
+        }
+
         const headerHtml = `
             <div class="scorer-table-header">
                 <span class="scorer-goals-header">Liczba zdobytych bramek</span>
@@ -41,9 +47,7 @@
             ? `<div class="scorer-own-divider"></div><div class="scorer-row scorer-own"><b>${Number(ownGoals)}</b><span class="scorer-dash">-</span><strong>Samobój</strong></div>`
             : "";
 
-        el.innerHTML = headerHtml + (normalHtml || ownHtml
-            ? normalHtml + ownHtml
-            : `<div class="scorer-empty">Brak bramek Widzewa.</div>`);
+        el.innerHTML = headerHtml + normalHtml + ownHtml;
     }
 
     function scorerNameFromSpan(span) {
@@ -91,22 +95,26 @@
         }
     }
 
+    // Read scorers after a played/simulated match.
     document.addEventListener("click", function (event) {
         const button = event.target?.closest?.("#playMatchButton,#simulateMatchButton");
         if (button) {
-            [80, 180, 350].forEach(delay => setTimeout(updateLiveFromCurrentMatch, delay));
-            return;
+            [80, 180, 350, 600].forEach(delay => setTimeout(updateLiveFromCurrentMatch, delay));
         }
-
-        const nextButton = event.target?.closest?.("#roundActions button");
-        if (!nextButton) return;
-        if (nextButton.id === "playMatchButton" || nextButton.id === "simulateMatchButton") return;
-
-        // The core game redraws the whole board when going to the next round
-        // and clears #topScorers. Restore the already accumulated season total
-        // after that redraw, without waiting for the next match.
-        [50, 150, 300, 600, 1000].forEach(delay => setTimeout(restoreLiveRows, delay));
     }, false);
+
+    // Going to the next round redraws #topScorers. Restore the already
+    // accumulated list repeatedly for a short, bounded period so it survives
+    // the complete redraw even when the next match has no Widzew scorer.
+    document.addEventListener("click", function (event) {
+        const button = event.target?.closest?.("#roundActions button");
+        if (!button) return;
+        if (button.id === "playMatchButton" || button.id === "simulateMatchButton") return;
+
+        for (let delay = 0; delay <= 3000; delay += 100) {
+            setTimeout(restoreLiveRows, delay);
+        }
+    }, true);
 
     function aggregateFinalSeasonFromDOM() {
         const matches = Array.from(document.querySelectorAll(".round-match.widzew-match"));
@@ -162,7 +170,7 @@
         }
         #topScorers .scorer-name-header {
             grid-column:3;
-            padding-left:58px;
+            padding-left:0;
             text-align:left;
         }
         #topScorers .scorer-row {
