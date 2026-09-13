@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Widzew 1910 — test silnika meczu</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}main{max-width:1000px;margin:auto}h1{font-size:24px}.panel{background:#1d1d1d;border:1px solid #444;border-radius:10px;padding:16px;margin:12px 0}label{display:inline-flex;flex-direction:column;gap:5px;margin:6px 12px 6px 0}input,select,button{font-size:16px;padding:8px;border-radius:6px;border:1px solid #666}button{cursor:pointer;font-weight:bold}pre{white-space:pre-wrap;line-height:1.45;background:#080808;padding:14px;border-radius:8px;overflow:auto}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}.ok{font-weight:bold}
+</style>
+</head>
+<body><main>
+<h1>Widzew 1910 — standalone Match Engine</h1>
+<div class="panel"><b>Test bez głównej gry</b><p>Ta strona ładuje wyłącznie season-match-engine.js. Nic nie jest podłączone do script.js.</p></div>
+<div class="panel grid">
+<label>Overall Widzewa<input id="wOverall" type="number" value="72"></label>
+<label>Overall rywala<input id="oOverall" type="number" value="75"></label>
+<label>Charakter rywala<input id="character" type="number" value="7" min="1" max="10"></label>
+<label>Siła trenera<input id="coach" type="number" value="0.6" step="0.1"></label>
+<label>Różnica pomocy<input id="mid" type="number" value="0"></label>
+<label>Różnica obrony<input id="def" type="number" value="0"></label>
+<label>Mecz<select id="home"><option value="1">Dom</option><option value="0">Wyjazd</option></select></label>
+</div>
+<div class="panel"><button id="one">GENERUJ TESTOWY MECZ</button> <button id="many">1000 LOSOWYCH MECZÓW</button></div>
+<div class="panel"><div id="summary"></div><pre id="output">Gotowy do testu.</pre></div>
+<script src="season-match-engine.js?v=1"></script>
+<script>
+function cfg(){const w=+wOverall.value,o=+oOverall.value;return{overallDiff:w-o,coachStrength:+coach.value,home:home.value==='1',charakter:+character.value,midfieldDiff:+mid.value,defenceDiff:+def.value};}
+function one(){const x=WidzewMatchEngine.generateMatchSkeleton(cfg());summary.textContent=`Eventów: ${x.eventCount} | OF: ${x.ofShare.toFixed(1)}% | DEF: ${(100-x.ofShare).toFixed(1)}%`;output.textContent=x.events.map(e=>`${String(e.minute).padStart(3,' ')}' | ${e.side} | event ${e.eventId} | Z=${e.z===null?'—':e.z} | K=${e.k}`).join('\n');}
+function many(){let n=1000,total=0,of=0,def=0,counts={};for(let i=0;i<n;i++){let x=WidzewMatchEngine.generateMatchSkeleton(cfg());total+=x.eventCount;of+=x.events.filter(e=>e.side==='OF').length;def+=x.events.filter(e=>e.side==='DEF').length;x.events.forEach(e=>counts[e.eventId]=(counts[e.eventId]||0)+1)}summary.textContent=`1000 meczów | średnio eventów: ${(total/n).toFixed(2)} | OF: ${(of/(of+def)*100).toFixed(2)}% | DEF: ${(def/(of+def)*100).toFixed(2)}%`;output.textContent=Object.keys(counts).sort((a,b)=>a-b).map(id=>`event ${id}: ${counts[id]} (${(counts[id]/total*100).toFixed(2)}%)`).join('\n');}
+one.onclick=one;many.onclick=many;
+</script></main></body></html>
