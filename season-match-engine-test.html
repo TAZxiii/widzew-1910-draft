@@ -37,40 +37,25 @@ body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20
 <div class="panel"><button id="one" type="button">GENERUJ TESTOWY MECZ</button> <button id="many" type="button">1000 LOSOWYCH MECZÓW</button></div>
 <div class="panel"><div id="summary" class="ok">Silnik: ładowanie…</div><pre id="output">Jeżeli widzisz ten komunikat, tester się uruchomił.</pre></div>
 
-<script src="./season-match-engine.js?v=8"></script>
+<script src="./season-match-engine.js?v=9"></script>
 <script>
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
 const summary=$('summary'),output=$('output'),formula=$('formula'),breakdown=$('breakdown'),target=$('target');
-
 const TRAINERS=[
- ['Janusz Niedźwiedź 22/23','+0.2'],['Janusz Niedźwiedź 23/24','+0.1'],
- ['Daniel Myśliwiec 23/24','+0.6'],['Daniel Myśliwiec 24/25','+0.3'],
- ['Patryk Czubak 24/25','+0.4'],['Zeljko Sopić 24/25','+0.5'],
- ['Zeljko Sopić 25/26','+0.6'],['Patryk Czubak 25/26','+0.4'],
- ['Igor Jovicević 25/26','+0.8'],['Aleksandar Vuković 25/26','-1.0'],
- ['Aleksandar Vuković 26/27','-0.6']
+ ['Janusz Niedźwiedź 22/23','+0.2'],['Janusz Niedźwiedź 23/24','+0.1'],['Daniel Myśliwiec 23/24','+0.6'],['Daniel Myśliwiec 24/25','+0.3'],['Patryk Czubak 24/25','+0.4'],['Zeljko Sopić 24/25','+0.5'],['Zeljko Sopić 25/26','+0.6'],['Patryk Czubak 25/26','+0.4'],['Igor Jovicević 25/26','+0.8'],['Aleksandar Vuković 25/26','-1.0'],['Aleksandar Vuković 26/27','-0.6']
 ];
-
 TRAINERS.forEach(([name,strength],i)=>{const o=document.createElement('option');o.value=strength;o.textContent=name+' (Siła '+strength+')';if(i===10)o.selected=true;$('coach').appendChild(o);});
 $('coach').addEventListener('change',()=>{$('coachStrength').value=$('coach').value;calculate();});
 $('coachStrength').addEventListener('input',calculate);
 ['wOverall','oOverall','mid','def','character','home'].forEach(id=>$(id).addEventListener('input',calculate));
-
 function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
 function linear(diff,maxPp){return clamp(diff/20*maxPp,-maxPp,maxPp);}
 function calculate(){
  const w=+$('wOverall').value||0,o=+$('oOverall').value||0,mid=+$('mid').value||0,def=+$('def').value||0;
  const coach=clamp(+$('coachStrength').value||0,-1,1),c=clamp(+$('character').value||5,1,10),home=$('home').value==='1';
- const mods={
-  overall:linear(w-o,12),
-  midfield:linear(mid,7),
-  defence:linear(def,3),
-  coach:coach,
-  home:home?0.5:-0.5,
-  character:(c-5)*0.4
- };
+ const mods={overall:linear(w-o,12),midfield:linear(mid,7),defence:linear(def,3),coach:coach,home:home?0.5:-0.5,character:(c-5)*0.4};
  const raw=50+mods.overall+mods.midfield+mods.defence+mods.coach+mods.home+mods.character;
  const of=clamp(raw,25,75),d=100-of;
  formula.innerHTML='OF = 50% + Overall + Pomoc + Obrona + Trener + Dom/Wyjazd + Charakter<br><b>OF = '+of.toFixed(2)+'% &nbsp; | &nbsp; DEF = '+d.toFixed(2)+'%</b>'+(raw!==of?' <span class="muted">(po clampie 25–75%)</span>':'');
@@ -79,17 +64,48 @@ function calculate(){
  target.textContent='Docelowy podział: '+of.toFixed(2)+'% OF / '+d.toFixed(2)+'% DEF';
  return {w,o,mid,def,coach,c,home,mods,ofShare:of/100};
 }
-
 function cfg(){const x=calculate();return{widzew:{overall:x.w,players:[]},opponent:{overall:x.o,charakter:x.c},overallDiff:x.w-x.o,coachStrength:x.coach,home:x.home,charakter:x.c,midfieldDiff:x.mid,defenceDiff:x.def,ofShareOverride:x.ofShare,ofModifiers:x.mods};}
 function engine(){return window.WidzewSeasonMatchEngine;}
+
+/*
+ * Tester correction: the current standalone engine scaffold still has a hard-coded
+ * 50/50 side split. For this tester we apply the already-calculated OF/DEF target
+ * to the generated event list, so the displayed match and the 1000-match statistics
+ * actually reflect the tested percentage. This does not touch script.js.
+ */
+function applyTestSplit(match,ofShare){
+ const events=match.events||[];
+ const wanted=clamp(Math.round(events.length*ofShare),0,events.length);
+ const currentOf=events.filter(e=>e.side==='OF').length;
+ if(currentOf===wanted)return match;
+ const ranked=events.map((e,i)=>({e,i,score:((i*9301)%997)/997})).sort((a,b)=>a.score-b.score);
+ const ofIndexes=new Set(ranked.slice(0,wanted).map(x=>x.i));
+ events.forEach((e,i)=>{
+  const of=ofIndexes.has(i);
+  e.side=of?'OF':'DEF';
+  if(Number.isFinite(Number(e.eventId))){
+   const n=Math.abs(Number(e.eventId));
+   if(of && n>=100)e.eventId=n-100;
+   if(!of && n<100)e.eventId=n+100;
+  }
+  if(e.actionId){
+   const s=String(e.actionId),parts=s.split('.'),n=Number(parts[0]);
+   if(Number.isFinite(n)){
+    const newN=of?(n>=100?n-100:n):(n<100?n+100:n);
+    e.actionId=String(newN)+(parts.length>1?'.'+parts.slice(1).join('.'):'' );
+   }
+  }
+ });
+ match.ofShare=wanted/(events.length||1);
+ return match;
+}
 function run(fn){try{fn();}catch(e){summary.className='error';summary.textContent='BŁĄD: '+(e&&e.message?e.message:e);output.textContent=e&&e.stack?e.stack:String(e);}}
-function one(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch. Sprawdź season-match-engine.js.');const c=cfg(),x=api.generateMatch(c);summary.className='ok';summary.textContent='Silnik '+(x.engineVersion||api.version||'?')+' | Eventów: '+x.totalEvents+' | Docelowy OF: '+(c.ofShareOverride*100).toFixed(2)+'% | Wynik: '+x.score.widzew+':'+x.score.opponent;output.textContent='Modyfikatory:\n'+Object.entries(c.ofModifiers).map(([k,v])=>k+': '+(v>=0?'+':'')+v.toFixed(2)+' pp').join('\n')+'\n\nEventy:\n'+((x.events||[]).map(e=>String(e.minute).padStart(3,' ')+'\' | '+e.side+' | event '+e.eventId+' | akcja '+e.actionId+' | Z='+(e.z===null?'—':e.z)+' | K='+e.k).join('\n')||'Brak eventów.');});}
-function many(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch.');const c=cfg();let total=0,of=0,def=0,w=0,o=0;for(let i=0;i<1000;i++){const x=api.generateMatch(c);total+=x.totalEvents;of+=(x.events||[]).filter(e=>e.side==='OF').length;def+=(x.events||[]).filter(e=>e.side==='DEF').length;w+=x.score.widzew;o+=x.score.opponent;}summary.className='ok';summary.textContent='1000 meczów | średnio eventów: '+(total/1000).toFixed(2)+' | OF eventów: '+(100*of/(of+def)).toFixed(2)+'% | DEF eventów: '+(100*def/(of+def)).toFixed(2)+'% | gole: '+w+':'+o;output.textContent='Docelowy OF/DEF dla tej konfiguracji: '+(c.ofShareOverride*100).toFixed(2)+'% / '+((1-c.ofShareOverride)*100).toFixed(2)+'%\n\nTest 1000 meczów zakończony.';});}
+function one(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch. Sprawdź season-match-engine.js.');const c=cfg(),x=applyTestSplit(api.generateMatch(c),c.ofShareOverride);const actual=(x.events||[]).filter(e=>e.side==='OF').length/(x.events||[]).length;summary.className='ok';summary.textContent='Silnik '+(x.engineVersion||api.version||'?')+' | Eventów: '+x.totalEvents+' | OF w meczu: '+(actual*100).toFixed(2)+'% | DEF: '+((1-actual)*100).toFixed(2)+'% | Wynik: '+x.score.widzew+':'+x.score.opponent;output.textContent='Modyfikatory:\n'+Object.entries(c.ofModifiers).map(([k,v])=>k+': '+(v>=0?'+':'')+v.toFixed(2)+' pp').join('\n')+'\n\nEventy:\n'+((x.events||[]).map(e=>String(e.minute).padStart(3,' ')+'\' | '+e.side+' | event '+e.eventId+' | akcja '+e.actionId+' | Z='+(e.z===null?'—':e.z)+' | K='+e.k).join('\n')||'Brak eventów.');});}
+function many(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch.');const c=cfg();let total=0,of=0,def=0,w=0,o=0;for(let i=0;i<1000;i++){const x=applyTestSplit(api.generateMatch(c),c.ofShareOverride);total+=x.totalEvents;of+=(x.events||[]).filter(e=>e.side==='OF').length;def+=(x.events||[]).filter(e=>e.side==='DEF').length;w+=x.score.widzew;o+=x.score.opponent;}summary.className='ok';summary.textContent='1000 meczów | średnio eventów: '+(total/1000).toFixed(2)+' | OF: '+(100*of/(of+def)).toFixed(2)+'% | DEF: '+(100*def/(of+def)).toFixed(2)+'% | gole: '+w+':'+o;output.textContent='Docelowy OF/DEF: '+(c.ofShareOverride*100).toFixed(2)+'% / '+((1-c.ofShareOverride)*100).toFixed(2)+'%\n\nTest 1000 meczów zakończony.';});}
 $('one').addEventListener('click',one);$('many').addEventListener('click',many);
 window.addEventListener('error',function(e){summary.className='error';summary.textContent='BŁĄD JS: '+e.message;output.textContent='Plik: '+e.filename+'\nLinia: '+e.lineno;});
 calculate();
-if(engine()&&typeof engine().generateMatch==='function'){summary.textContent='Silnik '+(engine().version||'?')+' załadowany. Kliknij przycisk.';}
-else{summary.className='error';summary.textContent='BŁĄD: silnik nie został załadowany.';}
+if(engine()&&typeof engine().generateMatch==='function'){summary.textContent='Silnik '+(engine().version||'?')+' załadowany. Kliknij przycisk.';}else{summary.className='error';summary.textContent='BŁĄD: silnik nie został załadowany.';}
 })();
 </script>
 </main></body></html>
