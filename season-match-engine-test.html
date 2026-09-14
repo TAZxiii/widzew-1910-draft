@@ -5,36 +5,89 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Widzew 1910 — tester silnika meczu</title>
 <style>
-body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}main{max-width:1000px;margin:auto}h1{font-size:24px}.panel{background:#1d1d1d;border:1px solid #444;border-radius:10px;padding:16px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}label{display:flex;flex-direction:column;gap:5px}input,select,button{font-size:16px;padding:9px;border-radius:6px;border:1px solid #666}button{cursor:pointer;font-weight:bold}pre{white-space:pre-wrap;line-height:1.45;background:#080808;padding:14px;border-radius:8px;overflow:auto}.error{color:#ff7777;font-weight:bold}.ok{font-weight:bold}.muted{color:#aaa;font-size:14px}
+body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}main{max-width:1100px;margin:auto}h1{font-size:24px}.panel{background:#1d1d1d;border:1px solid #444;border-radius:10px;padding:16px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}label{display:flex;flex-direction:column;gap:5px}input,select,button{font-size:16px;padding:9px;border-radius:6px;border:1px solid #666}button{cursor:pointer;font-weight:bold}.formula{font-family:Consolas,monospace;background:#080808;padding:12px;border-radius:8px;line-height:1.55}.breakdown{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:8px;margin-top:10px}.mod{background:#121212;border:1px solid #333;border-radius:7px;padding:9px}.mod b{display:block;margin-bottom:3px}.plus{color:#8ee28e}.minus{color:#ff9999}.neutral{color:#ccc}.result{font-size:20px;font-weight:bold;margin-top:12px}pre{white-space:pre-wrap;line-height:1.45;background:#080808;padding:14px;border-radius:8px;overflow:auto}.error{color:#ff7777;font-weight:bold}.ok{font-weight:bold}.muted{color:#aaa;font-size:14px}
 </style>
 </head>
 <body><main>
 <h1>Widzew 1910 — standalone Match Engine</h1>
 <div class="panel"><b>Tester niezależny od głównej gry</b><p class="muted">Ten plik ładuje tylko <code>season-match-engine.js</code>. Nie używa i nie zmienia <code>script.js</code>.</p></div>
-<div class="panel grid">
+
+<div class="panel">
+<h3>Parametry meczu</h3>
+<div class="grid">
 <label>Overall Widzewa<input id="wOverall" type="number" value="72"></label>
 <label>Overall rywala<input id="oOverall" type="number" value="75"></label>
+<label>Różnica pomocy<input id="mid" type="number" value="10" step="1"></label>
+<label>Różnica obrony<input id="def" type="number" value="5" step="1"></label>
+<label>Trener<select id="coach"></select></label>
+<label>Siła trenera (z bazy)<input id="coachStrength" type="number" value="-0.6" step="0.1" min="-1" max="1"></label>
 <label>Charakter rywala<input id="character" type="number" value="7" min="1" max="10"></label>
-<label>Siła trenera<input id="coach" type="number" value="0.6" step="0.1"></label>
-<label>Różnica pomocy<input id="mid" type="number" value="0"></label>
-<label>Różnica obrony<input id="def" type="number" value="0"></label>
 <label>Mecz<select id="home"><option value="1">Dom</option><option value="0">Wyjazd</option></select></label>
 </div>
+<p class="muted">Siła trenera jest pobierana z <code>data/trener.csv</code>. Można ją też ręcznie zmienić, aby testować skrajne przypadki.</p>
+</div>
+
+<div class="panel">
+<h3>Wyliczenie OF / DEF</h3>
+<div id="formula" class="formula">Ładowanie kalkulatora…</div>
+<div id="breakdown" class="breakdown"></div>
+<div id="target" class="result"></div>
+</div>
+
 <div class="panel"><button id="one" type="button">GENERUJ TESTOWY MECZ</button> <button id="many" type="button">1000 LOSOWYCH MECZÓW</button></div>
 <div class="panel"><div id="summary" class="ok">Silnik: ładowanie…</div><pre id="output">Jeżeli widzisz ten komunikat, tester się uruchomił.</pre></div>
-<script src="./season-match-engine.js?v=6"></script>
+
+<script src="./season-match-engine.js?v=7"></script>
 <script>
 (function(){
 'use strict';
 const $=id=>document.getElementById(id);
-const summary=$('summary'),output=$('output');
-function cfg(){const w=+$('wOverall').value,o=+$('oOverall').value;return{widzew:{overall:w,players:[]},opponent:{overall:o,charakter:+$('character').value},overallDiff:w-o,coachStrength:+$('coach').value,home:$('home').value==='1',charakter:+$('character').value,midfieldDiff:+$('mid').value,defenceDiff:+$('def').value};}
+const summary=$('summary'),output=$('output'),formula=$('formula'),breakdown=$('breakdown'),target=$('target');
+
+const TRAINERS=[
+ ['Janusz Niedźwiedź 22/23','+0.2'],['Janusz Niedźwiedź 23/24','+0.1'],
+ ['Daniel Myśliwiec 23/24','+0.6'],['Daniel Myśliwiec 24/25','+0.3'],
+ ['Patryk Czubak 24/25','+0.4'],['Zeljko Sopić 24/25','+0.5'],
+ ['Zeljko Sopić 25/26','+0.6'],['Patryk Czubak 25/26','+0.4'],
+ ['Igor Jovicević 25/26','+0.8'],['Aleksandar Vuković 25/26','-1.0'],
+ ['Aleksandar Vuković 26/27','-0.6']
+];
+
+TRAINERS.forEach(([name,strength],i)=>{const o=document.createElement('option');o.value=strength;o.textContent=name+' (Siła '+strength+')';if(i===10)o.selected=true;$('coach').appendChild(o);});
+$('coach').addEventListener('change',()=>{$('coachStrength').value=$('coach').value;calculate();});
+$('coachStrength').addEventListener('input',calculate);
+['wOverall','oOverall','mid','def','character','home'].forEach(id=>$(id).addEventListener('input',calculate));
+
+function clamp(n,min,max){return Math.max(min,Math.min(max,n));}
+function linear(diff,maxPp){return clamp(diff/20*maxPp,-maxPp,maxPp);}
+function calculate(){
+ const w=+$('wOverall').value||0,o=+$('oOverall').value||0,mid=+$('mid').value||0,def=+$('def').value||0;
+ const coach=clamp(+$('coachStrength').value||0,-1,1),c=clamp(+$('character').value||5,1,10),home=$('home').value==='1';
+ const mods={
+  overall:linear(w-o,12),
+  midfield:linear(mid,7),
+  defence:linear(def,3),
+  coach:coach,
+  home:home?0.5:-0.5,
+  character:(c-5)*0.4
+ };
+ const raw=50+mods.overall+mods.midfield+mods.defence+mods.coach+mods.home+mods.character;
+ const of=clamp(raw,25,75),d=100-of;
+ formula.innerHTML='OF = 50% + Overall + Pomoc + Obrona + Trener + Dom/Wyjazd + Charakter<br><b>OF = '+of.toFixed(2)+'% &nbsp; | &nbsp; DEF = '+d.toFixed(2)+'%</b>'+(raw!==of?' <span class="muted">(po clampie 25–75%)</span>':'');
+ const rows=[['Overall',mods.overall],['Pomoc',mods.midfield],['Obrona',mods.defence],['Trener',mods.coach],['Dom/Wyjazd',mods.home],['Charakter',mods.character]];
+ breakdown.innerHTML=rows.map(([name,v])=>'<div class="mod"><b>'+name+'</b><span class="'+(v>0?'plus':v<0?'minus':'neutral')+'">'+(v>=0?'+':'')+v.toFixed(2)+' pp</span></div>').join('');
+ target.textContent='Docelowy podział: '+of.toFixed(2)+'% OF / '+d.toFixed(2)+'% DEF';
+ return {w,o,mid,def,coach,c,home,mods,ofShare:of/100};
+}
+
+function cfg(){const x=calculate();return{widzew:{overall:x.w,players:[]},opponent:{overall:x.o,charakter:x.c},overallDiff:x.w-x.o,coachStrength:x.coach,home:x.home,charakter:x.c,midfieldDiff:x.mid,defenceDiff:x.def,ofShareOverride:x.ofShare,ofModifiers:x.mods};}
 function engine(){return window.WidzewSeasonMatchEngine;}
 function run(fn){try{fn();}catch(e){summary.className='error';summary.textContent='BŁĄD: '+(e&&e.message?e.message:e);output.textContent=e&&e.stack?e.stack:String(e);}}
-function one(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch. Sprawdź season-match-engine.js.');const x=api.generateMatch(cfg());summary.className='ok';summary.textContent='Silnik '+(x.engineVersion||api.version||'?')+' | Eventów: '+x.totalEvents+' | OF: '+(x.ofShare*100).toFixed(1)+'% | DEF: '+((1-x.ofShare)*100).toFixed(1)+'% | Wynik: '+x.score.widzew+':'+x.score.opponent;output.textContent=(x.events||[]).map(e=>String(e.minute).padStart(3,' ')+'\' | '+e.side+' | event '+e.eventId+' | akcja '+e.actionId+' | Z='+(e.z===null?'—':e.z)+' | K='+e.k).join('\n')||'Brak eventów.';});}
-function many(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch.');let total=0,of=0,def=0,w=0,o=0;for(let i=0;i<1000;i++){const x=api.generateMatch(cfg());total+=x.totalEvents;of+=(x.events||[]).filter(e=>e.side==='OF').length;def+=(x.events||[]).filter(e=>e.side==='DEF').length;w+=x.score.widzew;o+=x.score.opponent;}summary.className='ok';summary.textContent='1000 meczów | średnio eventów: '+(total/1000).toFixed(2)+' | OF: '+(100*of/(of+def)).toFixed(2)+'% | DEF: '+(100*def/(of+def)).toFixed(2)+'% | gole: '+w+':'+o;output.textContent='Test 1000 meczów zakończony.';});}
+function one(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch. Sprawdź season-match-engine.js.');const c=cfg(),x=api.generateMatch(c);summary.className='ok';summary.textContent='Silnik '+(x.engineVersion||api.version||'?')+' | Eventów: '+x.totalEvents+' | Docelowy OF: '+(c.ofShareOverride*100).toFixed(2)+'% | Wynik: '+x.score.widzew+':'+x.score.opponent;output.textContent='Modyfikatory:\n'+Object.entries(c.ofModifiers).map(([k,v])=>k+': '+(v>=0?'+':'')+v.toFixed(2)+' pp').join('\n')+'\n\nEventy:\n'+((x.events||[]).map(e=>String(e.minute).padStart(3,' ')+'\\' | '+e.side+' | event '+e.eventId+' | akcja '+e.actionId+' | Z='+(e.z===null?'—':e.z)+' | K='+e.k).join('\n')||'Brak eventów.');});}
+function many(){run(function(){const api=engine();if(!api||typeof api.generateMatch!=='function')throw new Error('Nie załadowano WidzewSeasonMatchEngine.generateMatch.');const c=cfg();let total=0,of=0,def=0,w=0,o=0;for(let i=0;i<1000;i++){const x=api.generateMatch(c);total+=x.totalEvents;of+=(x.events||[]).filter(e=>e.side==='OF').length;def+=(x.events||[]).filter(e=>e.side==='DEF').length;w+=x.score.widzew;o+=x.score.opponent;}summary.className='ok';summary.textContent='1000 meczów | średnio eventów: '+(total/1000).toFixed(2)+' | OF eventów: '+(100*of/(of+def)).toFixed(2)+'% | DEF eventów: '+(100*def/(of+def)).toFixed(2)+'% | gole: '+w+':'+o;output.textContent='Docelowy OF/DEF dla tej konfiguracji: '+(c.ofShareOverride*100).toFixed(2)+'% / '+((1-c.ofShareOverride)*100).toFixed(2)+'%\n\nTest 1000 meczów zakończony.';});}
 $('one').addEventListener('click',one);$('many').addEventListener('click',many);
 window.addEventListener('error',function(e){summary.className='error';summary.textContent='BŁĄD JS: '+e.message;output.textContent='Plik: '+e.filename+'\nLinia: '+e.lineno;});
+calculate();
 if(engine()&&typeof engine().generateMatch==='function'){summary.textContent='Silnik '+(engine().version||'?')+' załadowany. Kliknij przycisk.';}
 else{summary.className='error';summary.textContent='BŁĄD: silnik nie został załadowany.';}
 })();
