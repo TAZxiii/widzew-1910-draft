@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Widzew 1910 — interaktywny tester eventu</title>
+<style>
+body{font-family:Arial,sans-serif;background:#111;color:#eee;margin:0;padding:20px}main{max-width:1100px;margin:auto}.panel{background:#1d1d1d;border:1px solid #444;border-radius:10px;padding:16px;margin:12px 0}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}label{display:flex;flex-direction:column;gap:5px}input,select,button{font-size:16px;padding:9px;border-radius:6px;border:1px solid #666;background:#eee;color:#111}button{cursor:pointer;font-weight:bold}.event{font-size:21px;font-weight:bold;background:#080808;padding:16px;border-radius:8px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.actions button{min-width:150px}.selected{outline:3px solid #fff}.muted{color:#aaa;font-size:14px}pre{white-space:pre-wrap;line-height:1.45;background:#080808;padding:14px;border-radius:8px;overflow:auto}.error{color:#ff7777;font-weight:bold}.ok{font-weight:bold}.formula{font-family:Consolas,monospace;background:#080808;padding:12px;border-radius:8px;line-height:1.55}.result{font-size:19px;font-weight:bold;margin-top:12px}
+</style>
+</head>
+<body><main>
+<h1>Widzew 1910 — interaktywny tester pojedynczego eventu</h1>
+<div class="panel"><b>Tester jest niezależny od głównej gry.</b><p class="muted">Nie używa ani nie zmienia <code>script.js</code> / <code>index.html</code>. Korzysta z aktualnego standalone <code>season-match-engine.js</code>.</p></div>
+<div class="panel"><h3>Parametry meczu</h3><div class="grid">
+<label>Overall Widzewa<input id="wOverall" type="number" value="72"></label>
+<label>Overall rywala<input id="oOverall" type="number" value="75"></label>
+<label>Różnica pomocy<input id="mid" type="number" value="10"></label>
+<label>Różnica obrony<input id="def" type="number" value="5"></label>
+<label>Siła trenera<input id="coachStrength" type="number" value="-0.6" step="0.1"></label>
+<label>Charakter rywala<input id="character" type="number" value="7" min="1" max="10"></label>
+<label>Mecz<select id="home"><option value="1">Dom</option><option value="0">Wyjazd</option></select></label>
+</div></div>
+<div class="panel"><h3>Podział OF / DEF</h3><div id="formula" class="formula"></div></div>
+<div class="panel"><button id="generate" type="button">🎲 WYLOSUJ EVENT</button> <button id="reset" type="button">↻ NOWY EVENT</button><div id="status" class="muted" style="margin-top:10px"></div></div>
+<div class="panel"><h3>Aktualny event</h3><div id="event" class="event">Najpierw wylosuj event.</div><div id="actions" class="actions"></div><div id="chosen" class="result"></div></div>
+<div class="panel"><h3>Test wyboru akcji</h3><button id="resolve" type="button" disabled>ROZSTRZYGNIJ WYBRANĄ AKCJĘ</button><pre id="output">Tutaj pojawi się wynik techniczny.</pre></div>
+<script src="./season-match-engine.js?v=11"></script>
+<script>
+(function(){'use strict';
+const $=id=>document.getElementById(id), api=()=>window.WidzewSeasonMatchEngine;
+let current=null, selected=null;
+function clamp(n,a,b){return Math.max(a,Math.min(b,n))}
+function linear(d,m){return clamp(d/20*m,-m,m)}
+function cfg(){const w=+$('wOverall').value||0,o=+$('oOverall').value||0,mid=+$('mid').value||0,def=+$('def').value||0,c=clamp(+$('character').value||5,1,10),coach=clamp(+$('coachStrength').value||0,-1,1),home=$('home').value==='1';const mods={overall:linear(w-o,12),midfield:linear(mid,7),defence:linear(def,3),coach,home:home?.5:-.5,character:(c-5)*.4};const raw=50+mods.overall+mods.midfield+mods.defence+mods.coach+mods.home+mods.character;const of=clamp(raw,25,75);return{widzew:{overall:w,players:[]},opponent:{overall:o,charakter:c},overallDiff:w-o,coachStrength:coach,home,charakter:c,midfieldDiff:mid,defenceDiff:def,ofShareOverride:of/100,ofModifiers:mods}}
+function showFormula(){const c=cfg();$('formula').innerHTML='OF = 50% + '+Object.entries(c.ofModifiers).map(([k,v])=>k+' '+(v>=0?'+':'')+v.toFixed(2)+' pp').join(' + ')+'<br><b>Cel: '+(c.ofShareOverride*100).toFixed(2)+'% OF / '+((1-c.ofShareOverride)*100).toFixed(2)+'% DEF</b>'}
+function reset(){current=null;selected=null;$('event').textContent='Najpierw wylosuj event.';$('actions').innerHTML='';$('chosen').textContent='';$('resolve').disabled=true;$('output').textContent='Tutaj pojawi się wynik techniczny.'}
+function generate(){try{const e=api();if(!e||typeof e.generateMatch!=='function')throw Error('Silnik nie został załadowany.');const match=e.generateMatch(cfg());const events=Array.isArray(match.events)?match.events:[];if(!events.length)throw Error('Silnik nie wygenerował żadnego eventu.');const ev=events[Math.floor(Math.random()*events.length)];current={match,ev};selected=null;$('event').innerHTML='<b>'+String(ev.minute).padStart(2,' ')+'\'</b> &nbsp; | &nbsp; <b>'+ev.side+'</b> &nbsp; | &nbsp; event <b>'+ev.eventId+'</b> &nbsp; | &nbsp; Z: <b>'+(ev.z==null?'—':ev.z)+'</b>';$('chosen').textContent='Wybierz akcję. Silnik nie powinien podejmować tej decyzji za gracza.';renderActions();$('output').textContent='Wylosowany event:\n'+JSON.stringify(ev,null,2)+'\n\nDostępne akcje zostaną pokazane jako przyciski.';$('status').textContent='Event wylosowany. Teraz decyzja należy do gracza.'}catch(err){$('status').className='error';$('status').textContent='BŁĄD: '+err.message}}
+function renderActions(){const e=api(), list=e.availableActions(current.ev.eventId,current.ev.z)||[];$('actions').innerHTML='';if(!list.length){$('actions').textContent='Brak dostępnych akcji dla tego eventu.';return}list.forEach(id=>{const b=document.createElement('button');b.textContent='Akcja '+id;b.onclick=()=>choose(id,b);$('actions').appendChild(b)})}
+function choose(id,button){selected=String(id);document.querySelectorAll('.actions button').forEach(b=>b.classList.remove('selected'));button.classList.add('selected');$('chosen').textContent='Wybrana akcja: '+selected;$('resolve').disabled=false;$('output').textContent='Gracz wybrał akcję '+selected+'.\n\nKolejny krok silnika może teraz rozstrzygnąć powodzenie tej KONKRETNEJ akcji.\nNa tym etapie nie wykonujemy jeszcze automatycznego rozstrzygnięcia statystycznego.'}
+function resolve(){if(!current||!selected)return;try{const e=api();if(typeof e.transitionForAction!=='function')throw Error('Brak transitionForAction w API silnika.');const z=current.ev.z;const result=e.transitionForAction(selected,false,z,Math.random);$('output').textContent='Wybrana akcja: '+selected+'\nZ: '+(z==null?'—':z)+'\n\ntransitionForAction(...) zwróciło:\n'+JSON.stringify(result,null,2)+'\n\nUWAGA: przekazaliśmy success=false wyłącznie jako test techniczny. Nie jest to jeszcze finalny mechanizm powodzenia akcji.'}catch(err){$('output').textContent='BŁĄD: '+err.message}}
+['wOverall','oOverall','mid','def','coachStrength','character','home'].forEach(id=>$(id).addEventListener('input',showFormula));
+$('generate').onclick=generate;$('reset').onclick=reset;$('resolve').onclick=resolve;showFormula();
+if(api()&&typeof api().generateMatch==='function')$('status').textContent='Silnik '+(api().version||'?')+' załadowany.';else{$('status').className='error';$('status').textContent='BŁĄD: silnik nie został załadowany.'}
+})();
+</script></main></body></html>
