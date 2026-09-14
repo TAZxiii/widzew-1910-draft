@@ -1,0 +1,19 @@
+{
+  "system": {
+    "event_generated": "Wylosowano nowe wydarzenie.",
+    "choose_action": "Wybierz sposób rozegrania akcji.",
+    "action_selected": "Wybrano akcję.",
+    "no_actions": "Brak dostępnych akcji dla tego wydarzenia."
+  },
+  "match": {
+    "goal_widzew": "strzał celny Widzewa",
+    "goal_opponent": "strzał celny rywala",
+    "action_success": "Akcja zakończona powodzeniem.",
+    "action_failure": "Akcja zakończona niepowodzeniem."
+  },
+  "tester": {
+    "engine_loaded": "Silnik załadowany. Kliknij przycisk.",
+    "event_generated": "Event wylosowany. Zawodnik początkowy został ustalony.",
+    "technical_warning": "success=false nadal jest wyłącznie testem technicznym. Nie jest to finalne rozstrzygnięcie powodzenia."
+  }
+}
