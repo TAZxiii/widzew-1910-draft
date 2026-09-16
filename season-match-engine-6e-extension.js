@@ -96,9 +96,9 @@
             t={...t,nextEvent:103};
         }
 
-        // Korekta komunikatów zgodnie z tabelą Przejścia def:
-        // 103.2: 99.12 -> 99.13
-        if(id==='103.2' && t && t.message==='99.12'){
+        // Korekta komunikatu dla obu akcji eventu 103: 99.12 nie występuje.
+        // W obu przypadkach właściwym komunikatem jest 99.13 — rzut rożny.
+        if((id==='103.2'||id==='103.3') && t && t.message==='99.12'){
             t={...t,message:'99.13'};
         }
 
@@ -158,7 +158,7 @@
         fix_2_3_success_event:8,
         fix_2_3_success_new_z:'random_event_8_range',
         fix_110_99_9_next_event:103,
-        fix_103_2_message_99_12_to:'99.13',
+        fix_103_actions_message_99_12_to:'99.13',
         fix_104_106_message_99_13_to:'99.14',
         fix_101_5_102_5_success_messages:{'99.3':'najrzadziej','99.4':'najrzadziej','99.11':'często'}
     };
