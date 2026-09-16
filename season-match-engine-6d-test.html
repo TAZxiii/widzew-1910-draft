@@ -6,6 +6,8 @@
 <style>
 body{font:16px Arial;background:#111;color:#eee;padding:20px;max-width:1000px;margin:auto}
 button{padding:10px;margin:4px;cursor:pointer}
+.action{display:inline-block;min-width:230px;text-align:left}
+.action small{display:block;margin-top:5px;opacity:.75}
 .box{border:1px solid #555;padding:15px;margin:12px 0}
 pre{background:#000;padding:15px;white-space:pre-wrap}
 .err{color:#ff7777}
@@ -39,7 +41,9 @@ function setStatus(t,err){$('status').textContent=t;$('status').className=err?'e
 function eventName(e){
  const g=e.side==='OF'?'OF':'DEF',x=EV[g]&&EV[g][String(e.eventId)];
  if(!x)return 'Event '+e.eventId;
- return x.name.replace(/Zawodnik XY/g,'Zawodnik testowy').replace(/Z m/g,e.z==null?'—':e.z+' m');
+ let name=x.name.replace(/Zawodnik XY/g,'Zawodnik testowy').replace(/Z m/g,e.z==null?'—':e.z+' m');
+ if(Number(e.eventId)===4 && e.z!=null && !/\d+ m od bramki/.test(name)) name=name.replace('Zawodnik testowy wykonuje rzut wolny','Zawodnik testowy wykonuje rzut wolny '+e.z+' m od bramki przeciwnika');
+ return name;
 }
 function transitionLabel(t){
  if(!t)return 'brak przejścia';
@@ -66,9 +70,16 @@ function renderEvent(){
  $('actions').innerHTML='';
  const list=E.availableActions(ev.eventId,ev.z);
  if(!list.length){$('actions').innerHTML='<div class="next">Brak akcji do wyboru dla tego eventu — jest to etap specjalny/końcowy.</div>';return false;}
+ const previewK=E.updateKState(kstate,ev.eventId);
  list.forEach(id=>{
   const b=document.createElement('button');
-  b.textContent=(A[String(id)]?.name||id)+' ['+id+']';
+  b.className='action';
+  const name=A[String(id)]?.name||id;
+  let probability=null;
+  if(typeof E.calculateActionProbability==='function'){
+   probability=E.calculateActionProbability(String(id),{z:ev.z,k:previewK.k,performerStats:stats,opponentStats:stats}).probability;
+  }
+  b.innerHTML=name+' ['+id+']'+(probability==null?'':'<small>Szansa powodzenia: <b>'+Number(probability).toFixed(2)+'%</b></small>');
   b.onclick=()=>go(String(id));
   $('actions').appendChild(b);
  });
