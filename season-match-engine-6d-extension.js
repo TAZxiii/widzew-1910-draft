@@ -9,7 +9,6 @@
 
     const BASE_TRANSITION=E.transitionForAction;
     const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
-    const rngOf=c=>typeof c?.randomFn==='function'?c.randomFn:Math.random;
     const rand=(r)=>clamp(Number(r()),0,0.999999999);
     const int=(a,b,r)=>a+Math.floor(rand(r)*(b-a+1));
 
@@ -33,15 +32,13 @@
         '1.1':[1,5], '1.2':[5,11], '1.4':[3,8], '1.5':[5,12], '1.8':[-3,3],
         '2.1':[1,2], '2.2':[3,6], '2.4':[2,4], '2.5':[3,5],
         '4.1':[1,5], '4.2':[10,20], '5.1':[1,5], '5.2':[10,20],
-        '6.1':[1,5], '7.1':null,'7.2':null,'7.3':null,
+        '6.1':[1,5],
         '101.1':[1,5], '101.2':[5,12], '101.3':[7,15], '101.4':[3,8], '101.5':[7,15],
         '102.1':[1,5], '102.2':[5,12], '102.3':[7,15], '102.4':[3,8], '102.5':[7,15],
         '104.1':[1,5], '105.1':[5,12], '105.2':[8,15], '106.1':[2,6]
     };
 
-    function event8Z(r){
-        return E.chooseZ(8,'8.1',r);
-    }
+    function event8Z(r){ return E.chooseZ(8,'8.1',r); }
 
     function changedZ(actionId,z,r){
         const id=String(actionId);
@@ -55,7 +52,6 @@
         if(id==='3.6') return int(5,6,r);
         if(id==='6.2') return event8Z(r);
         if(id==='7.1'||id==='7.2'||id==='7.3') return 11;
-        if(id==='103.1') return null;
         if(id==='103.2'||id==='103.3') return event8Z(r);
         if(id==='104.2') return event8Z(r);
         if(id==='106.2') return event8Z(r);
@@ -68,10 +64,12 @@
 
     function targetZForTransition(id,t,z,r){
         const next=t.nextEvent;
-        if(next==null) return undefined;
-        // Strzał: zgodnie z arkuszem Z poprzedniej akcji.
+        // Strzał celny/niecelny oraz dalszy event 110 korzystają z Z poprzedniej akcji.
         if(t.message==='99.1' && next===110) return Number(z);
         if(next===110) return Number(z);
+
+        // Strzały Widzewa: Z zostaje w event 10.
+        if(t.nextAction==='10') return Number(z);
 
         if(id==='1.3') return next===8?event8Z(r):changedZ(id,z,r);
         if(id==='2.3'||id==='3.2'||id==='3.3'||id==='6.2') return next===8?event8Z(r):undefined;
@@ -91,9 +89,7 @@
             return (next===101||next===102||next===108)?changedZ(id,z,r):Number(z);
         }
         if(id==='105.1'||id==='105.2'||id==='106.1') return changedZ(id,z,r);
-        if(id==='105.2') return changedZ(id,z,r);
         if(id==='108.1'||id==='108.2'||id==='108.3') return Number(z);
-        if(id==='7.1'||id==='7.2'||id==='7.3'||id==='107.1'||id==='107.2'||id==='107.3') return 11;
         return t.newZ;
     }
 
@@ -107,7 +103,7 @@
     function transitionForAction6D(actionId,success,z,rng){
         const id=String(actionId);
         const r=rng||Math.random;
-        const isDef=/^(10[1-9]|110)\./.test(id) || /^(101|102|103|104|105|106|107|108|110)\./.test(id) || id==='110';
+        const isDef=/^(10[1-9]|110)\./.test(id) || /^(101|102|103|104|105|106|107|108)\./.test(id) || id==='110';
         const t=BASE_TRANSITION(actionId,success,z,r);
         if(!isDef || success || id==='110' || !Number.isFinite(Number(z))) return applyTransitionZ(id,t,z,r);
 
