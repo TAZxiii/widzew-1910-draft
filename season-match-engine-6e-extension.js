@@ -12,7 +12,6 @@
     function correctedZ(actionId,z,r){
         const id=String(actionId);
         if(!Number.isFinite(Number(z))) return null;
-        // Zmiany oznaczone „-” w arkuszu Zmiany Z są zawsze odejmowaniem.
         const ranges={
             '1.1':[1,5], '1.2':[5,11], '1.4':[3,8], '1.5':[5,12],
             '2.1':[1,2], '2.2':[3,6], '2.4':[2,4], '2.5':[3,5],
@@ -42,8 +41,7 @@
             if(nz!==null) t.newZ=nz;
         }
 
-        // W defensywie komunikat 99.11 prowadzi do rzutu karnego (event 107).
-        // Dotyczy wszystkich defensywnych akcji, które mogą zwrócić 99.11.
+        // W defensywie komunikat 99.11 prowadzi do eventu 107.
         const eventId=Number(id.split('.')[0]);
         if([101,102,103,104,105,106,108].includes(eventId) && t && t.message==='99.11'){
             t={...t,nextEvent:107};
@@ -52,15 +50,6 @@
         return t;
     }
 
-    E.applyActionZChange=function(actionId,z,r){
-        const corrected=correctedZ(actionId,z,r||Math.random);
-        if(corrected!==null) return corrected;
-        return typeof E._previousApplyActionZChange==='function'
-            ? E._previousApplyActionZChange(actionId,z,r||Math.random)
-            : z;
-    };
-
-    E._previousApplyActionZChange=E.applyActionZChange;
     E.transitionForAction=transitionForAction6E;
     E.constants.ETAP_6E={
         fix_6_1_event:2,
