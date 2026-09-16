@@ -1,111 +1,50 @@
-/* Season play fixes: use the exact 20-player squad selected before the season. */
+/* Season play fixes + stable per-round match database. */
 (function () {
     let preparedResults = null;
     let capturedSquad = null;
+    let seasonDB = null;
 
     function readFinalSquadFromDOM() {
-        const pool = [];
-        const starters = Array.from(document.querySelectorAll(".squad-list-player"));
-        const bench = Array.from(document.querySelectorAll(".bench-player"));
+        const pool = [], starters = Array.from(document.querySelectorAll(".squad-list-player")), bench = Array.from(document.querySelectorAll(".bench-player"));
         const starterRole = {"BR":"br","LO/PO":"loPo","ŚO":"so","ŚPD/ŚP/OP":"pomoc","LS/LP/PS/PP":"skrzydlowi","N":"napastnicy"};
-        const makePlayer = (name, role, position) => { const parts = String(name || "").trim().split(/\s+/); if (parts.length < 2 || !role) return null; const first = parts.shift(); const last = parts.join(" "); return { row: { "Imię": first, "Nazwisko": last }, role, position }; };
-        starters.forEach(el => { const info = el.querySelector(".squad-player-info"); const name = info?.querySelector("strong")?.textContent || ""; const position = info?.querySelector("small")?.textContent.trim() || ""; const p = makePlayer(name, starterRole[position], position); if (p) pool.push(p); });
-        bench.forEach(el => { const info = el.querySelector(".bench-info"); const name = info?.querySelector("strong")?.textContent || ""; const position = info?.querySelector("small")?.textContent.trim() || ""; const normalized = position.toUpperCase().replace(/\s+/g, ""); let role = "bench-mid"; if (normalized === "BR") role = "bench-br"; else if (normalized === "N") role = "bench-n"; else if (["ŚO","SO","LO/PO","LOPO"].includes(normalized)) role = "bench-def"; const p = makePlayer(name, role, position); if (p) pool.push(p); });
-        return pool.length === 20 ? pool : null;
+        const makePlayer = (name, role, position) => { const parts = String(name || "").trim().split(/\s+/); if (parts.length < 2 || !role) return null; const first = parts.shift(), last = parts.join(" "); return {row:{"Imię":first,"Nazwisko":last},role,position}; };
+        starters.forEach(el => { const info=el.querySelector(".squad-player-info"), name=info?.querySelector("strong")?.textContent||"", position=info?.querySelector("small")?.textContent.trim()||"", p=makePlayer(name,starterRole[position],position); if(p)pool.push(p); });
+        bench.forEach(el => { const info=el.querySelector(".bench-info"), name=info?.querySelector("strong")?.textContent||"", position=info?.querySelector("small")?.textContent.trim()||"", n=position.toUpperCase().replace(/\s+/g,""); let role="bench-mid"; if(n==="BR")role="bench-br"; else if(n==="N")role="bench-n"; else if(["ŚO","SO","LO/PO","LOPO"].includes(n))role="bench-def"; const p=makePlayer(name,role,position); if(p)pool.push(p); });
+        return pool.length===20?pool:null;
     }
+    document.addEventListener("click",e=>{const b=e.target?.closest?.("#playSeasonButton");if(!b)return;const s=readFinalSquadFromDOM();if(s)capturedSquad=s;},true);
+    function getScorerSquad(){return capturedSquad&&capturedSquad.length===20?capturedSquad:readFinalSquadFromDOM()||[];}
+    function category(p){const pos=String(p.position||"").toUpperCase().replace(/\s+/g,"");if(pos==="N")return"N";if(pos==="ŚO"||pos==="SO")return"CB";if(pos==="LO/PO"||pos==="LOPO")return"DEF";if(pos.includes("ŚPD")||pos.includes("ŚP")||pos.includes("OP"))return"MID";if(pos.includes("LS")||pos.includes("LP")||pos.includes("PS")||pos.includes("PP"))return"WING";const role=String(p.role||"");if(role==="napastnicy"||role==="bench-n")return"N";if(role==="so")return"CB";if(role==="loPo"||role==="bench-def")return"DEF";if(role==="pomoc"||role==="bench-mid")return"MID";if(role==="skrzydlowi")return"WING";return"N";}
+    function chooseWeightedScorerFrom20(){const squad=getScorerSquad(),starters=squad.filter(p=>!String(p.role).startsWith("bench-")),bench=squad.filter(p=>String(p.role).startsWith("bench-")),sp={N:[],MID:[],WING:[],DEF:[],CB:[]},bp={N:[],MID:[],WING:[],DEF:[],CB:[]};starters.forEach(p=>sp[category(p)]?.push(p));bench.forEach(p=>bp[category(p)]?.push(p));const base={N:33,MID:12,WING:9,DEF:7,CB:5},sw={...base},available=Object.keys(base).filter(c=>sp[c].length);Object.keys(base).forEach(c=>{if(!sp[c].length&&available.length){const bonus=base[c]/4;available.forEach(a=>sw[a]+=bonus);}});const candidates=[];available.forEach(c=>candidates.push(["starter",c,sw[c]]));const bw={N:18,MID:6,WING:5,DEF:3,CB:1};Object.keys(bw).forEach(c=>{if(bp[c].length)candidates.push(["bench",c,bw[c]]);});candidates.push(["own","OWN",1]);const fallback=[...starters,...bench].filter(p=>category(p)!=="GK");if(!fallback.length)return{type:"widzew",name:"Zawodnik Widzewa",player:null};let total=candidates.reduce((s,x)=>s+x[2],0),roll=Math.random()*total;for(const[side,cat,weight]of candidates){roll-=weight;if(roll<=0){if(side==="own")return{type:"own",name:"Samobój",player:null};const pool=side==="starter"?sp[cat]:bp[cat];if(pool.length){const p=pool[Math.floor(Math.random()*pool.length)];return{type:"widzew",player:p,name:`${p.row["Imię"]} ${p.row["Nazwisko"]}`.trim()};}}}const p=fallback[Math.floor(Math.random()*fallback.length)];return{type:"widzew",player:p,name:`${p.row["Imię"]} ${p.row["Nazwisko"]}`.trim()};}
+    function makeScorersUsing20(wg,og){const used=new Set(),minute=()=>{let m=1+Math.floor(Math.random()*90);while(used.has(m)&&used.size<90)m=1+Math.floor(Math.random()*90);used.add(m);return m;},sc=[];for(let i=0;i<Number(wg||0);i++){const s=typeof window.drawWidzewScorer==="function"?window.drawWidzewScorer():chooseWeightedScorerFrom20();sc.push({minute:minute(),type:s.type,name:s.name,player:s.player||null});}for(let i=0;i<Number(og||0);i++)sc.push({minute:minute(),type:"opponent",name:"Przeciwnik",player:null});return sc.sort((a,b)=>a.minute-b.minute);}
+    window.makeMatchScorers=makeScorersUsing20;
 
-    document.addEventListener("click", function (event) { const button = event.target?.closest?.("#playSeasonButton"); if (!button) return; const squad = readFinalSquadFromDOM(); if (squad) capturedSquad = squad; }, true);
-    function getScorerSquad() { if (capturedSquad && capturedSquad.length === 20) return capturedSquad; return readFinalSquadFromDOM() || []; }
-    function category(p) { const pos = String(p.position || "").toUpperCase().replace(/\s+/g, ""); if (pos === "N") return "N"; if (pos === "ŚO" || pos === "SO") return "CB"; if (pos === "LO/PO" || pos === "LOPO") return "DEF"; if (pos.includes("ŚPD") || pos.includes("ŚP") || pos.includes("OP")) return "MID"; if (pos.includes("LS") || pos.includes("LP") || pos.includes("PS") || pos.includes("PP")) return "WING"; const role = String(p.role || ""); if (role === "napastnicy" || role === "bench-n") return "N"; if (role === "so") return "CB"; if (role === "loPo" || role === "bench-def") return "DEF"; if (role === "pomoc" || role === "bench-mid") return "MID"; if (role === "skrzydlowi") return "WING"; return "N"; }
+    function cloneScorer(s){return{minute:Number(s?.minute)||1,type:s?.type||"widzew",name:s?.name||"",player:s?.player||null};}
+    function cloneMatch(m){return{round:Number(m.round),opponent:m.opponent,home:!!m.home,gf:Number(m.gf)||0,ga:Number(m.ga)||0,scorers:Array.isArray(m.scorers)?m.scorers.map(cloneScorer):[]};}
+    function toDBResult(m){const x=cloneMatch(m);return{round:x.round,opponent:x.opponent,home:x.home,homeGoals:x.home?x.gf:x.ga,awayGoals:x.home?x.ga:x.gf,widzewGoals:x.gf,opponentGoals:x.ga,scorers:x.scorers.map(cloneScorer)};}
+    function fromDBResult(r){return{round:Number(r.round),opponent:r.opponent,home:!!r.home,gf:Number(r.widzewGoals)||0,ga:Number(r.opponentGoals)||0,scorers:Array.isArray(r.scorers)?r.scorers.map(cloneScorer):[]};}
+    function ensureDB(results){if(seasonDB)return seasonDB;seasonDB={};(results||[]).forEach(m=>{seasonDB[Number(m.round)]={round:Number(m.round),opponent:m.opponent,home:!!m.home,simulated:toDBResult(m),played:null};});window.seasonMatchDB=seasonDB;return seasonDB;}
+    function resetDB(){seasonDB=null;window.seasonMatchDB=null;preparedResults=null;}
+    window.getSeasonMatchDB=()=>seasonDB||{};
+    window.storePlayedMatch=function(match){if(!match)return false;const db=seasonDB||window.seasonMatchDB;if(!db)return false;const round=Number(match.round),slot=db[round];if(!slot)return false;slot.played=toDBResult(match);return true;};
+    function effectiveResults(){const db=seasonDB||window.seasonMatchDB;if(!db)return[];return Object.keys(db).map(Number).sort((a,b)=>a-b).map(r=>db[r].played?fromDBResult(db[r].played):fromDBResult(db[r].simulated));}
+    window.getSeasonEffectiveResults=effectiveResults;
 
-    function chooseWeightedScorerFrom20() {
-        const squad = getScorerSquad(); const starters = squad.filter(p => !String(p.role).startsWith("bench-")); const bench = squad.filter(p => String(p.role).startsWith("bench-"));
-        const sp = {N:[],MID:[],WING:[],DEF:[],CB:[]}; const bp = {N:[],MID:[],WING:[],DEF:[],CB:[]}; starters.forEach(p => sp[category(p)]?.push(p)); bench.forEach(p => bp[category(p)]?.push(p));
-        const base = {N:33,MID:12,WING:9,DEF:7,CB:5}; const sw = {...base}; const available = Object.keys(base).filter(c => sp[c].length);
-        Object.keys(base).forEach(c => { if (!sp[c].length && available.length) { const bonus = base[c] / 4; available.forEach(a => sw[a] += bonus); } });
-        const candidates = []; available.forEach(c => candidates.push(["starter",c,sw[c]])); const bw = {N:18,MID:6,WING:5,DEF:3,CB:1}; Object.keys(bw).forEach(c => { if (bp[c].length) candidates.push(["bench",c,bw[c]]); }); candidates.push(["own","OWN",1]);
-        const fallback = [...starters,...bench].filter(p => category(p) !== "GK"); if (!fallback.length) return {type:"widzew",name:"Zawodnik Widzewa",player:null};
-        const total = candidates.reduce((sum,x) => sum+x[2],0); let roll = Math.random()*total;
-        for (const [side,cat,weight] of candidates) { roll -= weight; if (roll <= 0) { if (side === "own") return {type:"own",name:"Samobój",player:null}; const pool = side === "starter" ? sp[cat] : bp[cat]; if (pool.length) { const player = pool[Math.floor(Math.random()*pool.length)]; return {type:"widzew",player,name:`${player.row["Imię"]} ${player.row["Nazwisko"]}`.trim()}; } } }
-        const player = fallback[Math.floor(Math.random()*fallback.length)]; return {type:"widzew",player,name:`${player.row["Imię"]} ${player.row["Nazwisko"]}`.trim()};
-    }
+    function prepareResults(){if(preparedResults)return preparedResults;const original=window.renderFinalSeason;try{window.renderFinalSeason=function(){};window.simulateWholeSeason();}finally{window.renderFinalSeason=original;}preparedResults=(seasonGameState.widzewResults||[]).map(cloneMatch);seasonGameState.widzewResults=[];seasonGameState.scorers={};ensureDB(preparedResults);return preparedResults;}
+    function renderScorers(container,match){if(!container||!match)return;let sc=Array.isArray(match.scorers)?match.scorers.slice():[];const wg=Number(match.gf)||0,og=Number(match.ga)||0;if(sc.length!==wg+og){sc=makeScorersUsing20(wg,og);match.scorers=sc.map(cloneScorer);}container.innerHTML=sc.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{const op=s.type==="opponent",color=op?"scorer-opponent":"scorer-widzew",name=op?"Przeciwnik":(s.name||"Samobój");return`<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;}).join("");}
+    function getOrCreateScorerContainer(el){if(!el)return null;let c=el.querySelector(".match-scorers");if(!c){c=document.createElement("div");c.className="match-scorers";el.appendChild(c);}return c;}
+    function decorateVisibleScorers(m){renderScorers(getOrCreateScorerContainer(document.querySelector(".round-match.widzew-match")),m);}
+    function decorateAllFinalScorers(){const matches=Array.from(document.querySelectorAll(".round-match.widzew-match")),results=effectiveResults();matches.forEach(el=>{const round=Number(el.dataset?.round||el.querySelector?.("[data-round]")?.dataset?.round);const m=(Number.isFinite(round)&&round)?results.find(x=>x.round===round):results[matches.indexOf(el)];if(m)renderScorers(getOrCreateScorerContainer(el),m);});}
+    function enhanceLeagueTable(){const table=document.getElementById("leagueTable");if(!table)return;const panel=table.closest(".league-table-panel");if(panel&&!panel.querySelector(".league-competition-logo")){const logo=document.createElement("img");logo.className="league-competition-logo";logo.src="data/logos/ekstraklasa.png";logo.alt="Ekstraklasa";logo.style.objectFit="contain";panel.appendChild(logo);}const old=table.querySelector(".league-table-header");if(old)old.remove();const h=document.createElement("div");h.className="league-table-header";["#","Drużyna","M","Z","R","P","B","Pkt"].forEach(label=>{const c=document.createElement("span");c.textContent=label;h.appendChild(c);});table.insertBefore(h,table.firstChild);}
+    function addStyles(){if(document.getElementById("seasonScorerFixStyles"))return;const s=document.createElement("style");s.id="seasonScorerFixStyles";s.textContent=`.match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}.match-scorers .scorer-widzew{color:#39d353}.match-scorers .scorer-opponent{color:#ff4d4f}.league-table-panel{position:relative}.league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}.league-table-panel .season-panel-title{padding-left:88px}.league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}.league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}.league-table-header span:nth-child(2){text-align:left}@media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}`;document.head.appendChild(s);}
 
-    function makeScorersUsing20(widzewGoals, opponentGoals) {
-        const usedMinutes = new Set(); const minute = () => { let m = 1+Math.floor(Math.random()*90); while (usedMinutes.has(m) && usedMinutes.size<90)m=1+Math.floor(Math.random()*90); usedMinutes.add(m); return m; };
-        const scorers=[];
-        for(let i=0;i<Number(widzewGoals||0);i++){
-            const s = typeof window.drawWidzewScorer === "function" ? window.drawWidzewScorer() : chooseWeightedScorerFrom20();
-            scorers.push({minute:minute(),type:s.type,name:s.name,player:s.player||null});
-        }
-        for(let i=0;i<Number(opponentGoals||0);i++) scorers.push({minute:minute(),type:"opponent",name:"Przeciwnik",player:null});
-        return scorers.sort((a,b)=>a.minute-b.minute);
-    }
-    window.makeMatchScorers = makeScorersUsing20;
-
-    function cloneMatch(match){return {round:Number(match.round),opponent:match.opponent,home:!!match.home,gf:Number(match.gf),ga:Number(match.ga),scorers:Array.isArray(match.scorers)?match.scorers.map(s=>({...s})):[]};}
-    function prepareResults(){if(preparedResults)return preparedResults;const originalRenderFinalSeason=window.renderFinalSeason;try{window.renderFinalSeason=function(){};window.simulateWholeSeason();preparedResults=(seasonGameState.widzewResults||[]).map(cloneMatch);}finally{window.renderFinalSeason=originalRenderFinalSeason;}seasonGameState.widzewResults=[];seasonGameState.scorers={};return preparedResults;}
-
-    function renderScorers(container,match){
-        if(!container||!match)return;
-        let scorers=Array.isArray(match.scorers)?match.scorers.slice():[];
-        // gf/ga are stored as HOME/AWAY goals. Convert them to Widzew/opponent
-        // goals before validating or generating the scorer list.
-        const widzewGoals=match.home?Number(match.ga||0):Number(match.gf||0);
-        const opponentGoals=match.home?Number(match.gf||0):Number(match.ga||0);
-        const totalGoals=widzewGoals+opponentGoals;
-        if(scorers.length!==totalGoals){
-            scorers = makeScorersUsing20(widzewGoals, opponentGoals);
-            match.scorers = scorers.map(s => ({...s}));
-        }
-        container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{
-            const opponent=s.type==="opponent";
-            const color=opponent?"scorer-opponent":"scorer-widzew";
-            const name=opponent?"Przeciwnik":(s.name||"Samobój");
-            return `<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;
-        }).join("");
-    }
-
-    function getOrCreateScorerContainer(matchElement){if(!matchElement)return null;let container=matchElement.querySelector(".match-scorers");if(!container){container=document.createElement("div");container.className="match-scorers";matchElement.appendChild(container);}return container;}
-    function decorateVisibleScorers(match){const matchElement=document.querySelector(".round-match.widzew-match");renderScorers(getOrCreateScorerContainer(matchElement),match);}
-    function decorateAllFinalScorers(){
-        const matches=Array.from(document.querySelectorAll(".round-match.widzew-match"));
-        const results=Array.isArray(preparedResults)?preparedResults:[];
-        if(!matches.length||!results.length)return;
-        matches.forEach((el,index)=>{const match=results[index];if(match)renderScorers(getOrCreateScorerContainer(el),match);});
-    }
-
-    function enhanceLeagueTable(){
-        const table=document.getElementById("leagueTable");
-        if(!table) return;
-        const panel=table.closest(".league-table-panel");
-        if(panel && !panel.querySelector(".league-competition-logo")){
-            const logo=document.createElement("img");logo.className="league-competition-logo";logo.src="data/logos/ekstraklasa.png";logo.alt="Ekstraklasa";logo.style.objectFit="contain";panel.appendChild(logo);
-        }
-        const oldHeader=table.querySelector(".league-table-header");if(oldHeader)oldHeader.remove();
-        const header=document.createElement("div");header.className="league-table-header";["#","Drużyna","M","Z","R","P","B","Pkt"].forEach(label=>{const cell=document.createElement("span");cell.textContent=label;header.appendChild(cell);});table.insertBefore(header,table.firstChild);
-    }
-
-    function addStyles(){if(document.getElementById("seasonScorerFixStyles"))return;const style=document.createElement("style");style.id="seasonScorerFixStyles";style.textContent=`.match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}.match-scorers .scorer-widzew{color:#39d353}.match-scorers .scorer-opponent{color:#ff4d4f}.league-table-panel{position:relative}.league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}.league-table-panel .season-panel-title{padding-left:88px}.league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}.league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}.league-table-header span:nth-child(2){text-align:left}@media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}`;document.head.appendChild(style);}
-
-    function revealCurrentRound(){const round=Number(seasonGameState.currentRound);if((seasonGameState.widzewResults||[]).some(m=>Number(m.round)===round))return;const match=prepareResults().find(m=>Number(m.round)===round);if(!match)return;const revealed=cloneMatch(match);seasonGameState.widzewResults.push(revealed);updateTopScorersFromMatch(revealed);renderPlayableSeason();enhanceLeagueTable();decorateVisibleScorers(revealed);}
+    function revealCurrentRound(){const round=Number(seasonGameState.currentRound),db=seasonDB||window.seasonMatchDB;if(!db)return;const slot=db[round];if(!slot)return;if((seasonGameState.widzewResults||[]).some(m=>Number(m.round)===round))return;const revealed=fromDBResult(slot.played||slot.simulated);seasonGameState.widzewResults.push(revealed);if(typeof updateTopScorersFromMatch==="function")updateTopScorersFromMatch(revealed);renderPlayableSeason();enhanceLeagueTable();decorateVisibleScorers(revealed);}
+    function forceEffectiveResultsBeforeFinal(){const effective=effectiveResults();if(!effective.length)return;seasonGameState.widzewResults=effective.map(cloneMatch);}
     addStyles();
-    const originalRenderLeagueTable=window.renderLeagueTable;if(typeof originalRenderLeagueTable==="function"){window.renderLeagueTable=function(){const result=originalRenderLeagueTable.apply(this,arguments);enhanceLeagueTable();return result;};}
-    const originalRenderFinalSeasonForScorers=window.renderFinalSeason;if(typeof originalRenderFinalSeasonForScorers==="function"){window.renderFinalSeason=function(){const result=originalRenderFinalSeasonForScorers.apply(this,arguments);enhanceLeagueTable();decorateAllFinalScorers();return result;};}
-    const originalInitSeasonMode=window.initSeasonMode;if(typeof originalInitSeasonMode==="function"){window.initSeasonMode=async function(mode){preparedResults=null;if(!capturedSquad)capturedSquad=readFinalSquadFromDOM();return await originalInitSeasonMode.call(this,mode);};}
+    const originalRenderLeagueTable=window.renderLeagueTable;if(typeof originalRenderLeagueTable==="function")window.renderLeagueTable=function(){const r=originalRenderLeagueTable.apply(this,arguments);enhanceLeagueTable();return r;};
+    const originalRenderFinalSeason=window.renderFinalSeason;if(typeof originalRenderFinalSeason==="function")window.renderFinalSeason=function(){forceEffectiveResultsBeforeFinal();const r=originalRenderFinalSeason.apply(this,arguments);enhanceLeagueTable();decorateAllFinalScorers();return r;};
+    const originalInit=window.initSeasonMode;if(typeof originalInit==="function")window.initSeasonMode=async function(mode){resetDB();if(!capturedSquad)capturedSquad=readFinalSquadFromDOM();const r=await originalInit.call(this,mode);/* prepare immediately so SIMULUJ always uses the same scenario */try{prepareResults();}catch(e){console.warn("seasonMatchDB prepare",e);}return r;};
     window.simulateCurrentWidzewMatch=revealCurrentRound;
-
-    // Do not block the game's own match handlers. The previous version stopped
-    // propagation here, which made both match buttons appear frozen. We only
-    // refresh scorer display after the original handler has finished.
-    document.addEventListener("click",function(event){
-        const button=event.target?.closest?.("#playMatchButton,#simulateMatchButton");
-        if(!button)return;
-        setTimeout(function(){
-            const round=Number(seasonGameState.currentRound);
-            const result=(seasonGameState.widzewResults||[]).find(m=>Number(m.round)===round);
-            if(result)decorateVisibleScorers(result);
-            enhanceLeagueTable();
-        },0);
-    },false);
+    document.addEventListener("click",event=>{const button=event.target?.closest?.("#playMatchButton,#simulateMatchButton");if(!button)return;setTimeout(()=>{const round=Number(seasonGameState.currentRound),result=(seasonGameState.widzewResults||[]).find(m=>Number(m.round)===round);if(result)decorateVisibleScorers(result);enhanceLeagueTable();},0);},false);
     setTimeout(enhanceLeagueTable,0);
 })();
