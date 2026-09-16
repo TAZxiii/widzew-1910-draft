@@ -12,21 +12,50 @@
     const rand=(r)=>clamp(Number(r()),0,0.999999999);
     const int=(a,b,r)=>a+Math.floor(rand(r)*(b-a+1));
 
-    // Globalna zasada: po porażce defensywnej, jeżeli akcja ma znane Z,
-    // najpierw sprawdzamy możliwość oddania strzału.
-    // Z=70 -> 1%, Z=1 -> 100%, liniowo.
-    // Ważne: ten mechanizm dotyczy wyłącznie eventów 101, 102 i 104.
-    // Event 107 (rzut karny) ma własną logikę 99.1/99.2, a event 103
-    // (rzut rożny) nigdy nie generuje 99.1 ani 99.2.
+    // Szansa na oddanie strzału zależna od odległości Z.
+    // Wartości z tabeli są punktami krzywej; pomiędzy nimi stosujemy interpolację liniową.
+    const SHOT_CHANCE_BY_Z_POINTS=[
+        [70,1],[60,5],[50,10],[40,15],[35,20],[30,25],[25,30],
+        [20,50],[16,60],[12,70],[10,75],[5,85],[1,100]
+    ];
+
     function shotChanceByZ(z){
         const x=clamp(Number(z),1,70);
-        return 100-((x-1)*99/69);
+        const points=SHOT_CHANCE_BY_Z_POINTS.slice().sort((a,b)=>a[0]-b[0]);
+        if(x<=points[0][0]) return points[0][1];
+        if(x>=points[points.length-1][0]) return points[points.length-1][1];
+        for(let i=0;i<points.length-1;i++){
+            const [x1,y1]=points[i];
+            const [x2,y2]=points[i+1];
+            if(x>=x1 && x<=x2){
+                const t=(x-x1)/(x2-x1);
+                return y1+(y2-y1)*t;
+            }
+        }
+        return points[points.length-1][1];
     }
+
+    // Łączna waga pozostałych komunikatów dla danego typu akcji.
+    // Strzał jest dodawany jako kolejna możliwość i dopiero cały zestaw
+    // jest normalizowany. Dzięki temu np. 50% z tabeli nie oznacza
+    // automatycznie 50% wszystkich możliwych wyników akcji.
+    // Wagi odpowiadają istniejącym częstotliwościom z transitionDefense:
+    // najrzadziej=5, rzadko=30, normalnie=50, często=60.
+    const OTHER_FAILURE_WEIGHT={
+        '101.1':110, '101.2':90, '101.3':120, '101.4':120, '101.5':60,
+        '102.1':110, '102.2':90, '102.3':120, '102.4':120, '102.5':60,
+        '104.1':50, '104.2':50
+    };
 
     function rollDefensiveShot(z,r){
         if(!Number.isFinite(Number(z))) return null;
+        const id=String(arguments.length>3 ? arguments[3] : '');
         const p=shotChanceByZ(z);
-        if(rand(r)*100>=p) return null;
+        const otherWeight=OTHER_FAILURE_WEIGHT[id];
+        if(!otherWeight) return null;
+        const shotProbability=p/(p+otherWeight);
+        if(rand(r)>=shotProbability) return null;
+        // Dopiero po wylosowaniu samego strzału rozstrzygamy 45:55.
         return rand(r)<0.45?'99.1':'99.2';
     }
 
@@ -110,20 +139,26 @@
         const t=BASE_TRANSITION(actionId,success,z,r);
         if(!isDef || success || id==='110' || !Number.isFinite(Number(z))) return applyTransitionZ(id,t,z,r);
 
-        // Automatyczny test strzału jest dozwolony tylko dla akcji z eventów
-        // 101, 102 i 104. Dzięki temu event 103 nie może wygenerować 99.1/99.2.
+        // Automatyczny test strzału jest dozwolony tylko dla eventów 101, 102 i 104.
+        // Najpierw losujemy „strzał vs wszystkie pozostałe komunikaty” z normalizacją,
+        // a dopiero po wylosowaniu strzału 45:55 dla 99.1/99.2.
         const eventId=Number(id.split('.')[0]);
         const canGenerateShot=[101,102,104].includes(eventId);
         if(!canGenerateShot) return applyTransitionZ(id,t,z,r);
 
-        const shot=rollDefensiveShot(z,r);
+        const shot=rollDefensiveShot(z,r,id);
         if(shot==='99.1') return {message:'99.1',nextAction:'110',newZ:Number(z),shotChance:shotChanceByZ(z),shot:true};
         if(shot==='99.2') return {message:'99.2',end:true,newZ:Number(z),shotChance:shotChanceByZ(z),shot:true};
 
         return applyTransitionZ(id,t,z,r);
     }
 
-    E.constants.DEF_SHOT={minZ:1,maxZ:70,minChance:1,maxChance:100,onTargetShare:0.45,offTargetShare:0.55};
+    E.constants.DEF_SHOT={
+        minZ:1,maxZ:70,
+        chanceTable:SHOT_CHANCE_BY_Z_POINTS,
+        onTargetShare:0.45,offTargetShare:0.55,
+        normalized:true
+    };
     E.defensiveShotChance=shotChanceByZ;
     E.rollDefensiveShot=rollDefensiveShot;
     E.applyActionZChange=changedZ;
