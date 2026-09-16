@@ -48,9 +48,13 @@
     function renderScorers(container,match){
         if(!container||!match)return;
         let scorers=Array.isArray(match.scorers)?match.scorers.slice():[];
-        const totalGoals=Number(match.gf||0)+Number(match.ga||0);
+        // gf/ga are stored as HOME/AWAY goals. Convert them to Widzew/opponent
+        // goals before validating or generating the scorer list.
+        const widzewGoals=match.home?Number(match.ga||0):Number(match.gf||0);
+        const opponentGoals=match.home?Number(match.gf||0):Number(match.ga||0);
+        const totalGoals=widzewGoals+opponentGoals;
         if(scorers.length!==totalGoals){
-            scorers = makeScorersUsing20(match.gf, match.ga);
+            scorers = makeScorersUsing20(widzewGoals, opponentGoals);
             match.scorers = scorers.map(s => ({...s}));
         }
         container.innerHTML=scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{
