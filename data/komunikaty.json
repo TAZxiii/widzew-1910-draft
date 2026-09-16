@@ -13,8 +13,8 @@
     "9.11": {"id": "9.11", "name": "Faul"}
   },
   "DEF": {
-    "99.1": {"id": "99.1", "name": "Strzał celny"},
-    "99.2": {"id": "99.2", "name": "Strzał niecelny"},
+    "99.1": {"id": "99.1", "name": "Przeciwnik oddał celny strzał"},
+    "99.2": {"id": "99.2", "name": "Przeciwnik oddał niecelny strzał"},
     "99.3": {"id": "99.3", "name": "Zablokowałeś zagranie rywala"},
     "99.4": {"id": "99.4", "name": "Przeciwnik stracił piłkę"},
     "99.5": {"id": "99.5", "name": "Spalony"},
