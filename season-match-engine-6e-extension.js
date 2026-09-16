@@ -14,7 +14,8 @@
         '1.1':[1,5], '1.2':[5,11], '1.3':[15,30], '1.4':[3,8], '1.5':[5,12],
         '2.1':[1,2], '2.2':[3,6], '2.4':[2,4], '2.5':[3,5],
         '4.1':[1,5],
-        '5.1':[1,5], '5.2':[10,20]
+        '5.1':[1,5], '5.2':[10,20],
+        '6.1':[1,5]
     };
 
     function correctedDecreaseZ(actionId,z,r){
@@ -67,10 +68,11 @@
                 if(nz!==null) t={...t,nextEvent:1,newZ:nz};
             }
 
+            // 6.1 — podanie do najbliższego zawodnika: event 2,
+            // a Z zmniejsza się losowo o 1–5 m zgodnie z arkuszem „Zmiany Z”.
             if(id==='6.1'){
                 const nz=correctedDecreaseZ(id,z,r);
-                t={...t,nextEvent:2};
-                if(nz!==null) t.newZ=nz;
+                t={...t,nextEvent:2,newZ:nz};
             }
         }
 
@@ -144,6 +146,7 @@
         fix_4_1_z:'decrease_1_to_5',
         fix_5_1_z:'decrease_1_to_5',
         fix_5_2_z:'decrease_10_to_20',
+        fix_6_1_z:'decrease_1_to_5',
         fix_6_1_event:2,
         fix_99_11_threshold_m:16,
         fix_99_11_event_le_16:107,
