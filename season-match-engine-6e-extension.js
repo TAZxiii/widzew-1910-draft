@@ -5,6 +5,7 @@
     if(!E) throw Error('Silnik musi być załadowany przed 6E');
 
     const BASE_TRANSITION=E.transitionForAction;
+    const BASE_AVAILABLE_ACTIONS=E.availableActions;
     const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
     const rand=r=>clamp(Number(r()),0,0.999999999);
     const int=(a,b,r)=>a+Math.floor(rand(r)*(b-a+1));
@@ -79,8 +80,27 @@
             t={...t,nextEvent:Number(z)<=16?107:104};
         }
 
+        // Zasada 16 m: w każdej ofensywnej akcji, gdy wynikiem jest 9.11,
+        // decyzja o kolejnym evencie zależy od aktualnego Z.
+        // Z <= 16 m -> event 7, Z > 16 m -> event 4.
+        if([1,2,3,4,5,6,7,8].includes(eventId) && t && t.message==='9.11'){
+            t={...t,nextEvent:Number(z)<=16?7:4};
+        }
+
         return t;
     }
+
+    // Event 2: akcja 2.3 (dośrodkowanie) jest zawsze dostępna,
+    // niezależnie od aktualnego Z. Jej wynik nadal rozstrzygany jest
+    // normalnie, a przy sukcesie prowadzi do eventu 8 z nowym losowym Z.
+    E.availableActions=function(eventId,z){
+        const actions=BASE_AVAILABLE_ACTIONS(eventId,z);
+        if(Number(eventId)===2 && !actions.includes('2.3')){
+            const insertAt=Math.min(2,actions.length);
+            actions.splice(insertAt,0,'2.3');
+        }
+        return actions;
+    };
 
     E.transitionForAction=transitionForAction6E;
     E.constants.ETAP_6E={
@@ -92,7 +112,13 @@
         fix_99_11_threshold_m:16,
         fix_99_11_event_le_16:107,
         fix_99_11_event_gt_16:104,
-        fix_103_2_message_99_12_to: '99.13',
-        fix_104_106_message_99_13_to: '99.14'
+        fix_9_11_threshold_m:16,
+        fix_9_11_event_le_16:7,
+        fix_9_11_event_gt_16:4,
+        fix_event_2_action_2_3_always_available:true,
+        fix_2_3_success_event:8,
+        fix_2_3_success_new_z:'random_event_8_range',
+        fix_103_2_message_99_12_to:'99.13',
+        fix_104_106_message_99_13_to:'99.14'
     };
 })();
