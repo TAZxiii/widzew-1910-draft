@@ -1,0 +1,220 @@
+/* Main-game integration for the standalone season match engine. */
+(function(){
+  'use strict';
+
+  const ENGINE_SCRIPTS = [
+    'season-match-engine.js',
+    'season-match-engine-6c-extension.js',
+    'season-match-engine-6d-extension.js',
+    'season-match-engine-6e-extension.js'
+  ];
+  let started = false;
+  let assetsPromise = null;
+  let dataPromise = null;
+  let match = null;
+  let ui = null;
+
+  const css = `
+  #wsm-overlay{position:fixed;inset:0;z-index:99999;background:#101010;color:#eee;overflow:auto;font-family:Arial,sans-serif}
+  #wsm-overlay *{box-sizing:border-box}.wsm-wrap{max-width:1050px;margin:auto;padding:18px}
+  .wsm-box{background:#191919;border:1px solid #333;border-radius:14px;padding:15px;margin:10px 0}
+  .wsm-score{display:grid;grid-template-columns:1fr 150px 1fr;align-items:center;text-align:center}.wsm-team{font-size:21px;font-weight:900}.wsm-team img{width:58px;height:58px;object-fit:contain;display:block;margin:auto}.wsm-scoreline{font-size:40px;font-weight:900}.wsm-minute{font-size:18px;font-weight:800}
+  .wsm-layout{display:grid;grid-template-columns:1fr 300px;gap:10px}.wsm-event{font-size:23px;font-weight:900;line-height:1.35;min-height:72px}.wsm-meta,.wsm-status{color:#aaa;font-size:13px;margin-top:7px}.wsm-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px}.wsm-action{background:#292929;color:#fff;border:1px solid #555;border-radius:9px;padding:12px;text-align:left;cursor:pointer}.wsm-action:hover{border-color:#aaa}.wsm-action:disabled{opacity:.45;cursor:not-allowed}.wsm-action-name{font-weight:900}.wsm-chance{color:#bbb;margin-top:5px}.wsm-chance b{color:#fff}.wsm-feed{max-height:330px;overflow:auto}.wsm-row{padding:7px 0;border-bottom:1px solid #292929}.wsm-controls{display:flex;gap:8px;flex-wrap:wrap}.wsm-controls button{padding:9px 12px;border:0;border-radius:8px;font-weight:900;cursor:pointer}.wsm-primary{background:#e30613;color:#fff}.wsm-secondary{background:#333;color:#fff}.wsm-debug{white-space:pre-wrap;font:11px Consolas,monospace;color:#aaa;max-height:220px;overflow:auto}.wsm-player-choice{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px}.wsm-player-btn{background:#222;color:#fff;border:1px solid #555;border-radius:8px;padding:9px;cursor:pointer;font-weight:800}.wsm-player-btn.selected{border-color:#e30613;background:#341015}.wsm-loading{text-align:center;padding:45px 15px;font-weight:800}.wsm-error{color:#ff7777}.wsm-close{float:right;background:#333;color:#fff;border:0;border-radius:8px;padding:7px 10px;cursor:pointer;font-weight:900}.wsm-end{font-size:22px;font-weight:900;text-align:center;padding:25px}.wsm-note{color:#aaa;font-size:12px;margin-top:10px}
+  @media(max-width:700px){.wsm-layout{grid-template-columns:1fr}.wsm-score{grid-template-columns:1fr 100px 1fr}.wsm-team{font-size:15px}.wsm-actions{grid-template-columns:1fr}.wsm-event{font-size:20px}.wsm-player-choice{grid-template-columns:1fr}}
+  `;
+
+  function injectStyles(){
+    if(document.getElementById('wsm-styles'))return;
+    const s=document.createElement('style');s.id='wsm-styles';s.textContent=css;document.head.appendChild(s);
+  }
+
+  function loadScript(src){
+    return new Promise((resolve,reject)=>{
+      if(document.querySelector(`script[data-wsm-src="${src}"]`)){resolve();return;}
+      const s=document.createElement('script');s.src=`./${src}?wsm=${Date.now()}`;s.dataset.wsmSrc=src;s.onload=resolve;s.onerror=()=>reject(new Error('Nie udało się wczytać '+src));document.head.appendChild(s);
+    });
+  }
+
+  async function loadEngine(){
+    if(window.WidzewSeasonMatchEngine)return;
+    for(const src of ENGINE_SCRIPTS)await loadScript(src);
+    if(!window.WidzewSeasonMatchEngine)throw new Error('Silnik meczu nie został uruchomiony.');
+  }
+
+  async function loadData(){
+    if(dataPromise)return dataPromise;
+    dataPromise=Promise.all([
+      fetch('./data/akcje.json?match='+Date.now()).then(r=>r.json()),
+      fetch('./data/eventy.json?match='+Date.now()).then(r=>r.json()),
+      fetch('./data/komunikaty.json?match='+Date.now()).then(r=>r.json())
+    ]).then(([a,e,c])=>({actions:a,events:e,comms:c}));
+    return dataPromise;
+  }
+
+  function waitForSquad(timeout=5000){
+    return new Promise((resolve,reject)=>{
+      const startedAt=Date.now();
+      const tick=()=>{
+        const db=typeof window.getWidzewSeasonPlayerDB==='function'?window.getWidzewSeasonPlayerDB():null;
+        if(db&&Array.isArray(db.players)&&db.players.length>=11){resolve(db);return;}
+        if(Date.now()-startedAt>timeout){reject(new Error('Nie udało się pobrać składu wybranego przez gracza.'));return;}
+        setTimeout(tick,100);
+      };
+      tick();
+    });
+  }
+
+  function stat(row,key,fallback=50){
+    const map={
+      defensywa:'Defensywa',szybkosc:'Szybkość',podania:'Podania',atak:'Atak',zaangazowanie:'Zaangażowanie',
+      kreatywnosc:'Kreatywność',strzal:'Strzał',ogolna:'Ogólna',graNogami:'Gra nogami',piastkowanie:'Piastkowanie',robinsonada:'Robinsonada',br:'BR'
+    };
+    const n=Number(String(row?.[map[key]]??fallback).replace(',','.'));
+    return Number.isFinite(n)?n:fallback;
+  }
+
+  function playerFromDb(p){
+    const r=p.stats||{};
+    return {
+      name:`${p.first} ${p.last}`.trim(),
+      first:p.first,last:p.last,slot:p.slot,position:p.position,
+      isGoalkeeper:String(p.position||'').toUpperCase()==='BR',
+      stats:{defensywa:stat(r,'defensywa'),szybkosc:stat(r,'szybkosc'),podania:stat(r,'podania'),atak:stat(r,'atak'),zaangazowanie:stat(r,'zaangazowanie'),kreatywnosc:stat(r,'kreatywnosc'),strzal:stat(r,'strzal'),ogolna:stat(r,'ogolna'),graNogami:stat(r,'graNogami'),piastkowanie:stat(r,'piastkowanie'),robinsonada:stat(r,'robinsonada'),br:stat(r,'br')}
+    };
+  }
+
+  function readOpponent(){
+    const el=document.querySelector('.round-match.widzew-match');
+    const text=String(el?.textContent||'');
+    const teams=['Legia Warszawa','Lech Poznań','Górnik Zabrze','Jagiellonia Białystok','Raków Częstochowa','GKS Katowice','Pogoń Szczecin','Cracovia','Piast Gliwice','Korona Kielce','Motor Lublin','Radomiak Radom','Wieczysta Kraków','Wisła Kraków','Wisła Płock','Śląsk Wrocław','Zagłębie Lubin'];
+    const opponent=teams.find(t=>text.includes(t));
+    if(!opponent)throw new Error('Nie udało się ustalić przeciwnika z aktualnej kolejki.');
+    const widzewIndex=text.indexOf('Widzew Łódź'), oppIndex=text.indexOf(opponent);
+    return {name:opponent,home:widzewIndex<oppIndex,logo:'./data/logos/'+slug(opponent)+'.png'};
+  }
+
+  function slug(name){
+    const m={'Legia Warszawa':'legia_warszawa','Lech Poznań':'lech_poznan','Górnik Zabrze':'gornik_zabrze','Jagiellonia Białystok':'jagiellonia_bialystok','Raków Częstochowa':'rakow_czestochowa','GKS Katowice':'gks_katowice','Pogoń Szczecin':'pogon_szczecin','Cracovia':'cracovia','Piast Gliwice':'piast_gliwice','Korona Kielce':'korona_kielce','Motor Lublin':'motor_lublin','Radomiak Radom':'radomiak_radom','Wieczysta Kraków':'wieczysta_krakow','Wisła Kraków':'wisla_krakow','Wisła Płock':'wisla_plock','Śląsk Wrocław':'slask_wroclaw','Zagłębie Lubin':'zagłębie_lubin'};return m[name]||name.toLowerCase().replace(/[ąćęłńóśźż]/g,c=>({'ą':'a','ć':'c','ę':'e','ł':'l','ń':'n','ó':'o','ś':'s','ź':'z','ż':'z'}[c])).replace(/\s+/g,'_');}
+
+  function createUI(opponent){
+    const old=document.getElementById('wsm-overlay');if(old)old.remove();
+    const root=document.createElement('div');root.id='wsm-overlay';root.innerHTML=`<div class="wsm-wrap"><div class="wsm-box"><button class="wsm-close" id="wsm-close">× POWRÓT</button><div class="wsm-score"><div class="wsm-team"><img src="./data/logos/widzew_lodz.png"><span>Widzew Łódź</span></div><div><div id="wsm-score" class="wsm-scoreline">0 : 0</div><div id="wsm-minute" class="wsm-minute">—'</div></div><div class="wsm-team"><img src="${opponent.logo}"><span>${opponent.name}</span></div></div></div><div class="wsm-layout"><section><div class="wsm-box"><h2>Aktualna sytuacja</h2><div id="wsm-event" class="wsm-event">Przygotowanie meczu…</div><div id="wsm-meta" class="wsm-meta"></div><div id="wsm-actions" class="wsm-actions"></div><div id="wsm-player-choice"></div></div><div class="wsm-box"><h3>Przebieg meczu</h3><div id="wsm-feed" class="wsm-feed"></div></div></section><aside><div class="wsm-box"><div class="wsm-status" id="wsm-status">Ładowanie silnika…</div></div><div class="wsm-box"><h3>Strzelcy Widzewa</h3><div id="wsm-scorers">Brak bramek.</div></div><div class="wsm-box"><h3>Debug</h3><div id="wsm-debug" class="wsm-debug">—</div></div></aside></div></div>`;
+    document.body.appendChild(root);ui={root};
+    document.getElementById('wsm-close').onclick=close;
+  }
+
+  function close(){const el=document.getElementById('wsm-overlay');if(el)el.remove();started=false;match=null;ui=null;}
+  function setText(id,text){const e=document.getElementById(id);if(e)e.textContent=text;}
+  function esc(s){return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
+  function feed(text,minute){const e=document.getElementById('wsm-feed');if(!e)return;e.insertAdjacentHTML('afterbegin',`<div class="wsm-row"><b>${minute!=null?esc(minute)+"' ":''}</b>${esc(text)}</div>`);}
+  function renderScore(){setText('wsm-score',`${match.score.widzew} : ${match.score.opponent}`);setText('wsm-minute',match.minute!=null?`${match.minute}'`:'—');}
+  function renderScorers(){const e=document.getElementById('wsm-scorers');e.innerHTML=match.scorers.length?match.scorers.map(s=>`<div>${esc(s.player)} — ${s.minute}'</div>`).join(''):'Brak bramek.';}
+  function eventSide(id){return Number(id)>=100?'DEF':'OF';}
+  function eventData(id){const n=Number(id);if(n===10||n===110)return ui.data.events.special?.[String(id)];return ui.data.events[eventSide(id)]?.[String(id)];}
+  function actionData(id){return ui.data.actions[String(id)]||{};}
+  function commName(id){const k=String(id);const g=k.startsWith('99.')?'DEF':k.startsWith('9.')?'OF':null;return g&&ui.data.comms[g]?.[k]?.name||k;}
+  function eventText(ev){const d=eventData(ev.eventId);if(!d)return`Event ${ev.eventId}`;let s=d.name;s=s.replace(/Zawodnik XY/g,match.player?.name||'Zawodnik');if(ev.z!=null)s=s.replace(/Z m/g,`${ev.z} m`);else s=s.replace(/ Z m/g,'');return s;}
+
+  function regularMinute(){
+    const buckets=[{a:1,b:15,w:12.70},{a:16,b:30,w:13.90},{a:31,b:45,w:15.89},{a:46,b:60,w:16.20},{a:61,b:75,w:15.13},{a:76,b:90,w:15.89}];
+    let total=buckets.reduce((s,x)=>s+x.w,0),r=Math.random()*total;for(const x of buckets){r-=x.w;if(r<0)return x.a+Math.floor(Math.random()*(x.b-x.a+1));}return 90;
+  }
+  function eventZ(id){const n=Number(id);if([3,7,103,107,10,110].includes(n))return null;const first={1:'1.1',2:'2.1',4:'4.1',5:'5.1',6:'6.1',8:'8.1',101:'101.1',102:'102.1',104:'104.1',105:'105.1',106:'106.1',108:'108.1'}[n];return first?window.WidzewSeasonMatchEngine.chooseZ(n,first,Math.random):null;}
+  function pickEvent(side){const w=window.WidzewSeasonMatchEngine.constants.EVENT_WEIGHTS[side];const items=Object.entries(w).map(([value,weight])=>({value:Number(value),weight}));return window.WidzewSeasonMatchEngine.weightedPick(items,Math.random).value;}
+  function buildPlan(input){
+    const probe=window.WidzewSeasonMatchEngine.generateMatch(input);
+    const count=probe.totalEvents;
+    const sides=[];for(let i=0;i<count;i++)sides.push(Math.random()<0.5?'OF':'DEF');
+    const events=sides.map((s,i)=>{const id=pickEvent(s);return{minute:regularMinute(),eventId:id,z:eventZ(id),side:s,index:i};}).sort((a,b)=>a.minute-b.minute);
+    return events;
+  }
+  function selectActor(){
+    const pool=match.xi.filter(p=>!p.isGoalkeeper);return pool[Math.floor(Math.random()*pool.length)];
+  }
+  function selectReceiver(actor){
+    const pool=match.xi.filter(p=>!p.isGoalkeeper&&p!==actor);return pool.length?pool[Math.floor(Math.random()*pool.length)]:actor;
+  }
+  function chooseActorForAction(id){
+    const type=actionData(id).type;
+    if(Number(match.current.eventId)===7&&match.selectedEvent7Player)return match.selectedEvent7Player;
+    if(type==='pass'||type==='cross')return selectActor();
+    return match.player||selectActor();
+  }
+  function showEvent7PlayerChoice(){
+    const box=document.getElementById('wsm-player-choice');if(!box)return;
+    box.innerHTML='<div class="wsm-meta">Wybierz zawodnika wykonującego akcję:</div><div class="wsm-player-choice">'+match.xi.filter(p=>!p.isGoalkeeper).map((p,i)=>`<button class="wsm-player-btn ${match.selectedEvent7Player===p?'selected':''}" data-i="${i}">${esc(p.name)}</button>`).join('')+'</div>';
+    box.querySelectorAll('button').forEach(b=>b.onclick=()=>{match.selectedEvent7Player=match.xi.filter(p=>!p.isGoalkeeper)[Number(b.dataset.i)];renderActions();});
+  }
+  function renderActions(){
+    const ev=match.current;if(!ev)return;
+    setText('wsm-event',eventText(ev));setText('wsm-meta',`Event ${ev.eventId} · ${ev.side} · Z = ${ev.z==null?'—':ev.z} · ${ev.minute}'`);
+    const box=document.getElementById('wsm-actions');box.innerHTML='';
+    let ids=window.WidzewSeasonMatchEngine.availableActions(ev.eventId,ev.z)||[];
+    if(Number(ev.eventId)===104&&!ids.length)ids=['104.1','104.2'];
+    ids.forEach(id=>{
+      const actor=match.player||selectActor();
+      const p=window.WidzewSeasonMatchEngine.calculateActionProbability(id,{z:ev.z,performerStats:actor.stats,opponentStats:match.opponentStats,k:match.k.k});
+      const b=document.createElement('button');b.className='wsm-action';b.innerHTML=`<div class="wsm-action-name">${esc(actionData(id).name||id)}</div><div class="wsm-chance">Szansa powodzenia: <b>${p.probability.toFixed(1)}%</b></div>`;b.onclick=()=>playAction(id);box.appendChild(b);
+    });
+    if(Number(ev.eventId)===7)showEvent7PlayerChoice();else document.getElementById('wsm-player-choice').innerHTML='';
+  }
+  function nextEventFrom(t){if(!t)return null;let id=t.nextEvent;if(id==null&&t.nextAction!=null)id=Number(t.nextAction);if(id==null)return null;const z=t.newZ!==undefined?t.newZ:eventZ(id);return{eventId:Number(id),side:eventSide(id),z:z==null?null:Number(z),minute:match.plan[match.planIndex]?.minute??match.minute};}
+  function addGoal(msg){if(msg==='9.10'){match.score.widzew++;match.scorers.push({player:match.player?.name||'Zawodnik Widzewa',minute:match.minute});}if(msg==='99.10')match.score.opponent++;renderScore();renderScorers();}
+  function endSequence(){match.current=null;match.player=null;match.k={eventGroup:null,repeatCount:0,k:0};advance();}
+  function finishHalf(){match.half=2;match.planIndex=match.plan.findIndex(x=>x.minute>45);if(match.planIndex<0)finishMatch();else startCurrentEvent();}
+  function finishMatch(){match.current=null;setText('wsm-event','KONIEC CZASU GRY');setText('wsm-meta','');setText('wsm-status','Mecz zakończony.');feed('KONIEC CZASU GRY',90);renderScore();
+    if(window.seasonGameState){const round=Number(window.seasonGameState.currentRound);const result={round,opponent:match.opponent.name,home:match.opponent.home,gf:match.score.widzew,ga:match.score.opponent,scorers:match.scorers.map(s=>({minute:s.minute,type:'widzew',name:s.player}))};window.seasonGameState.widzewResults=Array.isArray(window.seasonGameState.widzewResults)?window.seasonGameState.widzewResults.filter(x=>Number(x.round)!==round):[];window.seasonGameState.widzewResults.push(result);if(typeof window.updateTopScorersFromMatch==='function')window.updateTopScorersFromMatch(result);if(typeof window.renderPlayableSeason==='function')window.renderPlayableSeason();}
+    const close=document.getElementById('wsm-close');close.textContent='← WRÓĆ DO SEZONU';
+  }
+  function startCurrentEvent(){
+    if(match.planIndex>=match.plan.length){finishMatch();return;}
+    const planned=match.plan[match.planIndex];if(match.half===1&&planned.minute>45){setText('wsm-event','KONIEC I POŁOWY');setText('wsm-status','Przerwa. Kliknij, aby kontynuować.');const b=document.createElement('button');b.className='wsm-primary';b.textContent='▶ DRUGA POŁOWA';b.onclick=()=>{b.remove();finishHalf();};document.getElementById('wsm-status').appendChild(b);return;}
+    match.current={...planned};match.minute=planned.minute;match.player=selectActor();match.k={eventGroup:null,repeatCount:0,k:0};renderScore();renderActions();feed('Początek sekwencji: '+eventText(match.current),match.minute);setText('wsm-status','Wybierz akcję.');
+  }
+  function advance(){match.planIndex++;startCurrentEvent();}
+
+  function playAction(id){
+    if(!match.current)return;
+    const actor=chooseActorForAction(id);match.player=actor;
+    const type=actionData(id).type;
+    const receiver=(type==='pass'||type==='cross')?selectReceiver(actor):null;
+    const p=window.WidzewSeasonMatchEngine.resolveAction(id,{z:match.current.z,performerStats:actor.stats,opponentStats:match.opponentStats,k:match.k.k,randomFn:Math.random});
+    match.k=window.WidzewSeasonMatchEngine.updateKState(match.k,match.current.eventId);
+    let t=window.WidzewSeasonMatchEngine.transitionForAction(id,p.success,match.current.z,Math.random);
+    const msg=t?.message?commName(t.message):'';
+    if(msg){feed(msg,match.minute);addGoal(String(t.message));}
+    document.getElementById('wsm-debug').textContent=JSON.stringify({action:id,name:actionData(id).name,type,performer:actor.name,receiver:receiver?.name||null,probability:p.probability,roll:p.roll,success:p.success,transition:t},null,2);
+    if(t?.goal){addGoal(t.goal==='WIDZEW'?'9.10':'99.10');}
+    if(t?.end){endSequence();return;}
+    const nx=nextEventFrom(t);if(!nx){endSequence();return;}
+    if(nx.eventId===10||nx.eventId===110){match.current=nx;match.player=selectActor();renderActions();playSpecial(nx);return;}
+    match.current=nx;match.player=(type==='pass'||type==='cross')?selectActor():actor;if(t.keepPlayer)match.player=actor;renderActions();
+  }
+  function playSpecial(ev){
+    const actor=match.player||selectActor();const id=String(ev.eventId);const p=window.WidzewSeasonMatchEngine.resolveAction(id,{z:ev.z,performerStats:actor.stats,opponentStats:match.opponentStats,k:match.k.k,randomFn:Math.random});const t=window.WidzewSeasonMatchEngine.transitionForAction(id,p.success,ev.z,Math.random);const msg=t?.message?commName(t.message):'';if(msg){feed(msg,match.minute);addGoal(String(t.message));}document.getElementById('wsm-debug').textContent=JSON.stringify({action:id,name:actionData(id).name,probability:p.probability,roll:p.roll,success:p.success,transition:t},null,2);if(t?.end){endSequence();return;}const nx=nextEventFrom(t);if(nx){match.current=nx;match.player=selectActor();renderActions();}else endSequence();
+  }
+
+  async function start(){
+    if(started)return;started=true;injectStyles();
+    try{
+      createUI({name:'Ładowanie…',logo:'./data/logos/widzew_lodz.png'});
+      setText('wsm-status','Ładowanie silnika i danych…');
+      await loadEngine();ui.data=await loadData();
+      const db=await waitForSquad();
+      const xi=db.players.filter(p=>p.slot==='starter').map(playerFromDb);
+      if(xi.length<11)throw new Error(`Nieprawidłowy skład: znaleziono ${xi.length} zawodników podstawowych.`);
+      const opponent=readOpponent();
+      createUI(opponent);ui.data=await loadData();
+      const avg=xi.reduce((s,p)=>s+p.stats.ogolna,0)/xi.length;
+      const input={home:opponent.home,widzew:{overall:avg,players:xi},opponent:{overall:50,charakter:5},coachStrength:0};
+      match={opponent,xi,opponentStats:{defensywa:50,szybkosc:50,podania:50,atak:50,zaangazowanie:50,kreatywnosc:50,strzal:50,ogolna:50,graNogami:50,piastkowanie:50,robinsonada:50,br:50},score:{widzew:0,opponent:0},scorers:[],minute:0,half:1,plan:buildPlan(input),planIndex:0,current:null,player:null,k:{eventGroup:null,repeatCount:0,k:0}};
+      setText('wsm-status',`Mecz rozpoczęty · ${db.season||''} · skład: ${xi.length} zawodników`);feed(`Mecz: Widzew Łódź – ${opponent.name}`);startCurrentEvent();
+    }catch(err){setText('wsm-event','Nie udało się uruchomić meczu.');setText('wsm-status',err.message);document.getElementById('wsm-status').classList.add('wsm-error');console.error(err);}
+  }
+
+  document.addEventListener('click',function(event){
+    const b=event.target?.closest?.('#playMatchButton');if(!b)return;
+    event.preventDefault();event.stopImmediatePropagation();
+    start();
+  },true);
+})();
