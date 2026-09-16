@@ -62,6 +62,20 @@
             }
         }
 
+        // 101.5 i 102.5: przy sukcesie 99.3/99.4 kończy akcję najrzadziej,
+        // natomiast faul 99.11 występuje często. 99.11 dalej przechodzi
+        // przez wspólną zasadę 16 m (Z <= 16 -> 107, Z > 16 -> 104).
+        if(success && (id==='101.5' || id==='102.5')){
+            const roll=rand(r);
+            if(roll < 60/70){
+                t={message:'99.11',nextEvent:Number(z)<=16?107:104};
+            }else if(roll < 65/70){
+                t={message:'99.3',end:true};
+            }else{
+                t={message:'99.4',end:true};
+            }
+        }
+
         // Po udanym strzale bramkarza w evencie 110 piłka trafia na rzut rożny.
         // Event 110 jest defensywny, więc dalszy event musi również być defensywny.
         if(id==='110' && t && t.message==='99.9' && t.nextEvent===3){
@@ -128,6 +142,7 @@
         fix_2_3_success_new_z:'random_event_8_range',
         fix_110_99_9_next_event:103,
         fix_103_2_message_99_12_to:'99.13',
-        fix_104_106_message_99_13_to:'99.14'
+        fix_104_106_message_99_13_to:'99.14',
+        fix_101_5_102_5_success_messages:{'99.3':'najrzadziej','99.4':'najrzadziej','99.11':'często'}
     };
 })();
