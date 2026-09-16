@@ -36,6 +36,12 @@
                 if(nz!==null) t={...t,nextEvent:t.nextEvent||1,newZ:nz};
             }
 
+            // 1.8 — gra na czas: event 1 + zmiana Z o -3..+3.
+            if(id==='1.8'){
+                const nz=Number(z)+int(-3,3,r);
+                t={...t,nextEvent:1,newZ:nz};
+            }
+
             if(['2.1','2.2','2.4','2.5'].includes(id)){
                 const nz=correctedDecreaseZ(id,z,r);
                 if(nz!==null) t={...t,nextEvent:t.nextEvent||2,newZ:nz};
@@ -43,6 +49,12 @@
             if(id==='2.3' && t.nextEvent===8){
                 const nz=typeof E.chooseZ==='function' ? E.chooseZ(8,'8.1',r) : null;
                 if(nz!==null) t={...t,nextEvent:8,newZ:nz};
+            }
+
+            // 2.8 — gra na czas: event 2 + zmiana Z o -3..+3.
+            if(id==='2.8'){
+                const nz=Number(z)+int(-3,3,r);
+                t={...t,nextEvent:2,newZ:nz};
             }
 
             if(id==='4.1'){
@@ -126,7 +138,9 @@
     E.transitionForAction=transitionForAction6E;
     E.constants.ETAP_6E={
         fix_1_1_to_1_5_z:'decrease_by_workbook_range',
+        fix_1_8_z:'plus_or_minus_3',
         fix_2_1_to_2_5_z:'decrease_by_workbook_range_except_2_3_event8',
+        fix_2_8_z:'plus_or_minus_3',
         fix_4_1_z:'decrease_1_to_5',
         fix_5_1_z:'decrease_1_to_5',
         fix_5_2_z:'decrease_10_to_20',
