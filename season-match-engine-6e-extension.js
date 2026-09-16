@@ -62,6 +62,12 @@
             }
         }
 
+        // Po udanym strzale bramkarza w evencie 110 piłka trafia na rzut rożny.
+        // Event 110 jest defensywny, więc dalszy event musi również być defensywny.
+        if(id==='110' && t && t.message==='99.9' && t.nextEvent===3){
+            t={...t,nextEvent:103};
+        }
+
         // Korekta komunikatów zgodnie z tabelą Przejścia def:
         // 103.2: 99.12 -> 99.13
         if(id==='103.2' && t && t.message==='99.12'){
@@ -120,6 +126,7 @@
         fix_event_2_action_2_3_always_available:true,
         fix_2_3_success_event:8,
         fix_2_3_success_new_z:'random_event_8_range',
+        fix_110_99_9_next_event:103,
         fix_103_2_message_99_12_to:'99.13',
         fix_104_106_message_99_13_to:'99.14'
     };
