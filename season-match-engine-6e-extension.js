@@ -13,7 +13,8 @@
     const DECREASE_RANGES={
         '1.1':[1,5], '1.2':[5,11], '1.3':[15,30], '1.4':[3,8], '1.5':[5,12],
         '2.1':[1,2], '2.2':[3,6], '2.4':[2,4], '2.5':[3,5],
-        '4.1':[1,5], '5.1':[1,5]
+        '4.1':[1,5],
+        '5.1':[1,5], '5.2':[10,20]
     };
 
     function correctedDecreaseZ(actionId,z,r){
@@ -49,7 +50,7 @@
                 if(nz!==null) t={...t,nextEvent:1,newZ:nz};
             }
 
-            if(id==='5.1'){
+            if(['5.1','5.2'].includes(id)){
                 const nz=correctedDecreaseZ(id,z,r);
                 if(nz!==null) t={...t,nextEvent:1,newZ:nz};
             }
@@ -108,6 +109,7 @@
         fix_2_1_to_2_5_z:'decrease_by_workbook_range_except_2_3_event8',
         fix_4_1_z:'decrease_1_to_5',
         fix_5_1_z:'decrease_1_to_5',
+        fix_5_2_z:'decrease_10_to_20',
         fix_6_1_event:2,
         fix_99_11_threshold_m:16,
         fix_99_11_event_le_16:107,
