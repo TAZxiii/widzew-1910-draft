@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="utf-8">
-<title>Widzew 1910 — tester 6D</title>
+<title>Widzew 1910 — tester 6D/6E</title>
 <style>
 body{font:16px Arial;background:#111;color:#eee;padding:20px;max-width:1000px;margin:auto}
 button{padding:10px;margin:4px;cursor:pointer}
@@ -14,7 +14,7 @@ pre{background:#000;padding:15px;white-space:pre-wrap}
 </style>
 </head>
 <body>
-<h1>Tester ETAP 6D — akcja → wynik → kolejny event</h1>
+<h1>Tester ETAP 6D/6E — akcja → wynik → kolejny event</h1>
 <div class="box"><b>Niezależny tester.</b><br>Zawodnik testowy; wszystkie statystyki = 50.</div>
 <div class="box">
 <button id="new">🎲 NOWY EVENT</button>
@@ -27,7 +27,8 @@ pre{background:#000;padding:15px;white-space:pre-wrap}
 
 <script src="./season-match-engine.js?v=11"></script>
 <script src="./season-match-engine-6c-extension.js?v=2"></script>
-<script src="./season-match-engine-6d-extension.js?v=2"></script>
+<script src="./season-match-engine-6d-extension.js?v=3"></script>
+<script src="./season-match-engine-6e-extension.js?v=1"></script>
 <script>
 (function(){'use strict';
 const $=id=>document.getElementById(id);
@@ -60,7 +61,7 @@ function eventInitialZ(eventId){
  if(!probe)return null;
  return E.chooseZ(id,probe,Math.random);
 }
-function renderEvent(message){
+function renderEvent(){
  $('event').innerHTML='<h2>'+eventName(ev)+'</h2><small>'+ev.side+' · event '+ev.eventId+' · Z='+(ev.z??'—')+'</small>';
  $('actions').innerHTML='';
  const list=E.availableActions(ev.eventId,ev.z);
@@ -82,8 +83,8 @@ function startRandom(){
   kstate=null;
   $('k').textContent='nowa grupa — pierwsza akcja K=0';
   $('out').textContent='Wybierz akcję.';
-  renderEvent(ev);
-  setStatus('Event wylosowany. Możesz wykonywać akcje i przechodzić dalej.',false);
+  renderEvent();
+  setStatus('Event wylosowany. 6D + 6E podłączone.',false);
  }catch(e){setStatus('BŁĄD: '+e.message,true);$('out').textContent=e.stack||e.message}
 }
 function advance(t){
@@ -106,11 +107,11 @@ function advance(t){
 function go(id){
  try{
   if(!ev)return;
+  const currentEvent={...ev};
   kstate=E.updateKState(kstate,ev.eventId);
   $('k').textContent='grupa '+kstate.eventGroup+' · iteracja '+kstate.repeatCount+' · K='+kstate.k;
   const r=E.resolveAction(id,{z:ev.z,k:kstate.k,performerStats:stats,opponentStats:stats});
   const transition=typeof E.transitionForAction==='function' ? E.transitionForAction(id,r.success,ev.z,Math.random) : null;
-  const currentEvent=ev;
   const lines=[];
   lines.push('EVENT: '+currentEvent.side+' / '+currentEvent.eventId+' / Z='+(currentEvent.z??'—'));
   lines.push('AKCJA: '+(A[id]?.name||id)+' ['+id+']');
@@ -126,7 +127,7 @@ function go(id){
   lines.push('R = '+r.roll.toFixed(2));
   lines.push('WYNIK: '+(r.success?'SUKCES':'PORAŻKA'));
   lines.push('');
-  lines.push('--- PRZEJŚCIE 6D ---');
+  lines.push('--- PRZEJŚCIE ---');
   lines.push(transitionLabel(transition));
   if(transition)lines.push('\nPełny obiekt:\n'+JSON.stringify(transition,null,2));
   const advanced=advance(transition);
