@@ -3,7 +3,7 @@
     "9.1": {"id": "9.1", "name": "Strzał celny"},
     "9.2": {"id": "9.2", "name": "Strzał niecelny"},
     "9.3": {"id": "9.3", "name": "Zagranie zablokowane przez rywala"},
-    "9.4": {"id": "9.4", "name": "Zawodnik XY stracił piłkę"},
+    "9.4": {"id": "9.4", "name": "Zawodnik stracił piłkę"},
     "9.5": {"id": "9.5", "name": "Spalony"},
     "9.6": {"id": "9.6", "name": "Przeciwnik wybił piłkę"},
     "9.7": {"id": "9.7", "name": "Przeciwnik wybił piłkę na rzut rożny"},
