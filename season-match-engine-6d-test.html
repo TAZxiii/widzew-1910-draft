@@ -35,9 +35,15 @@ pre{background:#000;padding:15px;white-space:pre-wrap}
 (function(){'use strict';
 const $=id=>document.getElementById(id);
 const E=window.WidzewSeasonMatchEngine;
-let A={},EV={},ready=false,ev=null,kstate=null;
+let A={},EV={},COMM={},ready=false,ev=null,kstate=null,busy=false;
 const stats={defensywa:50,szybkosc:50,podania:50,atak:50,zaangazowanie:50,kreatywnosc:50,strzal:50,ogolna:50,obrona:50,pomoc:50,br:50,graNogami:50,piastkowanie:50,robinsonada:50};
 function setStatus(t,err){$('status').textContent=t;$('status').className=err?'err':'ok'}
+function communicationName(id){
+ const side=String(id).startsWith('99.')?'DEF':'OF';
+ const x=COMM[side]&&COMM[side][String(id)];
+ if(!x)return String(id);
+ return String(x.name||id).replace(/Zawodnik XY/g,'Zawodnik testowy');
+}
 function eventName(e){
  const g=e.side==='OF'?'OF':'DEF',x=EV[g]&&EV[g][String(e.eventId)];
  if(!x)return 'Event '+e.eventId;
@@ -48,10 +54,10 @@ function eventName(e){
 function transitionLabel(t){
  if(!t)return 'brak przejścia';
  const parts=[];
- if(t.message!=null)parts.push('komunikat='+t.message);
+ if(t.message!=null)parts.push('Komunikat: '+communicationName(t.message));
  if(t.nextAction!=null)parts.push('nextAction='+t.nextAction);
- if(t.nextEvent!=null)parts.push('nextEvent='+t.nextEvent);
- if(t.newZ!=null)parts.push('newZ='+t.newZ);
+ if(t.nextEvent!=null)parts.push('Następny event: '+t.nextEvent);
+ if(t.newZ!=null)parts.push('nowe Z='+t.newZ);
  if(t.end)parts.push('KONIEC');
  if(t.shot)parts.push('strzał sprawdzony w 6D');
  if(t.shotChance!=null)parts.push('szansa strzału='+Number(t.shotChance).toFixed(2)+'%');
@@ -91,7 +97,7 @@ function startRandom(){
   const m=E.generateMatch({widzew:{overall:65,players:[]},opponent:{overall:65,charakter:5},home:true});
   if(!m.events||!m.events.length)throw Error('Silnik nie wygenerował eventu.');
   ev=m.events[Math.floor(Math.random()*m.events.length)];
-  kstate=null;
+  kstate=null;busy=false;
   $('k').textContent='nowa grupa — pierwsza akcja K=0';
   $('out').textContent='Wybierz akcję.';
   renderEvent();
@@ -116,11 +122,16 @@ function advance(t){
  return true;
 }
 function go(id){
+ if(busy)return;
+ busy=true;
  try{
   if(!ev)return;
   const currentEvent={...ev};
   kstate=E.updateKState(kstate,ev.eventId);
   $('k').textContent='grupa '+kstate.eventGroup+' · iteracja '+kstate.repeatCount+' · K='+kstate.k;
+
+  // Kluczowa zasada testera: samo wyświetlenie akcji niczego nie rozstrzyga.
+  // Dopiero kliknięcie konkretnej akcji uruchamia jej sprawdzenie i losowanie rezultatu.
   const r=E.resolveAction(id,{z:ev.z,k:kstate.k,performerStats:stats,opponentStats:stats});
   const transition=typeof E.transitionForAction==='function' ? E.transitionForAction(id,r.success,ev.z,Math.random) : null;
   const lines=[];
@@ -140,7 +151,8 @@ function go(id){
   lines.push('');
   lines.push('--- PRZEJŚCIE ---');
   lines.push(transitionLabel(transition));
-  if(transition)lines.push('\nPełny obiekt:\n'+JSON.stringify(transition,null,2));
+  if(transition?.message!=null)lines.push('\nKOMUNIKAT DLA GRACZA:\n'+communicationName(transition.message));
+  if(transition)lines.push('\nPełny obiekt techniczny:\n'+JSON.stringify(transition,null,2));
   const advanced=advance(transition);
   if(advanced){
    lines.push('\n--- NASTĘPNY EVENT ---');
@@ -151,13 +163,15 @@ function go(id){
   $('out').textContent=lines.join('\n');
   setStatus(advanced?'Akcja rozstrzygnięta. Przeszliśmy do kolejnego eventu.':'Akcja rozstrzygnięta. Sekwencja zakończona.',false);
  }catch(e){$('out').textContent='BŁĄD: '+e.stack;setStatus('BŁĄD podczas rozstrzygania.',true)}
+ finally{busy=false;}
 }
 $('new').onclick=startRandom;
 if(!E||typeof E.generateMatch!=='function'||typeof E.resolveAction!=='function'||typeof E.transitionForAction!=='function')setStatus('BŁĄD: silnik/rozszerzenia nie zostały załadowane.',true);
 Promise.all([
  fetch('./data/akcje.json?v=4').then(r=>{if(!r.ok)throw Error('akcje.json HTTP '+r.status);return r.json()}),
- fetch('./data/eventy.json?v=4').then(r=>{if(!r.ok)throw Error('eventy.json HTTP '+r.status);return r.json()})
-]).then(([a,e])=>{A=a;EV=e;ready=true;setStatus('Bazy załadowane. Możesz kliknąć NOWY EVENT.',false)})
+ fetch('./data/eventy.json?v=4').then(r=>{if(!r.ok)throw Error('eventy.json HTTP '+r.status);return r.json()}),
+ fetch('./data/komunikaty.json?v=1').then(r=>{if(!r.ok)throw Error('komunikaty.json HTTP '+r.status);return r.json()})
+]).then(([a,e,c])=>{A=a;EV=e;COMM=c;ready=true;setStatus('Bazy załadowane. Możesz kliknąć NOWY EVENT.',false)})
  .catch(e=>setStatus('BŁĄD ładowania baz: '+e.message,true));
 })();
 </script>
