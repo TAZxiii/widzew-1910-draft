@@ -10,10 +10,11 @@ button{padding:10px;margin:4px;cursor:pointer}
 pre{background:#000;padding:15px;white-space:pre-wrap}
 .err{color:#ff7777}
 .ok{color:#7f7}
+.next{border:2px solid #777;margin-top:10px;padding:10px}
 </style>
 </head>
 <body>
-<h1>Tester ETAP 6D — akcja → wynik → przejście</h1>
+<h1>Tester ETAP 6D — akcja → wynik → kolejny event</h1>
 <div class="box"><b>Niezależny tester.</b><br>Zawodnik testowy; wszystkie statystyki = 50.</div>
 <div class="box">
 <button id="new">🎲 NOWY EVENT</button>
@@ -26,7 +27,7 @@ pre{background:#000;padding:15px;white-space:pre-wrap}
 
 <script src="./season-match-engine.js?v=11"></script>
 <script src="./season-match-engine-6c-extension.js?v=2"></script>
-<script src="./season-match-engine-6d-extension.js?v=1"></script>
+<script src="./season-match-engine-6d-extension.js?v=2"></script>
 <script>
 (function(){'use strict';
 const $=id=>document.getElementById(id);
@@ -51,7 +52,28 @@ function transitionLabel(t){
  if(t.shotChance!=null)parts.push('szansa strzału='+Number(t.shotChance).toFixed(2)+'%');
  return parts.join(' · ')||JSON.stringify(t);
 }
-function next(){
+function makeEvent(side,eventId,z){return {side,eventId:Number(eventId),z:z==null?null:Number(z)}}
+function eventInitialZ(eventId){
+ const id=Number(eventId);
+ if([3,7,103,107].includes(id))return null;
+ const probe={1:'1.1',2:'2.1',4:'4.1',5:'5.1',6:'6.1',8:'8.1',101:'101.1',102:'102.1',104:'104.1',105:'105.1',106:'106.1',108:'108.1'}[id];
+ if(!probe)return null;
+ return E.chooseZ(id,probe,Math.random);
+}
+function renderEvent(message){
+ $('event').innerHTML='<h2>'+eventName(ev)+'</h2><small>'+ev.side+' · event '+ev.eventId+' · Z='+(ev.z??'—')+'</small>';
+ $('actions').innerHTML='';
+ const list=E.availableActions(ev.eventId,ev.z);
+ if(!list.length){$('actions').innerHTML='<div class="next">Brak akcji do wyboru dla tego eventu — jest to etap specjalny/końcowy.</div>';return false;}
+ list.forEach(id=>{
+  const b=document.createElement('button');
+  b.textContent=(A[String(id)]?.name||id)+' ['+id+']';
+  b.onclick=()=>go(String(id));
+  $('actions').appendChild(b);
+ });
+ return true;
+}
+function startRandom(){
  try{
   if(!ready)throw Error('Bazy danych jeszcze się nie załadowały.');
   const m=E.generateMatch({widzew:{overall:65,players:[]},opponent:{overall:65,charakter:5},home:true});
@@ -59,19 +81,27 @@ function next(){
   ev=m.events[Math.floor(Math.random()*m.events.length)];
   kstate=null;
   $('k').textContent='nowa grupa — pierwsza akcja K=0';
-  $('event').innerHTML='<h2>'+eventName(ev)+'</h2><small>'+ev.side+' · event '+ev.eventId+' · Z='+(ev.z??'—')+'</small>';
-  $('actions').innerHTML='';
-  const list=E.availableActions(ev.eventId,ev.z);
-  if(!list.length)throw Error('Brak dostępnych akcji dla eventu '+ev.eventId+' Z='+ev.z);
-  list.forEach(id=>{
-   const b=document.createElement('button');
-   b.textContent=(A[String(id)]?.name||id)+' ['+id+']';
-   b.onclick=()=>go(String(id));
-   $('actions').appendChild(b);
-  });
   $('out').textContent='Wybierz akcję.';
-  setStatus('Event wylosowany. 6D jest podłączone.',false);
+  renderEvent(ev);
+  setStatus('Event wylosowany. Możesz wykonywać akcje i przechodzić dalej.',false);
  }catch(e){setStatus('BŁĄD: '+e.message,true);$('out').textContent=e.stack||e.message}
+}
+function advance(t){
+ if(!t || t.end) return false;
+ let nextId=null,nextSide=null,nextZ=null;
+ if(t.nextAction!=null){
+  nextId=String(t.nextAction);
+  nextSide=nextId==='10'?'OF':'DEF';
+  nextZ=t.newZ!=null?t.newZ:ev.z;
+ }else if(t.nextEvent!=null){
+  nextId=Number(t.nextEvent);
+  nextSide=nextId>=100?'DEF':'OF';
+  nextZ=t.newZ!=null?t.newZ:eventInitialZ(nextId);
+ }
+ if(nextId==null)return false;
+ ev=makeEvent(nextSide,nextId,nextZ);
+ renderEvent();
+ return true;
 }
 function go(id){
  try{
@@ -80,7 +110,9 @@ function go(id){
   $('k').textContent='grupa '+kstate.eventGroup+' · iteracja '+kstate.repeatCount+' · K='+kstate.k;
   const r=E.resolveAction(id,{z:ev.z,k:kstate.k,performerStats:stats,opponentStats:stats});
   const transition=typeof E.transitionForAction==='function' ? E.transitionForAction(id,r.success,ev.z,Math.random) : null;
+  const currentEvent=ev;
   const lines=[];
+  lines.push('EVENT: '+currentEvent.side+' / '+currentEvent.eventId+' / Z='+(currentEvent.z??'—'));
   lines.push('AKCJA: '+(A[id]?.name||id)+' ['+id+']');
   lines.push('');
   lines.push('Baza: '+r.base);
@@ -97,11 +129,18 @@ function go(id){
   lines.push('--- PRZEJŚCIE 6D ---');
   lines.push(transitionLabel(transition));
   if(transition)lines.push('\nPełny obiekt:\n'+JSON.stringify(transition,null,2));
+  const advanced=advance(transition);
+  if(advanced){
+   lines.push('\n--- NASTĘPNY EVENT ---');
+   lines.push(currentEvent.eventId+' → '+ev.eventId+' · Z '+(currentEvent.z??'—')+' → '+(ev.z??'—'));
+  }else if(transition?.end){
+   lines.push('\n--- KONIEC TEJ SEKWENCJI ---');
+  }
   $('out').textContent=lines.join('\n');
-  setStatus('Akcja rozstrzygnięta przez 6C + przejście rozstrzygnięte przez 6D.',false);
+  setStatus(advanced?'Akcja rozstrzygnięta. Przeszliśmy do kolejnego eventu.':'Akcja rozstrzygnięta. Sekwencja zakończona.',false);
  }catch(e){$('out').textContent='BŁĄD: '+e.stack;setStatus('BŁĄD podczas rozstrzygania.',true)}
 }
-$('new').onclick=next;
+$('new').onclick=startRandom;
 if(!E||typeof E.generateMatch!=='function'||typeof E.resolveAction!=='function'||typeof E.transitionForAction!=='function')setStatus('BŁĄD: silnik/rozszerzenia nie zostały załadowane.',true);
 Promise.all([
  fetch('./data/akcje.json?v=4').then(r=>{if(!r.ok)throw Error('akcje.json HTTP '+r.status);return r.json()}),
