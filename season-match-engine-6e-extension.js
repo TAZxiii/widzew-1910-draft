@@ -60,17 +60,23 @@
             }
         }
 
-        // Zasada 16 m dla akcji defensywnych: gdy wynikiem jest 99.11,
+        // Korekta komunikatów zgodnie z tabelą Przejścia def:
+        // 103.2: 99.12 -> 99.13
+        if(id==='103.2' && t && t.message==='99.12'){
+            t={...t,message:'99.13'};
+        }
+
+        // 104.1/104.2/105.1/105.2/106.1/106.2: 99.13 -> 99.14
+        if(['104.1','104.2','105.1','105.2','106.1','106.2'].includes(id) && t && t.message==='99.13'){
+            t={...t,message:'99.14'};
+        }
+
+        // Zasada 16 m: w każdej defensywnej akcji, gdy wynikiem jest 99.11,
+        // decyzja o kolejnym evencie zależy od aktualnego Z.
         // Z <= 16 m -> rzut karny (107), Z > 16 m -> rzut wolny (104).
         const eventId=Number(id.split('.')[0]);
         if([101,102,103,104,105,106,108].includes(eventId) && t && t.message==='99.11'){
             t={...t,nextEvent:Number(z)<=16?107:104};
-        }
-
-        // Zasada 16 m dla akcji ofensywnych: gdy wynikiem jest 9.11,
-        // Z <= 16 m -> rzut karny (7), Z > 16 m -> rzut wolny (4).
-        if([1,2,3,4,5,6,7,8].includes(eventId) && t && t.message==='9.11'){
-            t={...t,nextEvent:Number(z)<=16?7:4};
         }
 
         return t;
@@ -86,8 +92,7 @@
         fix_99_11_threshold_m:16,
         fix_99_11_event_le_16:107,
         fix_99_11_event_gt_16:104,
-        fix_9_11_threshold_m:16,
-        fix_9_11_event_le_16:7,
-        fix_9_11_event_gt_16:4
+        fix_103_2_message_99_12_to: '99.13',
+        fix_104_106_message_99_13_to: '99.14'
     };
 })();
