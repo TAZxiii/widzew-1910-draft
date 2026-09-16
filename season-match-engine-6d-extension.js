@@ -15,6 +15,9 @@
     // Globalna zasada: po porażce defensywnej, jeżeli akcja ma znane Z,
     // najpierw sprawdzamy możliwość oddania strzału.
     // Z=70 -> 1%, Z=1 -> 100%, liniowo.
+    // Ważne: ten mechanizm dotyczy wyłącznie eventów 101, 102 i 104.
+    // Event 107 (rzut karny) ma własną logikę 99.1/99.2, a event 103
+    // (rzut rożny) nigdy nie generuje 99.1 ani 99.2.
     function shotChanceByZ(z){
         const x=clamp(Number(z),1,70);
         return 100-((x-1)*99/69);
@@ -106,6 +109,12 @@
         const isDef=/^(10[1-9]|110)\./.test(id) || /^(101|102|103|104|105|106|107|108)\./.test(id) || id==='110';
         const t=BASE_TRANSITION(actionId,success,z,r);
         if(!isDef || success || id==='110' || !Number.isFinite(Number(z))) return applyTransitionZ(id,t,z,r);
+
+        // Automatyczny test strzału jest dozwolony tylko dla akcji z eventów
+        // 101, 102 i 104. Dzięki temu event 103 nie może wygenerować 99.1/99.2.
+        const eventId=Number(id.split('.')[0]);
+        const canGenerateShot=[101,102,104].includes(eventId);
+        if(!canGenerateShot) return applyTransitionZ(id,t,z,r);
 
         const shot=rollDefensiveShot(z,r);
         if(shot==='99.1') return {message:'99.1',nextAction:'110',newZ:Number(z),shotChance:shotChanceByZ(z),shot:true};
