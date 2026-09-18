@@ -537,7 +537,7 @@ function formatSquadValue(value) {
             ["napastnicy",50,15]
         ],
         "4-1-3-2": [["br",50,90],["loPo",10,72],["so",36,74],["so",64,74],["loPo",90,72],["pomoc",34,45],["pomoc",50,54],["pomoc",50,42],["pomoc",66,45],["napastnicy",37,25],["napastnicy",63,25]],
-        "4-2-1-3": [["br",50,90],["loPo",10,72],["so",36,74],["so",64,74],["loPo",90,72],["pomoc",35,50],["pomoc",65,50],["pomoc",50,44],["napastnicy",22,25],["napastnicy",78,25],["napastnicy",50,17]],
+        "4-2-1-3": [["br",50,90],["loPo",10,72],["so",36,74],["so",64,74],["loPo",90,72],["pomoc",35,50],["pomoc",65,50],["pomoc",50,44],["skrzydlowi",22,25],["skrzydlowi",78,25],["napastnicy",50,17]],
         "4-3-3": [
             ["br",50,90],
             ["loPo",9,74],["so",36,74],["so",64,74],["loPo",91,74],
