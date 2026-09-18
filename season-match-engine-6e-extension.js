@@ -146,12 +146,14 @@
             actions.splice(insertAt,0,'2.3');
         }
 
-        // Eventy 105/106 wynikające z 101.4/102.4 zachowują Z z poprzedniej akcji.
-        // 105 może więc wystąpić przy Z <= 30, a 106 przy Z > 30.
-        // Obie akcje muszą być dostępne w całym zakresie gry, aby nie blokować
-        // sekwencji po takim przejściu.
-        if([105,106].includes(Number(eventId)) && Number.isFinite(Number(z))){
-            return ['105.1','105.2'].map(String).filter(id=>id.startsWith(String(eventId)+'.'));
+        // 105 = daleki aut: tylko Z 31–70.
+        // 106 = bliski aut: tylko Z 5–30.
+        // Z z poprzedniej akcji pozostaje bez zmian.
+        if(Number(eventId)===105 && Number.isFinite(Number(z))){
+            return Number(z)>=31 ? ['105.1','105.2'] : [];
+        }
+        if(Number(eventId)===106 && Number.isFinite(Number(z))){
+            return Number(z)<=30 ? ['106.1','106.2'] : [];
         }
         return actions;
     };
