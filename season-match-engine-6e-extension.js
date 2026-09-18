@@ -77,12 +77,17 @@
         }
 
         // 101.5 i 102.5: przy sukcesie 99.3/99.4 kończy akcję najrzadziej,
-        // natomiast faul 99.11 występuje często. 99.11 dalej przechodzi
-        // przez wspólną zasadę 16 m (Z <= 16 -> 107, Z > 16 -> 104).
+        // natomiast faul 99.11 występuje często.
+        // Kluczowe: 99.11 NIE losuje nowej odległości.
+        // Do eventu 107 lub 104 przekazujemy dokładnie Z z poprzedniej akcji.
         if(success && (id==='101.5' || id==='102.5')){
             const roll=rand(r);
             if(roll < 60/70){
-                t={message:'99.11',nextEvent:Number(z)<=16?107:104};
+                t={
+                    message:'99.11',
+                    nextEvent:Number(z)<=16?107:104,
+                    newZ:Number(z)
+                };
             }else if(roll < 65/70){
                 t={message:'99.3',end:true};
             }else{
@@ -107,7 +112,7 @@
             t={...t,message:'99.14'};
         }
 
-        // 102.4: po udanym wybiciu na aut komunikat 99.12 prowadzi
+        // Po udanym wybiciu na aut komunikat 99.12 prowadzi
         // do eventu 105 albo 106 zależnie od Z z POPRZEDNIEJ akcji.
         // Z <= 30 m -> 105, Z > 30 m -> 106. Z nie zmienia się.
         if(success && (id==='101.4'||id==='102.4') && t && t.message==='99.12'){
@@ -181,6 +186,7 @@
         fix_110_99_9_next_event:103,
         fix_103_actions_message_99_12_to:'99.13',
         fix_104_106_message_99_13_to:'99.14',
-        fix_101_5_102_5_success_messages:{'99.3':'najrzadziej','99.4':'najrzadziej','99.11':'często'}
+        fix_101_5_102_5_success_messages:{'99.3':'najrzadziej','99.4':'najrzadziej','99.11':'często'},
+        fix_101_5_102_5_99_11_preserve_z:true
     };
 })();
