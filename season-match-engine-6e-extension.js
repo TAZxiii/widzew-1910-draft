@@ -107,6 +107,13 @@
             t={...t,message:'99.14'};
         }
 
+        // 102.4: po udanym wybiciu na aut komunikat 99.12 prowadzi
+        // do eventu 105 albo 106 zależnie od Z z POPRZEDNIEJ akcji.
+        // Z <= 30 m -> 105, Z > 30 m -> 106. Z nie zmienia się.
+        if(success && id==='102.4' && t && t.message==='99.12'){
+            t={...t,nextEvent:Number(z)<=30?105:106,newZ:Number(z)};
+        }
+
         // Zasada 16 m: w każdej defensywnej akcji, gdy wynikiem jest 99.11,
         // decyzja o kolejnym evencie zależy od aktualnego Z.
         // Z <= 16 m -> rzut karny (107), Z > 16 m -> rzut wolny (104).
