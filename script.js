@@ -1440,12 +1440,28 @@ function updateTopScorersFromMatch(match) {
 function renderTopScorers() {
     const el=document.getElementById("topScorers");
     if(!el) return;
-    // In playable season mode the stable season database is the source of truth.
-    if(typeof window.rebuildSeasonTopScorers==="function"){
-        try{ window.rebuildSeasonTopScorers(seasonGameState.currentRound); }catch(e){ console.warn("Nie udało się odbudować klasyfikacji strzelców:",e); }
-    }
-    const rows=Object.values(seasonGameState.scorers||{}).sort((a,b)=>b.goals-a.goals || a.name.localeCompare(b.name,"pl"));
-    el.innerHTML=rows.length ? rows.map((r,i)=>`<div class="scorer-row"><span>${i+1}.</span><strong>${seasonSafe(r.name)}</strong><b>${r.goals}</b></div>`).join("") : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
+
+    // Jedno źródło prawdy: wyniki meczów zapisane w bieżącym sezonie.
+    // Nie losujemy ponownie strzelców i nie odczytujemy ich z HTML.
+    const totals={};
+    (seasonGameState.widzewResults||[]).forEach(match=>{
+        (match.scorers||[]).forEach(s=>{
+            if(s.type!=="widzew") return;
+            const name=String(s.name||"").trim();
+            if(!name || name==="Samobój") return;
+            const key=(s.player && typeof playerKey==="function")
+                ? playerKey(s.player.row)
+                : name.toLocaleLowerCase("pl");
+            if(!key) return;
+            if(!totals[key]) totals[key]={name,goals:0};
+            totals[key].goals++;
+        });
+    });
+    seasonGameState.scorers=totals;
+    const rows=Object.values(totals).sort((a,b)=>b.goals-a.goals || a.name.localeCompare(b.name,"pl"));
+    el.innerHTML=rows.length
+        ? rows.map((r,i)=>`<div class="scorer-row"><span>${i+1}.</span><strong>${seasonSafe(r.name)}</strong><b>${r.goals}</b></div>`).join("")
+        : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
 }
 function getWidzewFixtures() {
     return seasonGameState.fixtures
