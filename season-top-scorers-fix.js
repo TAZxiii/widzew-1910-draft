@@ -86,6 +86,17 @@
     }
 
     function restoreLiveRows() {
+        const stateScorers = window.seasonGameState?.scorers;
+        if (stateScorers && Object.keys(stateScorers).length) {
+            const authoritative = {};
+            Object.keys(stateScorers).forEach(key => {
+                const row = stateScorers[key];
+                if (!row || Number(row.goals) <= 0) return;
+                authoritative[key] = {name: row.name, goals: Number(row.goals)};
+            });
+            renderRows(authoritative, 0);
+            return;
+        }
         if (Object.keys(liveScorers).length || liveOwnGoals > 0) {
             renderRows(liveScorers, liveOwnGoals);
         }
