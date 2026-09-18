@@ -108,30 +108,46 @@
   /* The temporary DB is the sole renderer of the top-scorer panel. */
   window.renderTopScorers = render;
 
-  /* Reset together with a new season. */
-  const originalInit = window.initSeasonMode;
-  if(typeof originalInit === 'function'){
-    window.initSeasonMode = async function(mode){
-      reset();
-      const result = await originalInit.apply(this, arguments);
-      if(mode === 'simulate'){
-        (window.seasonGameState?.widzewResults || []).forEach(recordMatch);
-        render();
-      }
-      return result;
-    };
+  /*
+   * script.js definiuje funkcje sezonu wewnątrz DOMContentLoaded.
+   * Dlatego wcześniejsze próby owinięcia initSeasonMode/symulacji
+   * wykonywane podczas ładowania strony były zbyt wczesne.
+   * Podpinamy integrację po zdefiniowaniu funkcji przez rdzeń.
+   */
+  function installSeasonHooks(){
+    const originalInit = window.initSeasonMode;
+    if(typeof originalInit === 'function' && !originalInit.__seasonScorersHook){
+      const wrappedInit = async function(mode){
+        reset();
+        const result = await originalInit.apply(this, arguments);
+        if(mode === 'simulate'){
+          (window.seasonGameState?.widzewResults || []).forEach(recordMatch);
+          render();
+        }
+        return result;
+      };
+      wrappedInit.__seasonScorersHook = true;
+      window.initSeasonMode = wrappedInit;
+    }
+
+    const originalSimulateCurrent = window.simulateCurrentWidzewMatch;
+    if(typeof originalSimulateCurrent === 'function' && !originalSimulateCurrent.__seasonScorersHook){
+      const wrappedSimulate = function(){
+        const before = Number(window.seasonGameState?.currentRound);
+        const result = originalSimulateCurrent.apply(this, arguments);
+        const match = (window.seasonGameState?.widzewResults || []).find(m=>Number(m.round)===before);
+        if(match) recordMatch(match);
+        return result;
+      };
+      wrappedSimulate.__seasonScorersHook = true;
+      window.simulateCurrentWidzewMatch = wrappedSimulate;
+    }
   }
 
-  /* A simulated individual round ends here, so record its already generated scorers. */
-  const originalSimulateCurrent = window.simulateCurrentWidzewMatch;
-  if(typeof originalSimulateCurrent === 'function'){
-    window.simulateCurrentWidzewMatch = function(){
-      const before = Number(window.seasonGameState?.currentRound);
-      const result = originalSimulateCurrent.apply(this, arguments);
-      const match = (window.seasonGameState?.widzewResults || []).find(m=>Number(m.round)===before);
-      if(match) recordMatch(match);
-      return result;
-    };
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', installSeasonHooks, {once:true});
+  } else {
+    installSeasonHooks();
   }
 
   render();
