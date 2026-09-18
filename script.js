@@ -1438,9 +1438,7 @@ function updateTopScorersFromMatch(match) {
     });
 }
 function renderTopScorers() {
-    // Jedno źródło prawdy dla panelu TOP STRZELCÓW podczas sezonu.
-    // Jeśli tymczasowa baza strzelców jest załadowana, renderuje ona panel;
-    // fallback zachowuje dotychczasowe zachowanie rdzenia.
+    // Tymczasowa baza sezonowa jest źródłem prawdy dla panelu strzelców.
     if (typeof window.renderSeasonScorers === "function") {
         window.renderSeasonScorers();
         return;
@@ -1449,94 +1447,6 @@ function renderTopScorers() {
     if(!el) return;
     const rows=Object.values(seasonGameState.scorers||{}).sort((a,b)=>b.goals-a.goals || a.name.localeCompare(b.name,"pl"));
     el.innerHTML=rows.length ? rows.map((r,i)=>`<div class="scorer-row"><span>${i+1}.</span><strong>${seasonSafe(r.name)}</strong><b>${r.goals}</b></div>`).join("") : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
-}
-function getWidzewFixtures() {
-    return seasonGameState.fixtures
-        .filter(f => seasonTeamName(f.gospodarz) === "Widzew Łódź" || seasonTeamName(f.gosc) === "Widzew Łódź")
-        .sort((a,b) => Number(a.kolejka) - Number(b.kolejka));
-}
-function getWidzewFixture(round) {
-    return seasonGameState.widzewFixtures.find(f => Number(f.kolejka) === Number(round));
-}
-function completedNonWidzewFixtures(upToRound) {
-    return seasonGameState.fixtures.filter(f => {
-        const r=Number(f.kolejka);
-        if (r > upToRound) return false;
-        const isW = seasonTeamName(f.gospodarz)==="Widzew Łódź" || seasonTeamName(f.gosc)==="Widzew Łódź";
-        return !isW && !!seasonResultParts(f.wynik);
-    });
-}
-function seasonWidzewResultsByRound() {
-    const map = {};
-    seasonGameState.widzewResults.forEach(r => map[r.round] = r);
-    return map;
-}
-function buildStandings(round) {
-    const names = new Set(["Widzew Łódź"]);
-
-    // Baza ocen dostarcza zespoły, ale terminarz jest źródłem prawdy dla
-    // tego, kto rzeczywiście występuje w danym sezonie.
-    seasonGameState.teams.forEach(t => {
-        const n = seasonTeamName(t["drużyna"] || t["druzyna"] || t["Drużyna"]);
-        if (n) names.add(n);
-    });
-    seasonGameState.fixtures.forEach(f => {
-        const h = seasonTeamName(f.gospodarz), a = seasonTeamName(f.gosc);
-        if (h) names.add(h);
-        if (a) names.add(a);
-    });
-
-    const stats = {};
-    [...names].forEach(name => stats[name] = {
-        name, mp:0, w:0, d:0, l:0, gf:0, ga:0, pts:0
-    });
-
-    completedNonWidzewFixtures(round).forEach(f => {
-        applyStandingResult(
-            stats,
-            seasonTeamName(f.gospodarz),
-            seasonTeamName(f.gosc),
-            seasonResultParts(f.wynik)
-        );
-    });
-
-    seasonGameState.widzewResults.forEach(r => {
-        if (Number(r.round) <= Number(round)) {
-            const opponent = seasonTeamName(r.opponent);
-            if (r.home) {
-                applyStandingResult(stats, "Widzew Łódź", opponent, [r.gf, r.ga]);
-            } else {
-                applyStandingResult(stats, opponent, "Widzew Łódź", [r.ga, r.gf]);
-            }
-        }
-    });
-
-    return Object.values(stats)
-        .filter(r => r.name)
-        .sort((a,b) =>
-            b.pts-a.pts ||
-            ((b.gf-b.ga)-(a.gf-a.ga)) ||
-            b.gf-a.gf ||
-            a.name.localeCompare(b.name,"pl")
-        );
-}
-function applyStandingResult(stats, home, away, score) {
-    if (!score || !home || !away) return;
-    if (!stats[home]) stats[home]={name:home,mp:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
-    if (!stats[away]) stats[away]={name:away,mp:0,w:0,d:0,l:0,gf:0,ga:0,pts:0};
-
-    const [hg,ag]=score;
-    stats[home].mp++; stats[away].mp++;
-    stats[home].gf+=hg; stats[home].ga+=ag;
-    stats[away].gf+=ag; stats[away].ga+=hg;
-    if (hg>ag) {
-        stats[home].w++; stats[away].l++; stats[home].pts+=3;
-    } else if (hg<ag) {
-        stats[away].w++; stats[home].l++; stats[away].pts+=3;
-    } else {
-        stats[home].d++; stats[away].d++;
-        stats[home].pts++; stats[away].pts++;
-    }
 }
 function renderLeagueTable(round, final=false) {
     const el=document.getElementById("leagueTable");
@@ -1763,5 +1673,10 @@ function openSeasonMode(mode) {
     if(window.__showScreen) window.__showScreen(document.getElementById("seasonScreen"));
     initSeasonMode(mode);
 }
+// Udostępniamy funkcje sezonu po ich zdefiniowaniu, aby warstwy integracyjne mogły się podpiąć.
+window.initSeasonMode = initSeasonMode;
+window.simulateCurrentWidzewMatch = simulateCurrentWidzewMatch;
+window.simulateWholeSeason = simulateWholeSeason;
+
 document.getElementById("playWholeSeason")?.addEventListener("click",()=>openSeasonMode("play"));
 document.getElementById("simulateWholeSeason")?.addEventListener("click",()=>openSeasonMode("simulate"));
