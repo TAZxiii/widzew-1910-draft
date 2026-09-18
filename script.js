@@ -1506,7 +1506,7 @@ function renderRound(round) {
     document.getElementById("playMatchButton")?.addEventListener("click",()=>{
         // Do czasu wdrożenia właściwego ekranu meczu przycisk nie może pozostawiać
         // kolejki bez wyniku — wykonujemy tę samą symulację meczu.
-        simulateCurrentWidzewMatch();
+        window.simulateCurrentWidzewMatch?.();
     });
     document.getElementById("simulateMatchButton")?.addEventListener("click",()=>{
         simulateCurrentWidzewMatch();
@@ -1671,7 +1671,7 @@ function openSeasonMode(mode) {
     if(title) title.textContent=`SEZON ${season}`;
     if(intro) intro.textContent=`Widzew Łódź · ${mode==="play"?"Rozegraj cały sezon":"Symuluj cały sezon"}`;
     if(window.__showScreen) window.__showScreen(document.getElementById("seasonScreen"));
-    initSeasonMode(mode);
+    (window.initSeasonMode || initSeasonMode)(mode);
 }
 // Udostępniamy funkcje sezonu po ich zdefiniowaniu, aby warstwy integracyjne mogły się podpiąć.
 window.initSeasonMode = initSeasonMode;
