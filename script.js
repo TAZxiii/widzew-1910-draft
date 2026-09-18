@@ -1440,6 +1440,10 @@ function updateTopScorersFromMatch(match) {
 function renderTopScorers() {
     const el=document.getElementById("topScorers");
     if(!el) return;
+    // In playable season mode the stable season database is the source of truth.
+    if(typeof window.rebuildSeasonTopScorers==="function"){
+        try{ window.rebuildSeasonTopScorers(seasonGameState.currentRound); }catch(e){ console.warn("Nie udało się odbudować klasyfikacji strzelców:",e); }
+    }
     const rows=Object.values(seasonGameState.scorers||{}).sort((a,b)=>b.goals-a.goals || a.name.localeCompare(b.name,"pl"));
     el.innerHTML=rows.length ? rows.map((r,i)=>`<div class="scorer-row"><span>${i+1}.</span><strong>${seasonSafe(r.name)}</strong><b>${r.goals}</b></div>`).join("") : `<div class="scorer-empty">Brak bramek Widzewa.</div>`;
 }
