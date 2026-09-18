@@ -113,7 +113,12 @@
   if(typeof originalInit === 'function'){
     window.initSeasonMode = async function(mode){
       reset();
-      return await originalInit.apply(this, arguments);
+      const result = await originalInit.apply(this, arguments);
+      if(mode === 'simulate'){
+        (window.seasonGameState?.widzewResults || []).forEach(recordMatch);
+        render();
+      }
+      return result;
     };
   }
 
@@ -125,21 +130,6 @@
       const result = originalSimulateCurrent.apply(this, arguments);
       const match = (window.seasonGameState?.widzewResults || []).find(m=>Number(m.round)===before);
       if(match) recordMatch(match);
-      return result;
-    };
-  }
-
-  /* In the full-season simulation all 34 results already exist after init. */
-  const originalOpenSeasonMode = window.openSeasonMode;
-  if(typeof originalOpenSeasonMode === 'function'){
-    window.openSeasonMode = async function(mode){
-      const result = originalOpenSeasonMode.apply(this, arguments);
-      if(mode === 'simulate'){
-        setTimeout(()=>{
-          (window.seasonGameState?.widzewResults || []).forEach(recordMatch);
-          render();
-        },0);
-      }
       return result;
     };
   }
