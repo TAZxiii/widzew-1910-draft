@@ -3,7 +3,7 @@
     "1": {"id": 1, "name": "Zawodnik XY ma piłkę Z m od bramki przeciwnika"},
     "2": {"id": 2, "name": "Zawodnik XY znajduje się na skrzydle Z m od bramki przeciwnika"},
     "3": {"id": 3, "name": "Zawodnik XY wykonuje rzut rożny"},
-    "4": {"id": 4, "name": "Zawodnik XY wykonuje rzut wolny"},
+    "4": {"id": 4, "name": "Zawodnik XY wykonuje rzut wolny Z m od bramki przeciwnika"},
     "5": {"id": 5, "name": "Zawodnik XY wykonuje aut Z m od bramki przeciwnika"},
     "6": {"id": 6, "name": "Zawodnik XY wykonuje aut Z m od bramki przeciwnika"},
     "7": {"id": 7, "name": "Zawodnik XY wykonuje rzut wolny"},
