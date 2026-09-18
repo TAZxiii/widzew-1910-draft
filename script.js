@@ -1509,7 +1509,7 @@ function renderRound(round) {
         window.simulateCurrentWidzewMatch?.();
     });
     document.getElementById("simulateMatchButton")?.addEventListener("click",()=>{
-        simulateCurrentWidzewMatch();
+        window.simulateCurrentWidzewMatch?.();
     });
     document.getElementById("nextRoundButton")?.addEventListener("click",()=>{
         seasonGameState.currentRound++;
