@@ -150,10 +150,10 @@
         // 106 = bliski aut: tylko Z 5–30.
         // Z z poprzedniej akcji pozostaje bez zmian.
         if(Number(eventId)===105 && Number.isFinite(Number(z))){
-            return Number(z)>=31 ? ['105.1','105.2'] : [];
+            return ['105.1','105.2'];
         }
         if(Number(eventId)===106 && Number.isFinite(Number(z))){
-            return Number(z)<=30 ? ['106.1','106.2'] : [];
+            return ['106.1','106.2'];
         }
         return actions;
     };
