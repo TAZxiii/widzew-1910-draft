@@ -1564,7 +1564,7 @@ function renderRound(round) {
         seasonTeamName(x.gospodarz)!=="Widzew Łódź" && seasonTeamName(x.gosc)!=="Widzew Łódź");
     document.getElementById("roundLabel").textContent=`KOLEJKA ${round}`;
     document.getElementById("roundTitle").textContent=`Sezon ${seasonGameState.season}`;
-    const widzewPlayed=seasonGameState.widzewResults.find(x=>x.round===round);
+    const widzewPlayed=seasonGameState.widzewResults.find(x=>Number(x.round)===Number(round));
     const rows=[...others];
     if(f) rows.push(f);
     rows.sort((a,b)=>{
