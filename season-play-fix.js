@@ -127,11 +127,18 @@
     return chooseWeightedScorerFrom20();
   }
 
+  function cleanPlayerName(value){
+    return String(value||"").trim().replace(/^(?:Zawodnik|Zawodnika)\\s+/i,"").trim();
+  }
+
   function cloneScorer(s){
+    const type=String(s?.type||"widzew").toLowerCase();
+    const own=type==="own"||type==="own-goal"||type==="samoboj";
+    const opponent=type==="opponent";
     return{
       minute:Number(s?.minute)||1,
-      type:s?.type||"widzew",
-      name:s?.name||"",
+      type:opponent?"opponent":(own?"own":(s?.type||"widzew")),
+      name:opponent?"Przeciwnik":(own?"Samobój":cleanPlayerName(s?.name||s?.player?.name||s?.playerRef?.name||"")),
       player:s?.player||s?.playerRef||null
     };
   }
@@ -156,21 +163,34 @@
     const m=cloneMatch(match);
     if(!Array.isArray(m.scorers))m.scorers=[];
     const used=new Set(m.scorers.map(s=>Number(s.minute)||0));
-    let counted=m.scorers.filter(isWidzewScorer).length;
-    const target=Math.max(0,m.gf);
 
-    while(counted<target){
+    let countedWidzew=m.scorers.filter(isWidzewScorer).length;
+    const targetWidzew=Math.max(0,m.gf);
+    while(countedWidzew<targetWidzew){
       const s=drawScorer();
       let minute=1+Math.floor(Math.random()*90);
       while(used.has(minute)&&used.size<90)minute=1+Math.floor(Math.random()*90);
       used.add(minute);
+      const own=String(s?.type||"").toLowerCase().includes("own");
       m.scorers.push({
         minute,
-        type:s?.type==="own"||s?.type==="own-goal"?"own":"widzew",
-        name:s?.name||"Zawodnik Widzewa",
+        type:own?"own":"widzew",
+        name:own?"Samobój":cleanPlayerName(s?.name)||"Zawodnik Widzewa",
         player:s?.player||s?.playerRef||null
       });
-      counted++;
+      countedWidzew++;
+    }
+
+    // Wynik meczu może pochodzić z silnika, który zapisuje tylko gole Widzewa.
+    // Dla każdego gola przeciwnika dodajemy więc brakujący wpis "Przeciwnik".
+    let countedOpponent=m.scorers.filter(s=>String(s?.type||"").toLowerCase()==="opponent").length;
+    const targetOpponent=Math.max(0,m.ga);
+    while(countedOpponent<targetOpponent){
+      let minute=1+Math.floor(Math.random()*90);
+      while(used.has(minute)&&used.size<90)minute=1+Math.floor(Math.random()*90);
+      used.add(minute);
+      m.scorers.push({minute,type:"opponent",name:"Przeciwnik",player:null});
+      countedOpponent++;
     }
 
     m.scorers.sort((a,b)=>Number(a.minute)-Number(b.minute));
@@ -319,7 +339,7 @@
     if(document.getElementById("seasonScorerFixStyles"))return;
     const s=document.createElement("style");
     s.id="seasonScorerFixStyles";
-    s.textContent=`.match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}.match-scorers .scorer-widzew{color:#39d353}.match-scorers .scorer-opponent{color:#ff4d4f}.league-table-panel{position:relative}.league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}.league-table-panel .season-panel-title{padding-left:88px}.league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}.league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}.league-table-header span:nth-child(2){text-align:left}@media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}`;
+    s.textContent=`.match-scorers{display:flex;flex-direction:column;align-items:center;gap:3px;margin-top:7px;font-size:13px;font-weight:800;line-height:1.25}.match-scorers .scorer-widzew{color:#39d353}.match-scorers .scorer-opponent{color:#ff4d4f}.scorers-panel .scorer-row{grid-template-columns:35px 18px minmax(0,1fr);gap:6px}.scorers-panel .scorer-row strong{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.league-table-panel{position:relative}.league-competition-logo{position:absolute;top:16px;left:18px;width:72px;height:72px;object-fit:contain;z-index:2}.league-table-panel .season-panel-title{padding-left:88px}.league-table-header,.league-row{display:grid;grid-template-columns:32px minmax(190px,1fr) 28px 28px 28px 28px 58px 38px;gap:5px;align-items:center}.league-table-header{min-height:32px;padding:3px 7px;color:#aaa;font-size:10px;font-weight:900;letter-spacing:.08em;text-transform:uppercase;text-align:center;border-bottom:1px solid rgba(255,255,255,.14);margin-bottom:4px}.league-table-header span:nth-child(2){text-align:left}@media(max-width:700px){.league-competition-logo{width:56px;height:56px;top:12px;left:12px}.league-table-panel .season-panel-title{padding-left:70px}.league-table-header,.league-row{grid-template-columns:25px minmax(120px,1fr) 25px 25px 25px 25px 48px 35px;gap:3px}.league-table-header{font-size:9px}.league-row{font-size:11px}}`;
     document.head.appendChild(s);
   }
 
