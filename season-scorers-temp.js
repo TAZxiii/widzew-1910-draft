@@ -84,7 +84,7 @@
           return;
         }
         if(type !== 'widzew' || !name) return;
-        const player = s?.player || s?.playerRef || null;
+        const player = s?.playerRef || s?.player || null;
         const key = scorerKey(s) || normalizeName(name);
         if(!key) return;
         if(!liveDB[key]) liveDB[key] = {name,goals:0};
