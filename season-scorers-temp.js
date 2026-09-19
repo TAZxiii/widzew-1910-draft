@@ -67,11 +67,37 @@
     const el = document.getElementById('topScorers');
     if(!el) return;
 
-    const rows = Object.values(scorerDB)
+    // Dla aktualnego sezonu źródłem prawdy są już wygenerowane wyniki meczów.
+    // Nie losujemy tu niczego i nie polegamy na kolejności hooków innych warstw.
+    const liveResults = Array.isArray(window.seasonGameState?.widzewResults)
+      ? window.seasonGameState.widzewResults
+      : [];
+    const liveDB = {};
+    liveResults.forEach(match => {
+      (Array.isArray(match?.scorers) ? match.scorers : []).forEach(s => {
+        const type = String(s?.type || '').toLowerCase();
+        const name = String(s?.name || '').trim();
+        const own = type === 'own' || type === 'own-goal' || type === 'samoboj' || name.toLocaleLowerCase('pl') === 'samobój' || name.toLocaleLowerCase('pl') === 'samoboj';
+        if(own){
+          liveDB.__OWN__ = liveDB.__OWN__ || {name:'Samobój',goals:0,own:true};
+          liveDB.__OWN__.goals++;
+          return;
+        }
+        if(type !== 'widzew' || !name) return;
+        const player = s?.player || s?.playerRef || null;
+        const key = scorerKey(s) || normalizeName(name);
+        if(!key) return;
+        if(!liveDB[key]) liveDB[key] = {name,goals:0};
+        liveDB[key].goals++;
+      });
+    });
+
+    const source = Object.keys(liveDB).length ? liveDB : scorerDB;
+    const rows = Object.values(source)
       .filter(row => !row.own && Number(row.goals) > 0)
       .sort((a,b)=>Number(b.goals)-Number(a.goals) || a.name.localeCompare(b.name,'pl'));
 
-    const own = scorerDB.__OWN__?.goals || 0;
+    const own = source.__OWN__?.goals || 0;
 
     const header = `
       <div class="scorer-table-header">
