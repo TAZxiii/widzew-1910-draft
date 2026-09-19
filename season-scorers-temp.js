@@ -17,7 +17,7 @@
   }
 
   function scorerKey(s){
-    const player = s?.player || s?.playerRef || null;
+    const player = s?.playerRef || s?.player || null;
     if(player?.row && typeof window.playerKey === 'function'){
       const key = window.playerKey(player.row);
       if(key) return String(key);
@@ -50,7 +50,7 @@
       }
       if(String(s?.type || '').toLowerCase() !== 'widzew') return;
 
-      const name = String(s?.name || s?.player?.name || '').trim();
+      const name = String(s?.name || s?.player?.name || s?.playerRef?.name || '').trim().replace(/^(?:Zawodnik|Zawodnika)\s+/i, '');
       if(!name) return;
       const key = scorerKey(s) || normalizeName(name);
       if(!key) return;
@@ -76,7 +76,7 @@
     liveResults.forEach(match => {
       (Array.isArray(match?.scorers) ? match.scorers : []).forEach(s => {
         const type = String(s?.type || '').toLowerCase();
-        const name = String(s?.name || '').trim();
+        const name = String(s?.name || s?.player?.name || s?.playerRef?.name || '').trim().replace(/^(?:Zawodnik|Zawodnika)\s+/i, '');
         const own = type === 'own' || type === 'own-goal' || type === 'samoboj' || name.toLocaleLowerCase('pl') === 'samobój' || name.toLocaleLowerCase('pl') === 'samoboj';
         if(own){
           liveDB.__OWN__ = liveDB.__OWN__ || {name:'Samobój',goals:0,own:true};
@@ -117,19 +117,6 @@
       ? normal + ownHtml
       : '<div class="scorer-empty">Brak bramek Widzewa.</div>');
   }
-
-  function reset(){
-    scorerDB = {};
-    processedRounds = new Set();
-    render();
-  }
-
-  window.resetSeasonScorers = reset;
-  window.recordSeasonMatchScorers = recordMatch;
-  window.getSeasonScorers = function(){
-    return JSON.parse(JSON.stringify(scorerDB));
-  };
-  window.renderSeasonScorers = render;
 
   /* Top scorers are derived from the same match results shown on screen.
      This keeps simulation and playable-season modes on one source of truth. */
