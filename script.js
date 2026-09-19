@@ -1609,7 +1609,22 @@ function renderRound(round) {
 }
 function renderPlayableSeason() {
     renderLeagueTable(seasonGameState.currentRound,false);
-    renderRound(seasonGameState.currentRound);
+
+    // Wynik rozegranego meczu może już być zapisany w stabilnej bazie,
+    // nawet jeśli warstwa UI chwilowo nie ma go w widocznym stanie.
+    const round = Number(seasonGameState.currentRound);
+    const effective = typeof window.getSeasonEffectiveResults === "function"
+        ? window.getSeasonEffectiveResults()
+        : [];
+    const effectiveMatch = effective.find(m => Number(m.round) === round);
+    const stateMatch = (seasonGameState.widzewResults || []).find(m => Number(m.round) === round);
+    if(effectiveMatch && (!stateMatch || (Number(stateMatch.gf) === 0 && Number(stateMatch.ga) === 0))){
+        const idx = (seasonGameState.widzewResults || []).findIndex(m => Number(m.round) === round);
+        if(idx >= 0) seasonGameState.widzewResults[idx] = effectiveMatch;
+        else seasonGameState.widzewResults.push(effectiveMatch);
+    }
+
+    renderRound(round);
 }
 function simulateCurrentWidzewMatch() {
     const f=getWidzewFixture(seasonGameState.currentRound);
@@ -1643,11 +1658,28 @@ function simulateWholeSeason() {
 
         // Losowanie strzelców nie może zatrzymać całej symulacji.
         try {
-            const scorerFactory = typeof window.makeMatchScorers === "function"
-                ? window.makeMatchScorers
-                : makeMatchScorers;
-            match.scorers = scorerFactory(gf, ga);
+            // Symulacja sezonu korzysta z lokalnego, sprawdzonego losowania
+            // zawodników z aktualnego draftu. Globalne generatory innych warstw
+            // nie mogą zmienić źródła danych dla tej ścieżki.
+            match.scorers = makeMatchScorers(gf, ga);
             updateTopScorersFromMatch(match);
+
+            // Twarda gwarancja: każdy gol Widzewa ma wpis strzelca.
+            const widzewScorers = match.scorers.filter(s =>
+                String(s?.type || "").toLowerCase() === "widzew" ||
+                String(s?.type || "").toLowerCase() === "own" ||
+                String(s?.type || "").toLowerCase() === "own-goal"
+            ).length;
+            for(let missing = widzewScorers; missing < gf; missing++){
+                const s = chooseWeightedScorer();
+                match.scorers.push({
+                    minute: 1 + Math.floor(Math.random() * 90),
+                    type: s.type,
+                    name: s.name,
+                    player: s.player || null
+                });
+            }
+            match.scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0));
         } catch (e) {
             console.warn("Nie udało się wylosować strzelców meczu:", e);
             match.scorers = [];
