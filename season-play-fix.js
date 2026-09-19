@@ -30,7 +30,30 @@
     function effectiveResults(){const db=seasonDB||window.seasonMatchDB;if(!db)return[];return Object.keys(db).map(Number).sort((a,b)=>a-b).map(r=>db[r].played?fromDBResult(db[r].played):fromDBResult(db[r].simulated));}
     window.getSeasonEffectiveResults=effectiveResults;
 
-    function prepareResults(){if(preparedResults)return preparedResults;const original=window.renderFinalSeason;try{window.renderFinalSeason=function(){};window.simulateWholeSeason();}finally{window.renderFinalSeason=original;}preparedResults=(seasonGameState.widzewResults||[]).map(cloneMatch);seasonGameState.widzewResults=[];seasonGameState.scorers={};ensureDB(preparedResults);return preparedResults;}
+    function prepareResults(){if(preparedResults)return preparedResults;const original=window.renderFinalSeason;try{window.renderFinalSeason=function(){};window.simulateWholeSeason();}finally{window.renderFinalSeason=original;}
+    // Każdy gol Widzewa musi mieć odpowiadającego mu strzelca.
+    // Nie zmieniamy istniejących losowań; uzupełniamy wyłącznie brakujące wpisy.
+    (seasonGameState.widzewResults||[]).forEach(match=>{
+        if(!Array.isArray(match.scorers)) match.scorers=[];
+        const isWidzewGoal=s=>String(s?.type||'').toLowerCase()==='widzew' || ['own','own-goal','samoboj'].includes(String(s?.type||'').toLowerCase());
+        let counted=match.scorers.filter(isWidzewGoal).length;
+        const target=Math.max(0,Number(match.gf)||0);
+        while(counted<target){
+            let draw=null;
+            try{
+                if(typeof window.drawWidzewScorer==='function') draw=window.drawWidzewScorer();
+                else if(typeof chooseWeightedScorerFrom20==='function') draw=chooseWeightedScorerFrom20();
+            }catch(e){console.warn('Nie udało się uzupełnić strzelca Widzewa:',e);}
+            if(!draw) break;
+            const used=new Set(match.scorers.map(s=>Number(s?.minute)||0));
+            let minute=1+Math.floor(Math.random()*90);
+            while(used.has(minute) && used.size<90) minute=1+Math.floor(Math.random()*90);
+            match.scorers.push({minute,type:draw.type||'widzew',name:draw.name||'Zawodnik Widzewa',player:draw.player||null});
+            counted++;
+        }
+        match.scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0));
+    });
+    preparedResults=(seasonGameState.widzewResults||[]).map(cloneMatch);seasonGameState.widzewResults=[];seasonGameState.scorers={};ensureDB(preparedResults);return preparedResults;}
     function renderScorers(container,match){if(!container||!match)return;const sc=Array.isArray(match.scorers)?match.scorers.slice():[];container.innerHTML=sc.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0)).map(s=>{const op=s.type==="opponent",color=op?"scorer-opponent":"scorer-widzew",name=op?"Przeciwnik":(s.name||"Samobój");return`<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;}).join("");}
     function getOrCreateScorerContainer(el){if(!el)return null;let c=el.querySelector(".match-scorers");if(!c){c=document.createElement("div");c.className="match-scorers";el.appendChild(c);}return c;}
     function decorateVisibleScorers(m){renderScorers(getOrCreateScorerContainer(document.querySelector(".round-match.widzew-match")),m);}
