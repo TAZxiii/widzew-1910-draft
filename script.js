@@ -494,7 +494,8 @@ function formatSquadValue(value) {
         positions: [],
         candidates: [],
         bench: [],
-        benchIndex: 0
+        benchIndex: 0,
+        captainKey: null
     };
 
     const positionLabels = {
@@ -713,6 +714,7 @@ function displayCandidate(card, index) {
         draft.stage = "starting";
         draft.bench = [];
         draft.benchIndex = 0;
+        draft.captainKey = null;
 
         showScreen(draftScreen);
         renderDraftPosition();
@@ -826,6 +828,32 @@ function displayCandidate(card, index) {
         return Math.round(Number(value) || 0);
     }
 
+    function isCaptain(p) {
+        return !!p && !!draft.captainKey && String(p.key || "") === String(draft.captainKey);
+    }
+
+    function effectivePlayerRow(p) {
+        const row = { ...(p?.row || {}) };
+        if (!isCaptain(p)) return row;
+
+        // Kapitan dostaje +3 do każdej liczbowej statystyki.
+        // Nie zmieniamy wartości bazowych w bazie zawodników.
+        const statKeys = [
+            "Gra nogami", "Podania", "Piąstkowanie", "Robinsonada",
+            "Kreatywność", "Zaangażowanie", "Defensywa", "Szybkość",
+            "Atak", "Strzał", "Ogólna"
+        ];
+        statKeys.forEach(key => {
+            const value = Number(String(row[key] ?? "").replace(",", "."));
+            if (Number.isFinite(value)) row[key] = String(value + 3);
+        });
+        return row;
+    }
+
+    function effectiveOverall(p) {
+        return Number(effectivePlayerRow(p)["Ogólna"]) || 0;
+    }
+
     function weightedGroupScore(players) {
         if (!players.length) return 0;
         let weightedSum = 0;
@@ -833,7 +861,7 @@ function displayCandidate(card, index) {
         players.forEach(p => {
             const isBench = String(p.role).startsWith("bench-");
             const weight = isBench ? 0.25 : 0.75;
-            weightedSum += (Number(p.row["Ogólna"]) || 0) * weight;
+            weightedSum += effectiveOverall(p) * weight;
             weightSum += weight;
         });
         return weightSum ? weightedSum / weightSum : 0;
@@ -1068,7 +1096,7 @@ function displayCandidate(card, index) {
                     <strong>${playerName(p)}</strong>
                     <small>${safe(actualPos)}</small>
                 </div>
-                <strong class="bench-rating ${colorClass}">${roundScore(p.row["Ogólna"])}</strong>
+                <strong class="bench-rating ${colorClass}">${roundScore(effectiveOverall(p))}</strong>
             </div>`;
         };
 
@@ -1079,7 +1107,7 @@ function displayCandidate(card, index) {
                     <strong>${playerName(p)}</strong>
                     <small>${roleNames[p.role] || ""}</small>
                 </div>
-                <strong class="squad-rating ${positionColorClass(p.position || p["Pozycja"], p.role)}">${roundScore(p.row["Ogólna"])}</strong>
+                <strong class="squad-rating ${positionColorClass(p.position || p["Pozycja"], p.role)}">${roundScore(effectiveOverall(p))}</strong>
             </div>`;
 
         const formation = safe(
@@ -1137,10 +1165,25 @@ function displayCandidate(card, index) {
                         ${bench.map((p, i) => benchItem(p, i, draft.selected.indexOf(p))).join("")}
                     </div>
 
-                    <div class="final-value">
-                        <span>ŁĄCZNA WARTOŚĆ</span>
-                        <strong>${formatSquadValue(calculateTotalSquadValue(draft.selected))}</strong>
+                    <div class="captain-panel">
+                        <div class="captain-heading">
+                            <span>KAPITAN</span>
+                            <strong>Wybierz kapitana</strong>
+                        </div>
+                        <div class="captain-list">
+                            ${starters.map(p => `
+                                <button type="button"
+                                        class="captain-player${isCaptain(p) ? " is-captain" : ""}"
+                                        data-captain-key="${safe(p.key)}">
+                                    <span>${playerName(p)}</span>
+                                    <b>${isCaptain(p) ? "⭐ KAPITAN" : "WYBIERZ"}</b>
+                                </button>
+                            `).join("")}
+                        </div>
+                        <div class="captain-bonus">Bonus kapitana: +3 do wszystkich statystyk, w tym Ogólnej.</div>
                     </div>
+
+${marker}
                 </section>
             </div>
 
@@ -1166,6 +1209,16 @@ function displayCandidate(card, index) {
             window.finalSquadAlertShown = true;
             alert('W teorii powinni grać najlepsi, jednak każdy trener ma swoich ulubieńców. Możesz na tym etapie rozgrywki wymienić zawodników ze swojej jedenastki. Pamiętaj, że bycie w podstawowej jedenastce wpływa na zaangażowanie i rozwój zawodnika.');
         }
+        grid.querySelectorAll(".captain-player").forEach(button => {
+            button.addEventListener("click", () => {
+                const key = button.getAttribute("data-captain-key");
+                const player = draft.selected.find(p => String(p.key || "") === String(key));
+                if (!player) return;
+                draft.captainKey = player.key;
+                finishDraft();
+            });
+        });
+
         setupFinalSwapInteractions();
         updateFinalSeasonLabel();
     }
