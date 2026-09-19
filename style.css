@@ -2154,8 +2154,8 @@ h1 span {
 /* Logo WTM widoczne wyłącznie na ekranie startowym */
 .wtm-start-logo {
     position: absolute;
-    left: 24px;
-    bottom: 20px;
+    left: 0px;
+    bottom: 0px;
     width: 180px;
     height: auto;
     object-fit: contain;
@@ -2165,8 +2165,8 @@ h1 span {
 
 @media (max-width: 600px) {
     .wtm-start-logo {
-        left: 14px;
-        bottom: 14px;
+        left: 0px;
+        bottom: 0px;
         width: 120px;
     }
 }
