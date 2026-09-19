@@ -653,7 +653,22 @@ function formatSquadValue(value) {
         return `<span>${row["Imię"]}</span><span>${row["Nazwisko"]}</span>`;
     }
 
-    function displayCandidate(card, index) {
+    function formatPlayerValue(value) {
+        const raw = String(value ?? "").trim();
+        const numeric = parseFloat(raw.replace(/\s/g, "").replace(",", "."));
+        if (!Number.isFinite(numeric)) return raw ? `${raw} tys. €` : "";
+        if (numeric >= 1000) {
+            return `${new Intl.NumberFormat("pl-PL", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(numeric / 1000)} mln €`;
+        }
+        return `${new Intl.NumberFormat("pl-PL", {
+            maximumFractionDigits: 0
+        }).format(numeric)} tys. €`;
+    }
+
+function displayCandidate(card, index) {
         const row = card.row;
         const rating = row["Ogólna"];
         const value = row["Wartość"];
@@ -666,7 +681,7 @@ function formatSquadValue(value) {
                 ${draft.difficulty === "easy"
                     ? `<div class="candidate-rating">${rating}</div>`
                     : ""}
-                ${draft.difficulty === "easy" ? `<div class="candidate-value">${value} tys. €</div>` : ""}
+                ${draft.difficulty === "easy" ? `<div class="candidate-value">${formatPlayerValue(value)}</div>` : ""}
             </button>
         `;
     }
