@@ -1552,10 +1552,18 @@ function renderLeagueTable(round, final=false) {
 }
 function renderMatchScorers(scorers) {
     const list = Array.isArray(scorers) ? scorers : [];
-    return list
-        .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0))
-        .map(s => `<span>${Number(s.minute) || 1}' ${seasonSafe(s.name || (s.type === "opponent" ? "Przeciwnik" : "Samobój"))}</span>`)
-        .join("");
+    const isOwn = s => {
+        const t = String(s?.type || "").toLowerCase();
+        return t === "own" || t === "own-goal" || t === "samoboj" ||
+            String(s?.name || "").toLocaleLowerCase("pl") === "samobój";
+    };
+    const normal = list.filter(s => !isOwn(s))
+        .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0));
+    const own = list.filter(isOwn)
+        .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0));
+    const row = s => `<span>${Number(s.minute) || 1}' ${seasonSafe(s.name || (s.type === "opponent" ? "Przeciwnik" : "Samobój"))}</span>`;
+    return normal.map(row).join("") +
+        (own.length ? `<span class="scorer-own-divider"></span>${own.map(row).join("")}` : "");
 }
 
 function renderRound(round) {
