@@ -1608,22 +1608,11 @@ function renderRound(round) {
     });
 }
 function renderPlayableSeason() {
-    renderLeagueTable(seasonGameState.currentRound,false);
-
-    // Wynik rozegranego meczu może już być zapisany w stabilnej bazie,
-    // nawet jeśli warstwa UI chwilowo nie ma go w widocznym stanie.
+    // W trybie „Rozegraj sezon” UI pokazuje wyłącznie mecze już ujawnione
+    // (rozegrane ręcznie albo jawnie zasymulowane). Ukryty wynik bazowy
+    // pozostaje w seasonMatchDB i nie może sam pojawić się na ekranie.
     const round = Number(seasonGameState.currentRound);
-    const effective = typeof window.getSeasonEffectiveResults === "function"
-        ? window.getSeasonEffectiveResults()
-        : [];
-    const effectiveMatch = effective.find(m => Number(m.round) === round);
-    const stateMatch = (seasonGameState.widzewResults || []).find(m => Number(m.round) === round);
-    if(effectiveMatch && (!stateMatch || (Number(stateMatch.gf) === 0 && Number(stateMatch.ga) === 0))){
-        const idx = (seasonGameState.widzewResults || []).findIndex(m => Number(m.round) === round);
-        if(idx >= 0) seasonGameState.widzewResults[idx] = effectiveMatch;
-        else seasonGameState.widzewResults.push(effectiveMatch);
-    }
-
+    renderLeagueTable(round,false);
     renderRound(round);
 }
 function simulateCurrentWidzewMatch() {
