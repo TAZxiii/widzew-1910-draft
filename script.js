@@ -1561,7 +1561,11 @@ function renderMatchScorers(scorers) {
         .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0));
     const own = list.filter(isOwn)
         .sort((a,b) => Number(a.minute || 0) - Number(b.minute || 0));
-    const row = s => `<span>${Number(s.minute) || 1}' ${seasonSafe(s.name || (s.type === "opponent" ? "Przeciwnik" : "Samobój"))}</span>`;
+    const row = s => {
+        const type = String(s?.type || "").toLowerCase();
+        const cls = type === "opponent" ? " scorer-opponent" : " scorer-widzew";
+        return `<span class="${cls}">${Number(s.minute) || 1}' ${seasonSafe(s.name || (type === "opponent" ? "Przeciwnik" : "Samobój"))}</span>`;
+    };
     return normal.map(row).join("") +
         (own.length ? `<span class="scorer-own-divider"></span>${own.map(row).join("")}` : "");
 }
