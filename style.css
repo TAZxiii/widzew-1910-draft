@@ -2135,3 +2135,17 @@ h1 span {
 
 .match-scorers .scorer-widzew{color:#32c96b !important;}
 .match-scorers .scorer-opponent{color:#ff4d4d !important;}
+
+
+/* Mechanika kapitana */
+.captain-panel{margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.12)}
+.captain-heading{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:9px}
+.captain-heading span{font-size:11px;letter-spacing:.12em;opacity:.65}
+.captain-heading strong{font-size:12px}
+.captain-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.captain-player{display:flex;justify-content:space-between;align-items:center;gap:8px;border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:7px 9px;background:rgba(0,0,0,.12);color:inherit;cursor:pointer;text-align:left}
+.captain-player:hover{background:rgba(255,255,255,.06)}
+.captain-player.is-captain{border-color:rgba(255,215,0,.55);background:rgba(255,215,0,.08)}
+.captain-player b{font-size:9px;letter-spacing:.05em;white-space:nowrap}
+.captain-bonus{margin-top:8px;font-size:10px;opacity:.58}
+@media(max-width:600px){.captain-list{grid-template-columns:1fr}}
