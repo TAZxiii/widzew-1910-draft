@@ -1183,7 +1183,6 @@ function displayCandidate(card, index) {
                         <div class="captain-bonus">Bonus kapitana: +3 do wszystkich statystyk, w tym Ogólnej.</div>
                     </div>
 
-${marker}
                 </section>
             </div>
 
