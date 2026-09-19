@@ -1659,9 +1659,8 @@ function simulateWholeSeason() {
             // zawodników z aktualnego draftu. Globalne generatory innych warstw
             // nie mogą zmienić źródła danych dla tej ścieżki.
             match.scorers = makeMatchScorers(gf, ga);
-            updateTopScorersFromMatch(match);
-
-            // Twarda gwarancja: każdy gol Widzewa ma wpis strzelca.
+            // Generowanie strzelców jest niezależne od klasyfikacji.
+            // Awaria TOP STRZELCÓW nie może skasować gotowego meczu.
             const widzewScorers = match.scorers.filter(s =>
                 String(s?.type || "").toLowerCase() === "widzew" ||
                 String(s?.type || "").toLowerCase() === "own" ||
@@ -1677,9 +1676,18 @@ function simulateWholeSeason() {
                 });
             }
             match.scorers.sort((a,b)=>Number(a.minute||0)-Number(b.minute||0));
+
+            // Klasyfikację aktualizujemy dopiero po zapisaniu strzelców.
+            // Jej błąd nie może wpłynąć na match.scorers.
+            try {
+                updateTopScorersFromMatch(match);
+            } catch (e) {
+                console.warn("Nie udało się zaktualizować klasyfikacji strzelców:", e);
+            }
         } catch (e) {
             console.warn("Nie udało się wylosować strzelców meczu:", e);
-            match.scorers = [];
+            // Zachowaj przynajmniej strzelców przeciwnika, jeśli ich wygenerowanie
+            // się udało. Nigdy nie kasuj całego meczu przez błąd klasyfikacji.
         }
         seasonGameState.widzewResults.push(match);
     });
