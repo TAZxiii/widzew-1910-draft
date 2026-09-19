@@ -930,19 +930,6 @@ function displayCandidate(card, index) {
 
     let finalSwapIndex = null;
 
-    function setupCaptainInteractions() {
-        const grid = document.getElementById("candidateGrid");
-        if (!grid) return;
-        grid.querySelectorAll("[data-captain-index]").forEach(button => {
-            button.addEventListener("click", () => {
-                const idx = Number(button.getAttribute("data-captain-index"));
-                const player = Number.isInteger(idx) ? draft.selected[idx] : null;
-                if (!player) return;
-                draft.captainKey = player.key;
-                finishDraft();
-            });
-        });
-    }
     function setupFinalSwapInteractions() {
         const grid = document.getElementById("candidateGrid");
         if (!grid) return;
@@ -1168,28 +1155,9 @@ function displayCandidate(card, index) {
                         ${starters.map((p, i) => starterItem(p, i, draft.selected.indexOf(p))).join("")}
                     </div>
 
-                    <div class="captain-panel">
-                        <div class="captain-heading">
-                            <span>KAPITAN</span>
-                            <h3>Wybierz kapitana</h3>
-                        </div>
-                        <p class="captain-instruction">Wybierz jednego zawodnika z jedenastki. Kapitan otrzyma później bonus do statystyk.</p>
-                        <div class="captain-list">
-                            ${starters.map((p, i) => {
-                                const idx = draft.selected.indexOf(p);
-                                const isCaptain = draft.captainKey === p.key;
-                                return `<button type="button" class="captain-player${isCaptain ? " is-captain" : ""}" data-captain-index="${idx}">
-                                    <span class="captain-player-number">${i + 1}</span>
-                                    <span class="captain-player-name">${playerName(p)}</span>
-                                    <strong>${isCaptain ? "⭐ K" : "WYBIERZ"}</strong>
-                                </button>`;
-                            }).join("")}
-                        </div>
-                    </div>
-
                     <div class="final-divider"></div>
 
-                    <div class="final-list-heading bench-heading"
+                    <div class="final-list-heading bench-heading">
                         <span>REZERWOWI</span>
                         <h3>Ławka rezerwowych</h3>
                     </div>
@@ -1252,7 +1220,6 @@ ${marker}
         });
 
         setupFinalSwapInteractions();
-        setupCaptainInteractions();
         updateFinalSeasonLabel();
     }
 
