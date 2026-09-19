@@ -128,7 +128,7 @@
   }
 
   function cleanPlayerName(value){
-    return String(value||"").trim().replace(/^(?:Zawodnik|Zawodnika)\\s+/i,"").trim();
+    return String(value||"").trim().replace(/^(?:Zawodnik|Zawodnika)\s+/i,"").trim();
   }
 
   function cloneScorer(s){
