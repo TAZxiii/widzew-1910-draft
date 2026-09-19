@@ -131,50 +131,25 @@
   };
   window.renderSeasonScorers = render;
 
-  /* The temporary DB is the sole renderer of the top-scorer panel. */
+  /* Top scorers are derived from the same match results shown on screen.
+     This keeps simulation and playable-season modes on one source of truth. */
+  function reset(){
+    scorerDB = {};
+    processedRounds = new Set();
+    render();
+  }
+
+  window.resetSeasonScorers = reset;
+  window.recordSeasonMatchScorers = function(match){
+    if(!match)return false;
+    render();
+    return true;
+  };
+  window.getSeasonScorers = function(){
+    return JSON.parse(JSON.stringify(scorerDB));
+  };
+  window.renderSeasonScorers = render;
   window.renderTopScorers = render;
-
-  /*
-   * script.js definiuje funkcje sezonu wewnątrz DOMContentLoaded.
-   * Dlatego wcześniejsze próby owinięcia initSeasonMode/symulacji
-   * wykonywane podczas ładowania strony były zbyt wczesne.
-   * Podpinamy integrację po zdefiniowaniu funkcji przez rdzeń.
-   */
-  function installSeasonHooks(){
-    const originalInit = window.initSeasonMode;
-    if(typeof originalInit === 'function' && !originalInit.__seasonScorersHook){
-      const wrappedInit = async function(mode){
-        reset();
-        const result = await originalInit.apply(this, arguments);
-        if(mode === 'simulate'){
-          (window.seasonGameState?.widzewResults || []).forEach(recordMatch);
-          render();
-        }
-        return result;
-      };
-      wrappedInit.__seasonScorersHook = true;
-      window.initSeasonMode = wrappedInit;
-    }
-
-    const originalSimulateCurrent = window.simulateCurrentWidzewMatch;
-    if(typeof originalSimulateCurrent === 'function' && !originalSimulateCurrent.__seasonScorersHook){
-      const wrappedSimulate = function(){
-        const before = Number(window.seasonGameState?.currentRound);
-        const result = originalSimulateCurrent.apply(this, arguments);
-        const match = (window.seasonGameState?.widzewResults || []).find(m=>Number(m.round)===before);
-        if(match) recordMatch(match);
-        return result;
-      };
-      wrappedSimulate.__seasonScorersHook = true;
-      window.simulateCurrentWidzewMatch = wrappedSimulate;
-    }
-  }
-
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', installSeasonHooks, {once:true});
-  } else {
-    installSeasonHooks();
-  }
 
   render();
 })();
