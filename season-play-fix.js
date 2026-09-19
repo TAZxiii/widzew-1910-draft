@@ -70,4 +70,37 @@
     window.simulateCurrentWidzewMatch=revealCurrentRound;
     document.addEventListener("click",event=>{const button=event.target?.closest?.("#playMatchButton,#simulateMatchButton");if(!button)return;setTimeout(()=>{const round=Number(seasonGameState.currentRound),result=(seasonGameState.widzewResults||[]).find(m=>Number(m.round)===round);if(result)decorateVisibleScorers(result);enhanceLeagueTable();},0);},false);
     setTimeout(enhanceLeagueTable,0);
+
+    // script.js definiuje funkcje sezonu dopiero w DOMContentLoaded.
+    // Ponownie instalujemy integrację po ich utworzeniu, aby tryby
+    // „Symuluj sezon” i „Rozegraj sezon” korzystały z tej samej bazy meczów.
+    document.addEventListener("DOMContentLoaded",()=>{
+        const originalInit=window.initSeasonMode;
+        if(typeof originalInit==="function" && !originalInit.__seasonPlayFixHook){
+            const wrappedInit=async function(mode){
+                resetDB();
+                if(!capturedSquad) capturedSquad=readFinalSquadFromDOM();
+                const result=await originalInit.apply(this,arguments);
+                try{
+                    if(mode==="simulate"){
+                        ensureDB((seasonGameState.widzewResults||[]).map(cloneMatch));
+                    }else{
+                        prepareResults();
+                    }
+                }catch(e){console.warn("seasonMatchDB prepare",e);}
+                return result;
+            };
+            wrappedInit.__seasonPlayFixHook=true;
+            window.initSeasonMode=wrappedInit;
+        }
+
+        const originalSim=window.simulateCurrentWidzewMatch;
+        if(typeof originalSim==="function" && !originalSim.__seasonPlayFixHook){
+            const wrappedSim=function(){
+                return revealCurrentRound();
+            };
+            wrappedSim.__seasonPlayFixHook=true;
+            window.simulateCurrentWidzewMatch=wrappedSim;
+        }
+    },{once:true});
 })();
