@@ -1643,7 +1643,10 @@ function simulateWholeSeason() {
 
         // Losowanie strzelców nie może zatrzymać całej symulacji.
         try {
-            match.scorers = makeMatchScorers(gf, ga);
+            const scorerFactory = typeof window.makeMatchScorers === "function"
+                ? window.makeMatchScorers
+                : makeMatchScorers;
+            match.scorers = scorerFactory(gf, ga);
             updateTopScorersFromMatch(match);
         } catch (e) {
             console.warn("Nie udało się wylosować strzelców meczu:", e);
@@ -1707,6 +1710,7 @@ function renderFinalSeason() {
     }
     if (actions) actions.innerHTML = `<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
 }
+window.renderPlayableSeason = renderPlayableSeason;
 
 async function initSeasonMode(mode) {
     const season=window.__seasonValue || "22/23";
