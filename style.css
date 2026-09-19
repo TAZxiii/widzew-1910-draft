@@ -2149,3 +2149,24 @@ h1 span {
 .captain-player b{font-size:9px;letter-spacing:.05em;white-space:nowrap}
 .captain-bonus{margin-top:8px;font-size:10px;opacity:.58}
 @media(max-width:600px){.captain-list{grid-template-columns:1fr}}
+
+
+/* Logo WTM widoczne wyłącznie na ekranie startowym */
+.wtm-start-logo {
+    position: absolute;
+    left: 24px;
+    bottom: 20px;
+    width: 180px;
+    height: auto;
+    object-fit: contain;
+    z-index: 2;
+    pointer-events: none;
+}
+
+@media (max-width: 600px) {
+    .wtm-start-logo {
+        left: 14px;
+        bottom: 14px;
+        width: 120px;
+    }
+}
