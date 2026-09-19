@@ -1438,11 +1438,6 @@ function updateTopScorersFromMatch(match) {
     });
 }
 function renderTopScorers() {
-    // Tymczasowa baza sezonowa jest źródłem prawdy dla panelu strzelców.
-    if (typeof window.renderSeasonScorers === "function") {
-        window.renderSeasonScorers();
-        return;
-    }
     const el=document.getElementById("topScorers");
     if(!el) return;
     const rows=Object.values(seasonGameState.scorers||{}).sort((a,b)=>b.goals-a.goals || a.name.localeCompare(b.name,"pl"));
