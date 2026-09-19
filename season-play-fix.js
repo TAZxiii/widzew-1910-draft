@@ -277,14 +277,21 @@
   function renderScorers(container,match){
     if(!container||!match)return;
     const sc=Array.isArray(match.scorers)?match.scorers.slice():[];
-    container.innerHTML=sc.sort((a,b)=>Number(a.minute)-Number(b.minute)).map(s=>{
+    const isOwn=s=>{
+      const t=String(s?.type||"").toLowerCase();
+      return t==="own"||t==="own-goal"||t==="samoboj"||
+        String(s?.name||"").toLocaleLowerCase("pl")==="samobój";
+    };
+    const normal=sc.filter(s=>!isOwn(s)).sort((a,b)=>Number(a.minute)-Number(b.minute));
+    const own=sc.filter(isOwn).sort((a,b)=>Number(a.minute)-Number(b.minute));
+    const row=s=>{
       const t=String(s.type||"").toLowerCase();
-      const own=t==="own"||t==="own-goal"||t==="samoboj";
-      const op=t==="opponent";
-      const color=op?"scorer-opponent":"scorer-widzew";
-      const name=own?"Samobój":(s.name||"Zawodnik Widzewa");
+      const color=t==="opponent"?"scorer-opponent":"scorer-widzew";
+      const name=isOwn(s)?"Samobój":(s.name||"Zawodnik Widzewa");
       return`<span class="${color}">${Math.max(1,Math.min(90,Number(s.minute)||1))}' ${name}</span>`;
-    }).join("");
+    };
+    container.innerHTML=normal.map(row).join("")+
+      (own.length?`<span class="scorer-own-divider"></span>${own.map(row).join("")}`:"");
   }
 
   function getOrCreateScorerContainer(el){
