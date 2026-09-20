@@ -2107,6 +2107,9 @@ h1 span {
 .round-matches { display:flex; flex-direction:column; gap:7px; }
 .round-match { display:grid; grid-template-columns:minmax(0,1fr) 54px minmax(0,1fr); align-items:center; gap:8px; padding:9px 10px; border-radius:10px; background:rgba(0,0,0,.14); }
 .round-match.widzew-match { border:1px solid rgba(220,20,40,.5); background:rgba(220,20,40,.08); }
+.round-match.widzew-match.widzew-win { border-color:rgba(50,201,107,.65); background:rgba(50,201,107,.08); }
+.round-match.widzew-match.widzew-draw { border-color:rgba(160,160,160,.55); background:rgba(160,160,160,.07); }
+.round-match.widzew-match.widzew-loss { border-color:rgba(220,20,40,.5); background:rgba(220,20,40,.08); }
 .round-team { display:flex; align-items:center; gap:7px; min-width:0; font-size:12px; }
 .round-team span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .round-team.away { justify-content:flex-end; text-align:right; }
