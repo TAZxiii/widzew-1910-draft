@@ -2176,3 +2176,9 @@ h1 span {
         width: 120px;
     }
 }
+
+
+/* Kolory wyników Widzewa w końcowym podsumowaniu sezonu */
+.round-match.widzew-match.result-win{border-color:rgba(50,201,107,.65);background:rgba(50,201,107,.09)}
+.round-match.widzew-match.result-draw{border-color:rgba(180,180,180,.55);background:rgba(180,180,180,.08)}
+.round-match.widzew-match.result-loss{border-color:rgba(255,77,77,.65);background:rgba(255,77,77,.09)}
