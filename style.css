@@ -2088,7 +2088,7 @@ h1 span {
 }
 
 /* ================= SEZON / TABELA ================= */
-.season-board { width:100%; max-width:1400px; }
+.season-board { width:100%; max-width:1400px; border:0; background:transparent; padding:0; }
 .season-board-grid { display:grid; grid-template-columns:minmax(520px,1.15fr) minmax(430px,.85fr); gap:24px; align-items:start; }
 .league-table-panel,.round-panel { background:rgba(255,255,255,.055); border:1px solid rgba(255,255,255,.12); border-radius:18px; padding:18px; }
 .season-panel-title { margin-bottom:14px; }
