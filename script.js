@@ -1815,8 +1815,9 @@ function renderFinalSeason() {
             const homeTeam = r.home ? "Widzew Łódź" : r.opponent;
             const awayTeam = r.home ? r.opponent : "Widzew Łódź";
             const score = r.home ? `${r.gf}:${r.ga}` : `${r.ga}:${r.gf}`;
+            const resultClass = Number(r.gf) > Number(r.ga) ? " result-win" : Number(r.gf) < Number(r.ga) ? " result-loss" : " result-draw";
             const scorerHtml = renderMatchScorers(r.scorers);
-            return `<div class="round-match widzew-match">
+            return `<div class="round-match widzew-match${resultClass}">
                 <div class="round-team home">${seasonLogo(homeTeam)}<span>${seasonSafe(homeTeam)}</span></div>
                 <div class="round-score-wrap"><strong class="round-score">${score}</strong>${scorerHtml ? `<div class="match-scorers">${scorerHtml}</div>` : ""}</div>
                 <div class="round-team away"><span>${seasonSafe(awayTeam)}</span>${seasonLogo(awayTeam)}</div>
