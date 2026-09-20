@@ -2191,4 +2191,12 @@ h1 span {
         overflow: visible;
         padding: 0;
     }
+
+    #seasonPlaceholder {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        padding: 0;
+        max-width: none;
+    }
 }
