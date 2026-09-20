@@ -1398,10 +1398,10 @@ function generateProvisionalWidzewResult(opponent, home) {
     const drawOpponentGoals = () => {
         if (Math.random() >= oGoal) return 0;
         const r = Math.random();
-        if (q < 0.40) return 1;
-        if (q < 0.75) return 2;
-        if (q < 0.97) return 3;
-        if (q < 0.99) return 4;
+        if (r < 0.40) return 1;
+        if (r < 0.75) return 2;
+        if (r < 0.97) return 3;
+        if (r < 0.99) return 4;
         return 5;
     };
 
