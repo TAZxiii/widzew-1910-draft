@@ -1384,10 +1384,11 @@ function generateProvisionalWidzewResult(opponent, home) {
         const r = Math.random();
         if (r >= pGoal) return 0;
         const q = Math.random();
-        if (q < 0.58) return 1;
-        if (q < 0.88) return 2;
-        if (q < 0.97) return 3;
-        return 4;
+        if (q < 0.50) return 1;
+        if (q < 0.81) return 2;
+        if (q < 0.96) return 3;
+        if (q < 0.99) return 4;
+        return 5;
     };
 
     // Rywal ma podobny, ale niezależny rozkład. Silniejszy rywal dostaje
@@ -1397,10 +1398,11 @@ function generateProvisionalWidzewResult(opponent, home) {
     const drawOpponentGoals = () => {
         if (Math.random() >= oGoal) return 0;
         const r = Math.random();
-        if (r < 0.60) return 1;
-        if (r < 0.89) return 2;
-        if (r < 0.98) return 3;
-        return 4;
+        if (q < 0.40) return 1;
+        if (q < 0.75) return 2;
+        if (q < 0.97) return 3;
+        if (q < 0.99) return 4;
+        return 5;
     };
 
     return [drawWidzewGoals(), drawOpponentGoals()];
