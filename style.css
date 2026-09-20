@@ -2134,7 +2134,7 @@ h1 span {
 .scorer-row b { text-align:right; font-size:13px; }
 .scorer-empty { font-size:11px; opacity:.65; }
 
-.match-scorers .scorer-own-divider{display:block;width:70%;height:1px;margin:5px auto 2px;border-top:1px solid rgba(255,255,255,.35)}
+.scorer-own-divider{display:block;width:70%;height:1px;margin:7px auto 4px;border-top:1px solid rgba(255,255,255,.35)}
 
 .match-scorers .scorer-widzew{color:#32c96b !important;}
 .match-scorers .scorer-opponent{color:#ff4d4d !important;}
