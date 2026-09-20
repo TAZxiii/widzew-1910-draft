@@ -2182,3 +2182,13 @@ h1 span {
 .round-match.widzew-match.result-win{border-color:rgba(50,201,107,.65);background:rgba(50,201,107,.09)}
 .round-match.widzew-match.result-draw{border-color:rgba(180,180,180,.55);background:rgba(180,180,180,.08)}
 .round-match.widzew-match.result-loss{border-color:rgba(255,77,77,.65);background:rgba(255,77,77,.09)}
+/* Mobile: usunięcie zewnętrznej ramki dużego panelu boiska w podsumowaniu */
+@media (max-width: 650px) {
+    #candidateGrid .final-pitch-panel {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+        overflow: visible;
+        padding: 0;
+    }
+}
