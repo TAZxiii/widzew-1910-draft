@@ -1654,7 +1654,14 @@ function renderRound(round) {
     const html=rows.map(x=>{
         const isW=seasonTeamName(x.gospodarz)==="Widzew Łódź" || seasonTeamName(x.gosc)==="Widzew Łódź";
         const result=isW ? (widzewPlayed ? (widzewPlayed.home ? `${widzewPlayed.gf}:${widzewPlayed.ga}` : `${widzewPlayed.ga}:${widzewPlayed.gf}`) : "—") : seasonOtherResult(x);
-        return `<div class="round-match ${isW?"widzew-match":""}">
+        const widzewResultClass = isW && widzewPlayed
+            ? (Number(widzewPlayed.gf) > Number(widzewPlayed.ga)
+                ? " widzew-win"
+                : Number(widzewPlayed.gf) < Number(widzewPlayed.ga)
+                    ? " widzew-loss"
+                    : " widzew-draw")
+            : "";
+        return `<div class="round-match ${isW?"widzew-match":""}${widzewResultClass}">
             <div class="round-team home">${seasonLogo(seasonTeamName(x.gospodarz))}<span>${seasonSafe(seasonTeamName(x.gospodarz))}</span></div>
             <div class="round-score-wrap"><strong class="round-score">${result}</strong>${isW && widzewPlayed ? `<div class="match-scorers">${renderMatchScorers(widzewPlayed.scorers)}</div>` : ""}</div>
             <div class="round-team away"><span>${seasonSafe(seasonTeamName(x.gosc))}</span>${seasonLogo(seasonTeamName(x.gosc))}</div>
