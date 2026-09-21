@@ -686,7 +686,7 @@ function facePathForCandidate(card) {
         const [folder] = source;
         const id = String(card?.row?.["id"] ?? "").trim();
         if (!id) return "";
-        return `data/faces/${folder}/${encodeURIComponent(id)}.png`;
+        return `data/faces/${folder}/${encodeURIComponent(id)}.png?v=45`;
     }
 
     function displayCandidate(card, index) {
