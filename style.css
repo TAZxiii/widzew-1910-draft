@@ -798,19 +798,32 @@ h1 span {
     border: 1px solid #3d3d3d;
     border-radius: 18px;
     background: linear-gradient(145deg, #191919, #0d0d0d);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 150px auto;
+    gap: 20px;
+    align-items: center;
 }
 .trainer-name {
     display: flex;
     flex-direction: column;
     align-items: center;
+    justify-content: center;
     gap: 3px;
     font-size: 30px;
     font-weight: 900;
     line-height: 1.1;
-    margin-bottom: 28px;
+}
+.trainer-face {
+    width: 150px;
+    height: 150px;
+    object-fit: contain;
+    display: block;
+    margin: 0 auto;
 }
 .trainer-details {
     display: grid;
+    grid-column: 1 / -1;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
 }
