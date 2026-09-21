@@ -677,15 +677,31 @@ function formatSquadValue(value) {
         }).format(numeric)} tys. €`;
     }
 
-function displayCandidate(card, index) {
+function facePathForCandidate(card) {
+        const key = String(card?.key || "").trim().toLowerCase();
+        const source = Object.entries(playerDatabase).find(([, rows]) =>
+            rows.some(row => playerKey(row) === key)
+        );
+        if (!source) return "";
+        const [folder] = source;
+        const id = String(card?.row?.["id"] ?? "").trim();
+        if (!id) return "";
+        return `data/faces/${folder}/${encodeURIComponent(id)}.png`;
+    }
+
+    function displayCandidate(card, index) {
         const row = card.row;
         const rating = row["Ogólna"];
         const value = row["Wartość"];
+        const facePath = facePathForCandidate(card);
 
         return `
             <button class="candidate-card" data-index="${index}">
                 <div class="candidate-number">${index + 1}</div>
                 <div class="candidate-name">${displayName(row)}</div>
+                ${facePath
+                    ? `<img class="candidate-face" src="${facePath}" alt="" aria-hidden="true">`
+                    : ""}
                 <div class="candidate-season">${row["Sezon"]}</div>
                 ${draft.difficulty === "easy"
                     ? `<div class="candidate-rating">${rating}</div>`
