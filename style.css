@@ -1022,10 +1022,11 @@ h1 span {
 .draft-position { margin-top:35px; font-size:34px; font-weight:900; }
 .draft-instruction { margin-top:8px; color:#aaa; }
 .candidate-grid { width:100%; margin:30px auto 0; display:grid; grid-template-columns:repeat(5, minmax(0,1fr)); gap:18px; align-items:stretch; }
-.candidate-card { position:relative; min-height:260px; border:1px solid #3d3d3d; border-radius:18px; background:linear-gradient(145deg,#191919,#0d0d0d); color:#fff; padding:24px 15px; cursor:pointer; font:inherit; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; transition:.2s ease; }
+.candidate-card { position:relative; min-height:390px; border:1px solid #3d3d3d; border-radius:18px; background:linear-gradient(145deg,#191919,#0d0d0d); color:#fff; padding:30px 15px 22px; cursor:pointer; font:inherit; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:9px; transition:.2s ease; overflow:hidden; }
 .candidate-card:hover { transform:translateY(-6px); border-color:#e30613; }
 .candidate-number { position:absolute; top:12px; left:14px; color:#777; font-size:12px; }
-.candidate-name { display:flex; flex-direction:column; font-size:23px; font-weight:900; line-height:1.1; }
+.candidate-name { display:flex; flex-direction:column; font-size:23px; font-weight:900; line-height:1.1; min-height:51px; justify-content:flex-end; }
+.candidate-face { width:125px; height:125px; object-fit:contain; display:block; margin:2px auto 2px; }
 .candidate-season { color:#aaa; font-size:14px; }
 .candidate-rating { font-size:42px; font-weight:900; line-height:1; }
 .candidate-value { color:#777; font-size:12px; }
