@@ -348,6 +348,11 @@ h1 span {
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 22px;
 }
+@media (min-width: 801px) {
+    .coach-card:last-child {
+        grid-column: 2;
+    }
+}
 
 .coach-card {
     min-height: 220px;
