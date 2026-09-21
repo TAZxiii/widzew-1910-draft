@@ -307,6 +307,7 @@ function formatSquadValue(value) {
                     last: coach.last,
                     season: season["Sezon"],
                     formation: season["Taktyka"],
+                    faceId: season["id"],
                     strength: Number.isFinite(coachStrength) ? coachStrength : 0
                 };
                 // Tryb TRENER przekazuje do meczu siłę z dokładnie wybranego rekordu sezonu.
@@ -330,6 +331,7 @@ function formatSquadValue(value) {
                     <span>${selectedTrainer.first}</span>
                     <span>${selectedTrainer.last}</span>
                 </div>
+                <img class="trainer-face" src="data/faces/trener/${encodeURIComponent(selectedTrainer.faceId)}.png?v=1" alt="" aria-hidden="true">
                 <div class="trainer-details">
                     <div>
                         <span>SEZON</span>
