@@ -1393,7 +1393,7 @@ function generateProvisionalWidzewResult(opponent, home) {
         if (r >= pGoal) return 0;
         const q = Math.random();
         if (q < 0.50) return 1;
-        if (q < 0.81) return 2;
+        if (q < 0.83) return 2;
         if (q < 0.96) return 3;
         if (q < 0.99) return 4;
         return 5;
@@ -1407,7 +1407,7 @@ function generateProvisionalWidzewResult(opponent, home) {
         if (Math.random() >= oGoal) return 0;
         const r = Math.random();
         if (r < 0.40) return 1;
-        if (r < 0.75) return 2;
+        if (r < 0.70) return 2;
         if (r < 0.97) return 3;
         if (r < 0.99) return 4;
         return 5;
