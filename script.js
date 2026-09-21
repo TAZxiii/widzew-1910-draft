@@ -199,6 +199,9 @@ function formatSquadValue(value) {
             }
 
             playerName = value;
+            // Tryb GRACZ nie korzysta z siły trenera.
+            window.__widzewGameMode = "player";
+            window.__widzewCoachStrength = 0;
             input.disabled = true;
             confirm.classList.add("hidden");
             message.classList.remove("hidden", "error");
@@ -298,12 +301,17 @@ function formatSquadValue(value) {
                 const season =
                     coach.seasons[Math.floor(Math.random() * coach.seasons.length)];
 
+                const coachStrength = Number(String(season["Siła"] ?? "0").replace(",", "."));
                 selectedTrainer = {
                     first: coach.first,
                     last: coach.last,
                     season: season["Sezon"],
-                    formation: season["Taktyka"]
+                    formation: season["Taktyka"],
+                    strength: Number.isFinite(coachStrength) ? coachStrength : 0
                 };
+                // Tryb TRENER przekazuje do meczu siłę z dokładnie wybranego rekordu sezonu.
+                window.__widzewGameMode = "coach";
+                window.__widzewCoachStrength = selectedTrainer.strength;
 
                 showSelectedTrainer();
 
