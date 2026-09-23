@@ -386,7 +386,7 @@ function formatSquadValue(value) {
     let wtmWelcomeTimer = null;
 
     function showTrainerWelcome() {
-        wtmWelcomeImage.src = `data/wtm/in/${encodeURIComponent(selectedTrainer.faceId)}.png?v=1`;
+        wtmWelcomeImage.src = `data/wtm/in/${encodeURIComponent(selectedTrainer.faceId)}.PNG?v=2`;
         wtmWelcomeClose.classList.add("hidden");
         wtmWelcomeModal.classList.remove("hidden");
 
