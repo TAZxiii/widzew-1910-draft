@@ -496,7 +496,7 @@ function formatSquadValue(value) {
         playerWelcomeImage.src = "data/wtm/in/gracz.png?v=1";
 
         playerWelcomeText.innerHTML =
-            `W dzisiejszym dniu został ogłoszony szkoleniowiec czerwono-biało-czerwonych. Został nim <strong>${playerName}</strong>. Szkoleniowiec rozpocznie pracę wraz z rozpoczynającym się sezonem 2022/23 PKO Ekstraklasy. Jego ulubiona formacja to: <strong>${selectedFormation}</strong>.`;
+            `W dzisiejszym dniu został ogłoszony szkoleniowiec czerwono-biało-czerwonych. Został nim <strong>${playerName}</strong>. Szkoleniowiec rozpocznie pracę w nadchodzącym sezonie 2022/23 PKO Ekstraklasy. Jego ulubiona formacja to: <strong>${selectedFormation}</strong>.`;
 
         playerWelcomeClose.classList.add("hidden");
         playerWelcomeModal.classList.remove("hidden");
