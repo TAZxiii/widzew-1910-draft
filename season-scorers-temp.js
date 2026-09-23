@@ -108,10 +108,18 @@
 
     const scorerFace = row => {
       const player = row?.playerRef || null;
-      const folder = String(player?.faceFolder || "").trim();
-      const id = String(player?.row?.["id"] ?? "").trim();
+      const folder = String(
+        player?.faceFolder ||
+        player?.category ||
+        ""
+      ).trim();
+      const id = String(
+        player?.row?.["id"] ??
+        player?.stats?.["id"] ??
+        ""
+      ).trim();
       if(!folder || !id) return "";
-      return `<img class="scorer-player-face" src="data/faces/${folder}/${encodeURIComponent(id)}.png?v=46" alt="" aria-hidden="true">`;
+      return `<img class="scorer-player-face" src="data/faces/${folder}/${encodeURIComponent(id)}.png?v=47" alt="" aria-hidden="true">`;
     };
 
     const normal = rows.map(row =>
