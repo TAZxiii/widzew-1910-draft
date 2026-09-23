@@ -194,6 +194,12 @@
             .then(db => {
                 window.widzewSeasonPlayerDB = db;
                 console.info("[Widzew Draft] Tymczasowa baza sezonowa utworzona:", db);
+
+                // TOP STRZELCÓW może zostać wyrenderowane zanim baza sezonowa
+                // zakończy ładowanie. Po jej utworzeniu odświeżamy same twarze.
+                if (typeof window.renderTopScorers === "function") {
+                    window.renderTopScorers();
+                }
             })
             .catch(error => console.error("[Widzew Draft] Nie udało się utworzyć tymczasowej bazy zawodników:", error));
     }, true);
