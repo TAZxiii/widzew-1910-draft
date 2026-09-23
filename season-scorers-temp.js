@@ -107,19 +107,34 @@
       </div>`;
 
     const scorerFace = row => {
-      const player = row?.playerRef || null;
+      let player = row?.playerRef || row?.player || null;
+
+      // W wynikach meczowych identyfikator zawodnika może być globalnym ID
+      // (np. 25020), natomiast twarze mają ID z odpowiedniego CSV (np. 20).
+      // Dlatego dla listy TOP STRZELCÓW rozpoznajemy zawodnika po imieniu
+      // i nazwisku w tymczasowej bazie sezonowej.
+      const db = typeof window.getWidzewSeasonPlayerDB === 'function'
+        ? window.getWidzewSeasonPlayerDB()
+        : null;
+      const normalizedRowName = normalizeName(row?.name);
+      const dbPlayer = db?.players?.find(p =>
+        normalizeName(`${p?.first || ''} ${p?.last || ''}`) === normalizedRowName
+      );
+      if(dbPlayer?.found) player = dbPlayer;
+
       const folder = String(
-        player?.faceFolder ||
         player?.category ||
+        player?.faceFolder ||
         ""
       ).trim();
       const id = String(
-        player?.row?.["id"] ??
         player?.stats?.["id"] ??
+        player?.row?.["id"] ??
         ""
       ).trim();
+
       if(!folder || !id) return "";
-      return `<img class="scorer-player-face" src="data/faces/${folder}/${encodeURIComponent(id)}.png?v=47" alt="" aria-hidden="true">`;
+      return `<img class="scorer-player-face" src="data/faces/${folder}/${encodeURIComponent(id)}.png?v=48" alt="" aria-hidden="true">`;
     };
 
     const normal = rows.map(row =>
