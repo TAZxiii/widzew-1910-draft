@@ -87,7 +87,8 @@
         const player = s?.playerRef || s?.player || null;
         const key = scorerKey(s) || normalizeName(name);
         if(!key) return;
-        if(!liveDB[key]) liveDB[key] = {name,goals:0};
+        if(!liveDB[key]) liveDB[key] = {name,goals:0,playerRef:player};
+        if(!liveDB[key].playerRef && player) liveDB[key].playerRef = player;
         liveDB[key].goals++;
       });
     });
@@ -105,8 +106,16 @@
         <span class="scorer-name-header">Zawodnik</span>
       </div>`;
 
+    const scorerFace = row => {
+      const player = row?.playerRef || null;
+      const folder = String(player?.faceFolder || "").trim();
+      const id = String(player?.row?.["id"] ?? "").trim();
+      if(!folder || !id) return "";
+      return `<img class="scorer-player-face" src="data/faces/${folder}/${encodeURIComponent(id)}.png?v=46" alt="" aria-hidden="true">`;
+    };
+
     const normal = rows.map(row =>
-      `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong></div>`
+      `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong>${scorerFace(row)}</div>`
     ).join('');
 
     const ownHtml = own > 0
