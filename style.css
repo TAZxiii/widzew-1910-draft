@@ -853,6 +853,38 @@ h1 span {
     font-size: 21px;
 }
 
+.trainer-actions {
+    display: flex;
+    justify-content: center;
+    gap: 14px;
+    margin-top: 10px;
+}
+
+.trainer-actions .next-button {
+    margin-top: 0;
+}
+
+.trainer-back {
+    background: #222;
+    border-color: #444;
+}
+
+.trainer-back:hover {
+    background: #2d2d2d;
+    border-color: #666;
+}
+
+@media (max-width: 520px) {
+    .trainer-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .trainer-actions .next-button {
+        width: min(320px, 90vw);
+    }
+}
+
 /* Formation selection: five cards exactly across the row */
 .formation-grid {
     width: min(1200px, 94vw);
