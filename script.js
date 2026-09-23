@@ -361,6 +361,15 @@ function formatSquadValue(value) {
         document.getElementById("trainerBack").addEventListener("click", () => {
             selectedTrainer = null;
             window.__widzewCoachStrength = 0;
+
+            const content = coachScreen.querySelector(".coach-content");
+            content.innerHTML = `
+                <h2>Wybierz trenera</h2>
+                <p class="screen-intro">Wybierz jednego z dotychczasowych szkoleniowców, którzy prowadzili Widzew od wejścia do PKO Ekstraklasy.</p>
+                <div id="coachStatus" class="coach-status"></div>
+                <div id="coachGrid" class="coach-grid"></div>
+            `;
+
             showScreen(coachScreen);
             loadTrainerDatabase();
         });
