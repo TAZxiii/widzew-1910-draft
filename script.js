@@ -234,6 +234,15 @@ function formatSquadValue(value) {
         modal.classList.add("hidden");
     });
 
+    // SUPPORT THE CREATOR
+    const supportModal = document.getElementById("supportCreatorModal");
+    document.getElementById("supportCreator").addEventListener("click", () => {
+        supportModal.classList.remove("hidden");
+    });
+    document.getElementById("closeSupportModal").addEventListener("click", () => {
+        supportModal.classList.add("hidden");
+    });
+
     // TRAINER DATABASE
     async function loadTrainerDatabase() {
         const status = document.getElementById("coachStatus");
