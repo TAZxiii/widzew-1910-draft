@@ -134,6 +134,15 @@ h1 span {
     color: #ddd;
 }
 
+.game-version {
+    position: absolute;
+    z-index: 2;
+    right: 24px;
+    bottom: 44px;
+    color: #666;
+    font-size: 11px;
+}
+
 .modal {
     position: fixed;
     inset: 0;
@@ -197,6 +206,12 @@ h1 span {
         right: 14px;
         bottom: 14px;
         font-size: 11px;
+    }
+
+    .game-version {
+        right: 14px;
+        bottom: 38px;
+        font-size: 10px;
     }
 }
 
