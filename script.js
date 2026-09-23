@@ -375,12 +375,35 @@ function formatSquadValue(value) {
         });
 
         document.getElementById("trainerContinue").addEventListener("click", () => {
-            showDifficultyScreen(
-                `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
-                 Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
-            );
+            showTrainerWelcome();
         });
     }
+
+    // POWITANIE WTM PO WYBORZE TRENERA
+    const wtmWelcomeModal = document.getElementById("wtmWelcomeModal");
+    const wtmWelcomeImage = document.getElementById("wtmWelcomeImage");
+    const wtmWelcomeClose = document.getElementById("wtmWelcomeClose");
+    let wtmWelcomeTimer = null;
+
+    function showTrainerWelcome() {
+        wtmWelcomeImage.src = `data/wtm/in/${encodeURIComponent(selectedTrainer.faceId)}.png?v=1`;
+        wtmWelcomeClose.classList.add("hidden");
+        wtmWelcomeModal.classList.remove("hidden");
+
+        clearTimeout(wtmWelcomeTimer);
+        wtmWelcomeTimer = setTimeout(() => {
+            wtmWelcomeClose.classList.remove("hidden");
+        }, 5000);
+    }
+
+    wtmWelcomeClose.addEventListener("click", () => {
+        clearTimeout(wtmWelcomeTimer);
+        wtmWelcomeModal.classList.add("hidden");
+        showDifficultyScreen(
+            `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
+             Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
+        );
+    });
 
     // FORMATIONS DATABASE
     async function loadFormationDatabase() {
