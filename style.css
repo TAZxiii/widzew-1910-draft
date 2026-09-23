@@ -1270,6 +1270,22 @@ h1 span {
 }
 .squad-list,
 .bench-list { display:flex; flex-direction:column; }
+
+.squad-player-face,
+.bench-player-face {
+    display: block;
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    object-fit: contain;
+    margin-left: 8px;
+    border-radius: 50%;
+}
+
+.squad-player-face {
+    margin-right: 4px;
+}
+
 .squad-list-player,
 .bench-player {
     display:grid;
@@ -2208,6 +2224,16 @@ h1 span {
 .scorer-table-header{display:grid;grid-template-columns:35px 18px minmax(0,1fr);gap:6px;align-items:center;margin:0 6px 4px;font-size:11px;line-height:1.2}
 .scorer-goals-header{grid-column:1 / 3;text-align:left}
 .scorer-name-header{grid-column:3;text-align:center}
+
+.scorer-player-face {
+    width: 32px;
+    height: 32px;
+    flex: 0 0 32px;
+    object-fit: contain;
+    margin-left: auto;
+    border-radius: 50%;
+}
+
 .scorer-row { display:grid; grid-template-columns:25px 1fr 25px; gap:6px; align-items:center; min-height:30px; padding:3px 6px; border-radius:7px; background:rgba(0,0,0,.12); font-size:11px; }
 .scorer-row b { text-align:right; font-size:13px; }
 .scorer-empty { font-size:11px; opacity:.65; }
