@@ -87,8 +87,7 @@
         const player = s?.playerRef || s?.player || null;
         const key = scorerKey(s) || normalizeName(name);
         if(!key) return;
-        if(!liveDB[key]) liveDB[key] = {name,goals:0,playerRef:player};
-        if(!liveDB[key].playerRef && player) liveDB[key].playerRef = player;
+        if(!liveDB[key]) liveDB[key] = {name,goals:0};
         liveDB[key].goals++;
       });
     });
@@ -107,7 +106,7 @@
       </div>`;
 
     const normal = rows.map(row =>
-      `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong>${scorerFace(row)}</div>`
+      `<div class="scorer-row"><b>${Number(row.goals)}</b><span class="scorer-dash">-</span><strong>${escapeName(row.name)}</strong></div>`
     ).join('');
 
     const ownHtml = own > 0
