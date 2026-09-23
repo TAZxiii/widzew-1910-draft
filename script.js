@@ -467,9 +467,7 @@ function formatSquadValue(value) {
                         content.appendChild(button);
 
                         button.addEventListener("click", () => {
-                            showDifficultyScreen(
-                                `Wybrana formacja: <strong>${selectedFormation}</strong>`
-                            );
+                            showPlayerWelcome();
                         });
                     }
                 });
@@ -482,6 +480,40 @@ function formatSquadValue(value) {
             console.error(error);
         }
     }
+
+    // POWITANIE NOWEGO TRENERA W TRYBIE GRACZ
+    const playerWelcomeModal = document.getElementById("playerWelcomeModal");
+    const playerWelcomeImage = document.getElementById("playerWelcomeImage");
+    const playerWelcomeHeadline = document.getElementById("playerWelcomeHeadline");
+    const playerWelcomeText = document.getElementById("playerWelcomeText");
+    const playerWelcomeClose = document.getElementById("playerWelcomeClose");
+    let playerWelcomeTimer = null;
+
+    function showPlayerWelcome() {
+        playerWelcomeHeadline.textContent =
+            `OFICJALNE: ${playerName} nowym trenerem Widzewa Łódź!`;
+
+        playerWelcomeImage.src = "data/wtm/in/gracz.png?v=1";
+
+        playerWelcomeText.innerHTML =
+            `W dzisiejszym dniu został ogłoszony szkoleniowiec czerwono-biało-czerwonych. Został nim <strong>${playerName}</strong>. Szkoleniowiec rozpocznie pracę wraz z rozpoczynającym się sezonem 2022/23 PKO Ekstraklasy. Jego ulubiona formacja to: <strong>${selectedFormation}</strong>.`;
+
+        playerWelcomeClose.classList.add("hidden");
+        playerWelcomeModal.classList.remove("hidden");
+
+        clearTimeout(playerWelcomeTimer);
+        playerWelcomeTimer = setTimeout(() => {
+            playerWelcomeClose.classList.remove("hidden");
+        }, 5000);
+    }
+
+    playerWelcomeClose.addEventListener("click", () => {
+        clearTimeout(playerWelcomeTimer);
+        playerWelcomeModal.classList.add("hidden");
+        showDifficultyScreen(
+            `Wybrana formacja: <strong>${selectedFormation}</strong>`
+        );
+    });
 
     // DEDICATED DIFFICULTY SCREEN
     function showDifficultyScreen(context) {
