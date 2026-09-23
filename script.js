@@ -1197,6 +1197,13 @@ function facePathForCandidate(card) {
             return pitchPlayer(p, occurrence);
         }).join("");
 
+        const playerFace = p => {
+            const folder = String(p?.faceFolder || "").trim();
+            const id = String(p?.row?.["id"] ?? "").trim();
+            if (!folder || !id) return "";
+            return `<img class="squad-player-face" src="data/faces/${folder}/${encodeURIComponent(id)}.png?v=46" alt="" aria-hidden="true">`;
+        };
+
         const benchItem = (p, i, selectedIndex) => {
             const actualPos = actualBenchPosition(p);
             const colorClass = positionColorClass(actualPos, p.role);
@@ -1207,6 +1214,7 @@ function facePathForCandidate(card) {
                     <strong>${playerName(p)}</strong>
                     <small>${safe(actualPos)}</small>
                 </div>
+                ${playerFace(p)}
                 <strong class="bench-rating ${colorClass}">${roundScore(effectiveOverall(p))}</strong>
             </div>`;
         };
@@ -1218,6 +1226,7 @@ function facePathForCandidate(card) {
                     <strong>${playerName(p)}</strong>
                     <small>${roleNames[p.role] || ""}</small>
                 </div>
+                ${playerFace(p)}
                 <strong class="squad-rating ${positionColorClass(p.position || p["Pozycja"], p.role)}">${roundScore(effectiveOverall(p))}</strong>
             </div>`;
 
