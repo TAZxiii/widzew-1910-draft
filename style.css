@@ -179,6 +179,15 @@ h1 span {
     cursor: pointer;
 }
 
+.support-link {
+    display: flex;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    text-decoration: none;
+    margin-top: 22px;
+}
+
 @media (max-width: 600px) {
     h1 {
         letter-spacing: -2px;
