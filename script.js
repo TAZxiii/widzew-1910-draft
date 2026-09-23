@@ -352,8 +352,18 @@ function formatSquadValue(value) {
                     </div>
                 </div>
             </div>
-            <button id="trainerContinue" class="next-button">DALEJ</button>
+            <div class="trainer-actions">
+                <button id="trainerBack" class="next-button trainer-back">WRÓĆ</button>
+                <button id="trainerContinue" class="next-button">DALEJ</button>
+            </div>
         `;
+
+        document.getElementById("trainerBack").addEventListener("click", () => {
+            selectedTrainer = null;
+            window.__widzewCoachStrength = 0;
+            showScreen(coachScreen);
+            loadTrainerDatabase();
+        });
 
         document.getElementById("trainerContinue").addEventListener("click", () => {
             showDifficultyScreen(
