@@ -725,7 +725,7 @@ function formatSquadValue(value) {
         return shuffled.map(([key, records]) => {
             // Season is selected only after the player identity has been drawn.
             const record = records[Math.floor(Math.random() * records.length)];
-            return { key, row: record };
+            return { key, row: record, faceFolder: positionKey };
         });
     }
 
@@ -737,10 +737,17 @@ function formatSquadValue(value) {
         if (type === "n") rows = playerDatabase.napastnicy;
 
         const unique = uniqueAvailablePlayers(rows);
-        return unique.sort(() => Math.random() - 0.5).slice(0, 5).map(([key, records]) => ({
-            key,
-            row: records[Math.floor(Math.random() * records.length)]
-        }));
+        return unique.sort(() => Math.random() - 0.5).slice(0, 5).map(([key, records]) => {
+            const record = records[Math.floor(Math.random() * records.length)];
+            const faceFolder =
+                playerDatabase.loPo.some(row => playerKey(row) === key) ? "loPo" :
+                playerDatabase.so.some(row => playerKey(row) === key) ? "so" :
+                playerDatabase.br.some(row => playerKey(row) === key) ? "br" :
+                playerDatabase.pomoc.some(row => playerKey(row) === key) ? "pomoc" :
+                playerDatabase.skrzydlowi.some(row => playerKey(row) === key) ? "skrzydlowi" :
+                "napastnicy";
+            return { key, row: record, faceFolder };
+        });
     }
 
     function displayName(row) {
@@ -763,14 +770,9 @@ function formatSquadValue(value) {
     }
 
 function facePathForCandidate(card) {
-        const key = String(card?.key || "").trim().toLowerCase();
-        const source = Object.entries(playerDatabase).find(([, rows]) =>
-            rows.some(row => playerKey(row) === key)
-        );
-        if (!source) return "";
-        const [folder] = source;
+        const folder = String(card?.faceFolder || "").trim();
         const id = String(card?.row?.["id"] ?? "").trim();
-        if (!id) return "";
+        if (!folder || !id) return "";
         return `data/faces/${folder}/${encodeURIComponent(id)}.png?v=45`;
     }
 
