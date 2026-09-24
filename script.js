@@ -1500,7 +1500,7 @@ function generateProvisionalWidzewResult(opponent, home) {
     const widzew = Number.isFinite(raw) && raw > 0 ? raw : 65;
     const diff = Math.max(-20, Math.min(20, widzew - opp));
 
-    let pGoal = 0.62 + diff * 0.008 + (home ? 0.04 : -0.03);
+    let pGoal = 0.60 + diff * 0.008 + (home ? 0.04 : -0.03);
     pGoal = Math.max(0.42, Math.min(0.78, pGoal));
 
     const drawWidzewGoals = () => {
@@ -1514,7 +1514,7 @@ function generateProvisionalWidzewResult(opponent, home) {
         return 5;
     };
 
-    let oGoal = 0.68 - diff * 0.008 + (home ? -0.03 : 0.04);
+    let oGoal = 0.70 - diff * 0.008 + (home ? -0.03 : 0.04);
     oGoal = Math.max(0.45, Math.min(0.80, oGoal));
     const drawOpponentGoals = () => {
         if (Math.random() >= oGoal) return 0;
