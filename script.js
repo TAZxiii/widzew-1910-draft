@@ -317,8 +317,10 @@ function formatSquadValue(value) {
                     season: season["Sezon"],
                     formation: season["Taktyka"],
                     faceId: season["id"],
-                    strength: Number.isFinite(coachStrength) ? coachStrength : 0
+                    strength: Number.isFinite(coachStrength) ? coachStrength : 0,
+                    startRound: Math.max(1, Number(season["KolejkaStartowa"]) || 1)
                 };
+                window.__widzewTrainerStartRound = selectedTrainer.startRound;
                 // Tryb TRENER przekazuje do meczu siłę z dokładnie wybranego rekordu sezonu.
                 window.__widzewGameMode = "coach";
                 window.__widzewCoachStrength = selectedTrainer.strength;
@@ -2055,6 +2057,31 @@ async function initSeasonMode(mode) {
         seasonGameState.fixtures=fixtures;
         seasonGameState.widzewFixtures=getWidzewFixtures();
         seasonGameState.teams=teams;
+
+        // W trybie TRENER zaczynamy dokładnie od kolejki, w której dany trener
+        // objął Widzew. Mecze wcześniejsze są już rozegrane na podstawie wyników z CSV.
+        const trainerStartRound = (draft.mode === "trainer")
+            ? Math.max(1, Number(window.__widzewTrainerStartRound) || 1)
+            : 1;
+        seasonGameState.currentRound = trainerStartRound;
+
+        if (trainerStartRound > 1) {
+            seasonGameState.widzewFixtures
+                .filter(f => Number(f.kolejka) < trainerStartRound)
+                .forEach(f => {
+                    const score = seasonResultParts(f.wynik);
+                    if (!score) return;
+                    const home = seasonTeamName(f.gospodarz) === "Widzew Łódź";
+                    seasonGameState.widzewResults.push({
+                        round: Number(f.kolejka),
+                        opponent: home ? seasonTeamName(f.gosc) : seasonTeamName(f.gospodarz),
+                        home,
+                        gf: home ? score[0] : score[1],
+                        ga: home ? score[1] : score[0],
+                        scorers: []
+                    });
+                });
+        }
         if (seasonGameState.widzewFixtures.length === 0) {
             throw new Error(`Nie znaleziono meczów Widzewa w terminarzu ${season}.`);
         }
