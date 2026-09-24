@@ -2416,7 +2416,7 @@ h1 span {
         font-size: 18px;
     }
 
-    /* Draft: mniej pustego miejsca nad kartami i między elementami nagłówka */
+    /* Draft: kompaktowy układ mobilny */
     .draft-content {
         padding: 16px 0 20px;
     }
@@ -2450,32 +2450,32 @@ h1 span {
     }
 
     .candidate-card {
-        min-height: 150px;
-        padding: 5px 6px 4px;
+        min-height: 135px;
+        padding: 3px 5px 2px;
         gap: 1px;
     }
 
     .candidate-name {
-        font-size: 15px;
-        min-height: 30px;
+        font-size: 12px;
+        min-height: 26px;
     }
 
     .candidate-face {
-        width: 60px;
-        height: 60px;
+        width: 55px;
+        height: 55px;
         margin: 0 auto;
     }
 
     .candidate-rating {
-        font-size: 23px;
+        font-size: 20px;
     }
 
     .candidate-season {
-        font-size: 9px;
+        font-size: 8px;
     }
 
     .candidate-value {
-        font-size: 8px;
+        font-size: 7px;
     }
 
     .draft-action {
