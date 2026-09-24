@@ -2361,3 +2361,73 @@ h1 span {
         max-height: 48vh;
     }
 }
+
+
+/* TEST: kompaktowy widok mobilny dla iframe */
+@media (max-width: 600px) {
+    .coach-card {
+        min-height: 110px;
+        padding: 16px 12px;
+    }
+
+    .coach-first,
+    .coach-last {
+        font-size: 20px;
+    }
+
+    .trainer-summary {
+        margin: 18px auto 18px;
+        padding: 18px;
+        grid-template-rows: 105px auto;
+        gap: 12px;
+    }
+
+    .trainer-name {
+        font-size: 23px;
+    }
+
+    .trainer-face {
+        width: 100px;
+        height: 100px;
+    }
+
+    .trainer-details {
+        gap: 10px;
+    }
+
+    .trainer-details div {
+        padding: 11px;
+    }
+
+    .trainer-details strong {
+        font-size: 18px;
+    }
+
+    .candidate-card {
+        min-height: 300px;
+        padding: 22px 12px 16px;
+        gap: 6px;
+    }
+
+    .candidate-name {
+        font-size: 19px;
+        min-height: 43px;
+    }
+
+    .candidate-face {
+        width: 90px;
+        height: 90px;
+    }
+
+    .candidate-rating {
+        font-size: 32px;
+    }
+
+    .candidate-season {
+        font-size: 12px;
+    }
+
+    .candidate-value {
+        font-size: 11px;
+    }
+}
