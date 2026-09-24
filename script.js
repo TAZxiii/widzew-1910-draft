@@ -2060,7 +2060,7 @@ async function initSeasonMode(mode) {
 
         // W trybie TRENER zaczynamy dokładnie od kolejki, w której dany trener
         // objął Widzew. Mecze wcześniejsze są już rozegrane na podstawie wyników z CSV.
-        const trainerStartRound = (draft.mode === "trainer")
+        const trainerStartRound = (window.__widzewGameMode === "coach")
             ? Math.max(1, Number(window.__widzewTrainerStartRound) || 1)
             : 1;
         seasonGameState.currentRound = trainerStartRound;
