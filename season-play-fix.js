@@ -377,7 +377,38 @@
         buildBaseline();
         window.seasonGameState.widzewResults=[];
         window.seasonGameState.scorers={};
-        window.seasonGameState.currentRound=1;
+
+        const trainerStartRound = window.__widzewGameMode === "coach"
+          ? Math.max(1, Number(window.__widzewTrainerStartRound) || 1)
+          : 1;
+        window.seasonGameState.currentRound = trainerStartRound;
+
+        // W trybie TRENER wcześniejsze mecze Widzewa są już rozegrane.
+        // Bierzemy ich rzeczywiste wyniki bezpośrednio z terminarza CSV.
+        if(trainerStartRound > 1){
+          window.seasonGameState.widzewFixtures
+            .filter(f => Number(f.kolejka) < trainerStartRound)
+            .forEach(f => {
+              const score = typeof window.seasonResultParts === "function"
+                ? window.seasonResultParts(f.wynik)
+                : String(f.wynik || "").match(/^(\\d+)\\s*:\\s*(\\d+)$/)?.slice(1).map(Number);
+              if(!score) return;
+              const home = window.seasonTeamName(f.gospodarz) === "Widzew Łódź";
+              const match = {
+                round: Number(f.kolejka),
+                opponent: home ? window.seasonTeamName(f.gosc) : window.seasonTeamName(f.gospodarz),
+                home,
+                gf: home ? score[0] : score[1],
+                ga: home ? score[1] : score[0],
+                scorers: []
+              };
+              window.seasonGameState.widzewResults.push(match);
+
+              const slot = seasonDB?.[match.round];
+              if(slot) slot.played = toDBResult(match);
+            });
+        }
+
         if(typeof window.renderPlayableSeason==="function")window.renderPlayableSeason();
       }else if(mode==="simulate"){
         /* The core already generated the season. Repair any missing scorer rows,
