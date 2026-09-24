@@ -1483,7 +1483,11 @@ function seasonResultParts(result) {
     return m ? [Number(m[1]), Number(m[2])] : null;
 }
 function seasonOtherResult(fixture) {
-    return String(fixture.wynik || "").trim();
+    const real = seasonResultParts(fixture?.wynik);
+    if (real) return String(real[0]) + ":" + String(real[1]);
+
+    const generated = getNonWidzewResult(fixture);
+    return Array.isArray(generated) ? String(generated[0]) + ":" + String(generated[1]) : "—";
 }
 function generateProvisionalWidzewResult(opponent, home) {
     // Zawsze zwracamy [gole Widzewa, gole przeciwnika].
