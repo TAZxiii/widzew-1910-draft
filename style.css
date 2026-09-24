@@ -2416,32 +2416,36 @@ h1 span {
         font-size: 18px;
     }
 
+    .candidate-grid {
+        gap: 7px;
+    }
+
     .candidate-card {
-        min-height: 230px;
-        padding: 16px 10px 12px;
-        gap: 4px;
+        min-height: 200px;
+        padding: 10px 8px 8px;
+        gap: 3px;
     }
 
     .candidate-name {
-        font-size: 17px;
-        min-height: 38px;
+        font-size: 15px;
+        min-height: 34px;
     }
 
     .candidate-face {
-        width: 70px;
-        height: 70px;
-        margin: 1px auto;
+        width: 65px;
+        height: 65px;
+        margin: 0 auto;
     }
 
     .candidate-rating {
-        font-size: 28px;
+        font-size: 25px;
     }
 
     .candidate-season {
-        font-size: 11px;
+        font-size: 10px;
     }
 
     .candidate-value {
-        font-size: 10px;
+        font-size: 9px;
     }
 }
