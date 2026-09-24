@@ -1405,6 +1405,9 @@ const seasonGameState = {
     teams: [],
     results: [],
     widzewResults: [],
+    // Wyniki innych drużyn, które nie są jeszcze wpisane do CSV.
+    // Są losowane tylko raz na dany mecz podczas bieżącego sezonu.
+    generatedResults: {},
     started: false
 };
 
@@ -1493,13 +1496,9 @@ function generateProvisionalWidzewResult(opponent, home) {
     const widzew = Number.isFinite(raw) && raw > 0 ? raw : 65;
     const diff = Math.max(-20, Math.min(20, widzew - opp));
 
-    // Prawdopodobieństwo zdobycia gola przez Widzew. Różnica ocen tylko
-    // umiarkowanie je przesuwa, a tryb "Rozegraj sezon" i "Symuluj sezon"
-    // korzystają z dokładnie tej samej funkcji.
     let pGoal = 0.62 + diff * 0.008 + (home ? 0.04 : -0.03);
     pGoal = Math.max(0.42, Math.min(0.78, pGoal));
 
-    // Warunkowy rozkład liczby goli, jeśli Widzew trafi.
     const drawWidzewGoals = () => {
         const r = Math.random();
         if (r >= pGoal) return 0;
@@ -1511,8 +1510,6 @@ function generateProvisionalWidzewResult(opponent, home) {
         return 5;
     };
 
-    // Rywal ma podobny, ale niezależny rozkład. Silniejszy rywal dostaje
-    // umiarkowanie większą szansę na trafienie.
     let oGoal = 0.68 - diff * 0.008 + (home ? -0.03 : 0.04);
     oGoal = Math.max(0.45, Math.min(0.80, oGoal));
     const drawOpponentGoals = () => {
@@ -1527,6 +1524,53 @@ function generateProvisionalWidzewResult(opponent, home) {
 
     return [drawWidzewGoals(), drawOpponentGoals()];
 }
+
+/*
+ * Generator brakujących wyników meczów innych drużyn.
+ *
+ * Dla każdego zespołu używamy rozkładu liczby goli wyliczonego przez autora
+ * gry na podstawie kilku sezonów Ekstraklasy. Gospodarz i gość są losowani
+ * niezależnie jednym Math.random() każdy.
+ *
+ * Ważne: ta funkcja NIE dotyka wyników Widzewa.
+ */
+const NON_WIDZEW_HOME_GOAL_CDF = [
+    [0, 0.2273],
+    [1, 0.5585],
+    [2, 0.8095],
+    [3, 0.9297],
+    [4, 0.9755],
+    [5, 0.9943],
+    [6, 0.9984],
+    [7, 0.9992],
+    [8, 1.0000]
+];
+
+const NON_WIDZEW_AWAY_GOAL_CDF = [
+    [0, 0.3058],
+    [1, 0.6778],
+    [2, 0.8945],
+    [3, 0.9722],
+    [4, 0.9943],
+    [5, 0.9992],
+    [6, 1.0000]
+];
+
+function drawNonWidzewGoals(cdf) {
+    const r = Math.random();
+    for (const [goals, limit] of cdf) {
+        if (r < limit) return goals;
+    }
+    return cdf[cdf.length - 1][0];
+}
+
+function generateNonWidzewResult() {
+    return [
+        drawNonWidzewGoals(NON_WIDZEW_HOME_GOAL_CDF),
+        drawNonWidzewGoals(NON_WIDZEW_AWAY_GOAL_CDF)
+    ];
+}
+
 
 const WIDZEW_SCORER_WEIGHTS = [
     ["starter", "N", 33], ["starter", "MID", 12], ["starter", "WING", 9],
@@ -1645,12 +1689,41 @@ function getWidzewFixtures() {
 function getWidzewFixture(round) {
     return seasonGameState.widzewFixtures.find(f => Number(f.kolejka) === Number(round));
 }
+function getNonWidzewGeneratedResultKey(fixture) {
+    return [
+        Number(fixture?.kolejka),
+        seasonTeamName(fixture?.gospodarz),
+        seasonTeamName(fixture?.gosc)
+    ].join("|");
+}
+
+function getNonWidzewResult(fixture) {
+    if (!fixture) return null;
+
+    // Rzeczywisty wynik z terminarza zawsze ma pierwszeństwo.
+    const real = seasonResultParts(fixture.wynik);
+    if (real) return real;
+
+    if (!seasonGameState.generatedResults) seasonGameState.generatedResults = {};
+    const key = getNonWidzewGeneratedResultKey(fixture);
+
+    // Brak ponownego losowania tego samego meczu podczas jednego sezonu.
+    if (Array.isArray(seasonGameState.generatedResults[key])) {
+        return seasonGameState.generatedResults[key];
+    }
+
+    const generated = generateNonWidzewResult();
+    seasonGameState.generatedResults[key] = generated;
+    return generated;
+}
+
 function completedNonWidzewFixtures(upToRound) {
     return seasonGameState.fixtures.filter(f => {
         const r=Number(f.kolejka);
         if (r > upToRound) return false;
+
         const isW = seasonTeamName(f.gospodarz)==="Widzew Łódź" || seasonTeamName(f.gosc)==="Widzew Łódź";
-        return !isW && !!seasonResultParts(f.wynik);
+        return !isW && !!getNonWidzewResult(f);
     });
 }
 function seasonWidzewResultsByRound() {
@@ -1957,6 +2030,7 @@ async function initSeasonMode(mode) {
     seasonGameState.currentRound=1;
     seasonGameState.widzewResults=[];
     seasonGameState.scorers={};
+    seasonGameState.generatedResults={};
     seasonGameState.widzewFixtures=[];
     const loading=document.getElementById("seasonLoading");
     const content=document.getElementById("seasonBoardContent");
