@@ -1756,7 +1756,7 @@ function buildStandings(round) {
             stats,
             seasonTeamName(f.gospodarz),
             seasonTeamName(f.gosc),
-            seasonResultParts(f.wynik)
+            getNonWidzewResult(f)
         );
     });
 
