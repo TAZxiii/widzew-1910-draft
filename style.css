@@ -2421,31 +2421,31 @@ h1 span {
     }
 
     .candidate-card {
-        min-height: 200px;
-        padding: 10px 8px 8px;
-        gap: 3px;
+        min-height: 150px;
+        padding: 7px 6px 5px;
+        gap: 2px;
     }
 
     .candidate-name {
         font-size: 15px;
-        min-height: 34px;
+        min-height: 30px;
     }
 
     .candidate-face {
-        width: 65px;
-        height: 65px;
+        width: 60px;
+        height: 60px;
         margin: 0 auto;
     }
 
     .candidate-rating {
-        font-size: 25px;
+        font-size: 23px;
     }
 
     .candidate-season {
-        font-size: 10px;
+        font-size: 9px;
     }
 
     .candidate-value {
-        font-size: 9px;
+        font-size: 8px;
     }
 }
