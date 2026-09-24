@@ -2416,14 +2416,43 @@ h1 span {
         font-size: 18px;
     }
 
+    /* Draft: mniej pustego miejsca nad kartami i między elementami nagłówka */
+    .draft-content {
+        padding: 16px 0 20px;
+    }
+
+    .draft-header {
+        gap: 8px;
+    }
+
+    .draft-header strong {
+        font-size: 20px;
+    }
+
+    .draft-progress {
+        margin-top: 5px;
+        font-size: 12px;
+    }
+
+    .draft-position {
+        margin-top: 14px;
+        font-size: 27px;
+    }
+
+    .draft-instruction {
+        margin-top: 4px;
+        font-size: 13px;
+    }
+
     .candidate-grid {
         gap: 7px;
+        margin-top: 12px;
     }
 
     .candidate-card {
         min-height: 150px;
-        padding: 7px 6px 5px;
-        gap: 2px;
+        padding: 5px 6px 4px;
+        gap: 1px;
     }
 
     .candidate-name {
@@ -2447,5 +2476,9 @@ h1 span {
 
     .candidate-value {
         font-size: 8px;
+    }
+
+    .draft-action {
+        margin-top: 15px;
     }
 }
