@@ -2366,22 +2366,26 @@ h1 span {
 /* TEST: kompaktowy widok mobilny dla iframe */
 @media (max-width: 600px) {
     .coach-card {
-        min-height: 92px;
-        padding: 12px 10px;
+        min-height: 85px;
+        padding: 10px 10px;
+    }
+
+    .coach-grid {
+        gap: 10px;
     }
 
     .coach-name {
-        font-size: 21px;
-        margin-bottom: 6px;
-    }
-
-    .coach-season {
-        font-size: 12px;
+        font-size: 18px;
         margin-bottom: 4px;
     }
 
+    .coach-season {
+        font-size: 11px;
+        margin-bottom: 3px;
+    }
+
     .coach-formation {
-        font-size: 12px;
+        font-size: 11px;
     }
 
     .trainer-summary {
