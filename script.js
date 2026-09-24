@@ -243,6 +243,11 @@ function formatSquadValue(value) {
         supportModal.classList.add("hidden");
     });
 
+    // Pokazuj dokładnie to samo okno również po zakończeniu sezonu.
+    window.showSupportCreatorModal = () => {
+        supportModal.classList.remove("hidden");
+    };
+
     // TRAINER DATABASE
     async function loadTrainerDatabase() {
         const status = document.getElementById("coachStatus");
@@ -2026,6 +2031,12 @@ function renderFinalSeason() {
         }).join("");
     }
     if (actions) actions.innerHTML = `<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
+
+    // Po podsumowaniu sezonu pokazujemy to samo okno wsparcia,
+    // które jest dostępne z ekranu startowego.
+    setTimeout(() => {
+        window.showSupportCreatorModal?.();
+    }, 300);
 }
 window.renderPlayableSeason = renderPlayableSeason;
 
