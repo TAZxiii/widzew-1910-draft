@@ -2389,7 +2389,9 @@ h1 span {
     }
 
     .trainer-summary {
-        margin: 18px auto 18px;
+        width: calc(100% - 20px);
+        box-sizing: border-box;
+        margin: 18px auto;
         padding: 18px;
         grid-template-rows: 105px auto;
         gap: 12px;
