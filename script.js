@@ -318,7 +318,8 @@ function formatSquadValue(value) {
             goalsAgainstPoints: components.goalsAgainstPoints,
             pointsPoints: components.pointsPoints,
             winsPoints: components.winsPoints,
-            tablePosition
+            tablePosition,
+            tablePositionPoints: components.tablePosition
         };
     }
 
@@ -334,7 +335,7 @@ function formatSquadValue(value) {
             "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
         }[c]));
 
-        const placeBonus = score.tablePosition >= 16 ? score.tablePosition : "+" + score.tablePosition;
+        const placeBonus = score.tablePositionPoints > 0 ? "+" + score.tablePositionPoints : String(score.tablePositionPoints);
 
         content.innerHTML =
             "<h2>Wynik sezonu</h2>" +
