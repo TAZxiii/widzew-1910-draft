@@ -290,10 +290,10 @@ function formatSquadValue(value) {
         const components = {
             playerRating,
             teamOverall,
-            goalsFor: goalsFor * 5,
-            goalsAgainst: goalsAgainst * -5,
-            points: points * 10,
-            wins: wins * 3,
+            goalsForPoints: goalsFor * 5,
+            goalsAgainstPoints: goalsAgainst * -5,
+            pointsPoints: points * 10,
+            winsPoints: wins * 3,
             tablePosition: placePoints[tablePosition] ?? 0
         };
 
@@ -304,16 +304,20 @@ function formatSquadValue(value) {
             total: Math.round(
                 components.playerRating +
                 components.teamOverall +
-                components.goalsFor +
-                components.goalsAgainst +
-                components.points +
-                components.wins +
+                components.goalsForPoints +
+                components.goalsAgainstPoints +
+                components.pointsPoints +
+                components.winsPoints +
                 components.tablePosition
             ),
             goalsFor,
             goalsAgainst,
             points,
             wins,
+            goalsForPoints: components.goalsForPoints,
+            goalsAgainstPoints: components.goalsAgainstPoints,
+            pointsPoints: components.pointsPoints,
+            winsPoints: components.winsPoints,
             tablePosition
         };
     }
@@ -340,10 +344,10 @@ function formatSquadValue(value) {
             "<div class='player-score-breakdown'>" +
                 "<div><span>Ocena zawodników</span><strong>+" + score.playerRating + "</strong></div>" +
                 "<div><span>Ocena końcowa zespołu</span><strong>+" + score.teamOverall + "</strong></div>" +
-                "<div><span>Zdobyte gole (" + score.goalsFor + ")</span><strong>+" + (score.goalsFor * 5) + "</strong></div>" +
-                "<div><span>Stracone gole (" + score.goalsAgainst + ")</span><strong>" + (score.goalsAgainst * -5) + "</strong></div>" +
-                "<div><span>Zdobyte punkty (" + score.points + ")</span><strong>+" + (score.points * 10) + "</strong></div>" +
-                "<div><span>Zwycięstwa (" + score.wins + ")</span><strong>+" + (score.wins * 3) + "</strong></div>" +
+                "<div><span>Zdobyte gole (" + score.goalsFor + ")</span><strong>+" + (score.goalsForPoints) + "</strong></div>" +
+                "<div><span>Stracone gole (" + score.goalsAgainst + ")</span><strong>" + (score.goalsAgainstPoints) + "</strong></div>" +
+                "<div><span>Zdobyte punkty (" + score.points + ")</span><strong>+" + (score.pointsPoints) + "</strong></div>" +
+                "<div><span>Zwycięstwa (" + score.wins + ")</span><strong>+" + (score.winsPoints) + "</strong></div>" +
                 "<div><span>Miejsce w tabeli (" + score.tablePosition + ".)</span><strong>" + placeBonus + "</strong></div>" +
             "</div>";
         modal.classList.remove("hidden");
