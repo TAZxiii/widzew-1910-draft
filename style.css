@@ -2366,26 +2366,26 @@ h1 span {
 /* TEST: kompaktowy widok mobilny dla iframe */
 @media (max-width: 600px) {
     .coach-card {
-        min-height: 70px;
-        padding: 8px 10px;
+        min-height: 60px;
+        padding: 6px 10px;
     }
 
     .coach-grid {
-        gap: 6px;
+        gap: 5px;
     }
 
     .coach-name {
-        font-size: 15px;
-        margin-bottom: 3px;
-    }
-
-    .coach-season {
-        font-size: 10px;
+        font-size: 12px;
         margin-bottom: 2px;
     }
 
+    .coach-season {
+        font-size: 9px;
+        margin-bottom: 1px;
+    }
+
     .coach-formation {
-        font-size: 10px;
+        font-size: 9px;
     }
 
     .trainer-summary {
@@ -2418,11 +2418,11 @@ h1 span {
 
     /* Draft: kompaktowy układ mobilny */
     .draft-content {
-        padding: 16px 0 20px;
+        padding: 10px 0 15px;
     }
 
     .draft-header {
-        gap: 8px;
+        gap: 6px;
     }
 
     .draft-header strong {
@@ -2430,23 +2430,23 @@ h1 span {
     }
 
     .draft-progress {
-        margin-top: 5px;
-        font-size: 12px;
+        margin-top: 3px;
+        font-size: 11px;
     }
 
     .draft-position {
-        margin-top: 14px;
+        margin-top: 10px;
         font-size: 27px;
     }
 
     .draft-instruction {
-        margin-top: 4px;
+        margin-top: 2px;
         font-size: 13px;
     }
 
     .candidate-grid {
         gap: 7px;
-        margin-top: 12px;
+        margin-top: 9px;
     }
 
     .candidate-card {
