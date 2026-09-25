@@ -1952,6 +1952,126 @@ function renderMatchScorers(scorers) {
         (own.length ? `<span class="scorer-own-divider"></span>${own.map(row).join("")}` : "");
 }
 
+const COACH_DISMISSAL_RULES = {
+    1:  { type: "finalTable", minPosition: 16, maxPosition: 18, image: "data/wtm/out/1.PNG" },
+    2:  { type: "seasonPoints", round: 7, maxPoints: 7, image: "data/wtm/out/1.PNG" },
+    3:  { type: "finalTable", minPosition: 16, maxPosition: 18, image: "data/wtm/out/2.PNG" },
+    4:  { type: "seasonPoints", round: 22, maxPoints: 27, image: "data/wtm/out/2.PNG" },
+    5:  { type: "coachPoints", matches: 3, maxPoints: 4, image: "data/wtm/out/3.PNG" },
+    6:  { type: "finalTable", minPosition: 16, maxPosition: 18, image: "data/wtm/out/4.PNG" },
+    7:  { type: "seasonPoints", round: 7, maxPoints: 7, image: "data/wtm/out/4.PNG" },
+    8:  { type: "coachPoints", matches: 5, maxPoints: 6, image: "data/wtm/out/5.PNG" },
+    9:  { type: "coachPoints", matches: 12, maxPoints: 11, image: "data/wtm/out/7.PNG" },
+    10: { type: "finalTable", minPosition: 16, maxPosition: 18, image: "data/wtm/out/10.PNG" },
+    11: { type: "seasonPoints", round: 7, maxPoints: 7, image: "data/wtm/out/10.PNG" },
+    12: { type: "finalTable", minPosition: 16, maxPosition: 18, image: null }
+};
+
+function coachResultsPoints(results) {
+    return results.reduce((sum, match) => {
+        const gf = Number(match.gf || 0);
+        const ga = Number(match.ga || 0);
+        return sum + (gf > ga ? 3 : gf === ga ? 1 : 0);
+    }, 0);
+}
+
+function getCoachDismissalStatus() {
+    if (window.__widzewGameMode !== "coach" || !selectedTrainer || window.__coachDismissed) return null;
+
+    const coachId = Number(selectedTrainer.faceId);
+    const rule = COACH_DISMISSAL_RULES[coachId];
+    if (!rule) return null;
+
+    if (rule.type === "finalTable") {
+        const finalRound = seasonGameState.widzewFixtures.length
+            ? Math.max(...seasonGameState.widzewFixtures.map(f => Number(f.kolejka) || 0))
+            : 34;
+        const standings = buildStandings(finalRound);
+        const widzewRow = standings.find(row => row.name === "Widzew Łódź");
+        if (!widzewRow) return null;
+
+        const position = standings.indexOf(widzewRow) + 1;
+        return position >= rule.minPosition && position <= rule.maxPosition
+            ? { rule, coachId, position, points: widzewRow.pts }
+            : null;
+    }
+
+    if (rule.type === "seasonPoints") {
+        const results = seasonGameState.widzewResults.filter(
+            match => Number(match.round) <= rule.round
+        );
+        if (results.length < rule.round) return null;
+
+        const points = coachResultsPoints(results);
+        return points <= rule.maxPoints
+            ? { rule, coachId, points, round: rule.round }
+            : null;
+    }
+
+    if (rule.type === "coachPoints") {
+        const startRound = Math.max(1, Number(selectedTrainer.startRound) || 1);
+        const results = seasonGameState.widzewResults
+            .filter(match => Number(match.round) >= startRound)
+            .sort((a, b) => Number(a.round) - Number(b.round));
+
+        if (results.length < rule.matches) return null;
+
+        const points = coachResultsPoints(results.slice(0, rule.matches));
+        return points <= rule.maxPoints
+            ? { rule, coachId, points, matches: rule.matches }
+            : null;
+    }
+
+    return null;
+}
+
+function showCoachDismissal(status) {
+    const modal = document.getElementById("coachDismissalModal");
+    const content = document.getElementById("coachDismissalContent");
+    if (!modal || !content || !status) return;
+
+    const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[c]));
+
+    let reason = "";
+    if (status.rule.type === "finalTable") {
+        reason = "Widzew zakończył sezon na <strong>" + status.position + ". miejscu</strong>.";
+    } else if (status.rule.type === "seasonPoints") {
+        reason = "Po " + status.round + ". kolejce Widzew miał zaledwie <strong>" + status.points + " pkt</strong>.";
+    } else {
+        reason = "W pierwszych " + status.matches + " meczach swojej kadencji Widzew zdobył <strong>" + status.points + " pkt</strong>.";
+    }
+
+    content.innerHTML =
+        (status.rule.image
+            ? '<img class="coach-dismissal-image" src="' + status.rule.image + '" alt="">'
+            : "") +
+        "<h2>ZWOLNIENIE!</h2>" +
+        "<p><strong>" + safe(selectedTrainer.first) + " " + safe(selectedTrainer.last) +
+        "</strong> został zwolniony z funkcji pierwszego trenera Widzewa Łódź.</p>" +
+        "<p>" + reason + "</p>" +
+        "<p class=\"coach-dismissal-end\">KARIERA TRENERA ZAKOŃCZONA</p>";
+
+    modal.classList.remove("hidden");
+    window.__coachDismissed = true;
+}
+
+function checkCoachDismissal() {
+    const status = getCoachDismissalStatus();
+    if (!status) return false;
+    showCoachDismissal(status);
+    return true;
+}
+
+document.getElementById("closeCoachDismissalModal")?.addEventListener("click", () => {
+    document.getElementById("coachDismissalModal")?.classList.add("hidden");
+});
+
 function renderRound(round) {
     const f=getWidzewFixture(round);
     const others=seasonGameState.fixtures.filter(x=>Number(x.kolejka)===Number(round) &&
@@ -2026,6 +2146,12 @@ function simulateCurrentWidzewMatch() {
     const match={round:seasonGameState.currentRound, opponent, home, gf, ga, scorers:makeMatchScorers(gf,ga)};
     seasonGameState.widzewResults.push(match);
     updateTopScorersFromMatch(match);
+
+    if (checkCoachDismissal()) {
+        renderPlayableSeason();
+        return;
+    }
+
     renderPlayableSeason();
 }
 function simulateWholeSeason() {
@@ -2141,6 +2267,8 @@ function renderFinalSeason() {
     }
     if (actions) actions.innerHTML = `<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
 
+    if (window.__widzewGameMode === "coach" && checkCoachDismissal()) return;
+
     // W trybie GRACZ wynik punktowy pojawia się po zamknięciu
     // okna "Wesprzyj twórcę". Tryb TRENER pozostaje bez punktacji.
     window.__playerScorePending = window.__widzewGameMode === "player";
@@ -2159,6 +2287,7 @@ async function initSeasonMode(mode) {
     seasonGameState.scorers={};
     seasonGameState.generatedResults={};
     window.__playerScorePending = false;
+    window.__coachDismissed = false;
     seasonGameState.widzewFixtures=[];
     const loading=document.getElementById("seasonLoading");
     const content=document.getElementById("seasonBoardContent");
