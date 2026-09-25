@@ -241,12 +241,118 @@ function formatSquadValue(value) {
     });
     document.getElementById("closeSupportModal").addEventListener("click", () => {
         supportModal.classList.add("hidden");
+        if (playerScorePending) {
+            playerScorePending = false;
+            setTimeout(() => showPlayerSeasonScore(), 100);
+        }
     });
 
     // Pokazuj dokładnie to samo okno również po zakończeniu sezonu.
     window.showSupportCreatorModal = () => {
         supportModal.classList.remove("hidden");
     };
+
+    let playerScorePending = false;
+
+    function calculatePlayerSeasonScore() {
+        const selectedPlayers = Array.isArray(draft?.selected) ? draft.selected : [];
+        const playerRating = selectedPlayers.reduce((sum, player) => {
+            return sum + Number(effectiveOverall(player) || 0);
+        }, 0);
+
+        const teamScores = getTeamScores();
+        const teamOverall = roundScore(teamScores.overall);
+
+        const goalsFor = seasonGameState.widzewResults.reduce((sum, match) => sum + Number(match.gf || 0), 0);
+        const goalsAgainst = seasonGameState.widzewResults.reduce((sum, match) => sum + Number(match.ga || 0), 0);
+        const points = seasonGameState.widzewResults.reduce((sum, match) => {
+            const gf = Number(match.gf || 0);
+            const ga = Number(match.ga || 0);
+            return sum + (gf > ga ? 3 : gf === ga ? 1 : 0);
+        }, 0);
+        const wins = seasonGameState.widzewResults.filter(match =>
+            Number(match.gf || 0) > Number(match.ga || 0)
+        ).length;
+
+        const finalRound = seasonGameState.widzewFixtures.length
+            ? Math.max(...seasonGameState.widzewFixtures.map(f => Number(f.kolejka) || 0))
+            : 34;
+        const standings = buildStandings(finalRound);
+        const widzewRow = standings.find(row => row.name === "Widzew Łódź");
+        const tablePosition = widzewRow ? standings.indexOf(widzewRow) + 1 : 18;
+
+        const placePoints = {
+            1: 100, 2: 75, 3: 50, 4: 25, 5: 20, 6: 18, 7: 15, 8: 12,
+            9: 10, 10: 7, 11: 5, 12: 4, 13: 3, 14: 2, 15: 1,
+            16: -25, 17: -50, 18: -100
+        };
+
+        const components = {
+            playerRating,
+            teamOverall,
+            goalsFor: goalsFor * 5,
+            goalsAgainst: goalsAgainst * -5,
+            points: points * 10,
+            wins: wins * 3,
+            tablePosition: placePoints[tablePosition] ?? 0
+        };
+
+        return {
+            playerName: draft.playerName || playerName,
+            formation: selectedFormation || draft.formation?.["Formacje"] || "",
+            ...components,
+            total: Math.round(
+                components.playerRating +
+                components.teamOverall +
+                components.goalsFor +
+                components.goalsAgainst +
+                components.points +
+                components.wins +
+                components.tablePosition
+            ),
+            goalsFor,
+            goalsAgainst,
+            points,
+            wins,
+            tablePosition
+        };
+    }
+
+    function showPlayerSeasonScore() {
+        if (window.__widzewGameMode !== "player") return;
+
+        const modal = document.getElementById("playerScoreModal");
+        const content = document.getElementById("playerScoreContent");
+        if (!modal || !content) return;
+
+        const score = calculatePlayerSeasonScore();
+        const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+        }[c]));
+
+        const placeBonus = score.tablePosition >= 16 ? score.tablePosition : "+" + score.tablePosition;
+
+        content.innerHTML =
+            "<h2>Wynik sezonu</h2>" +
+            "<p class='player-score-name'><strong>" + safe(score.playerName) + "</strong></p>" +
+            "<p class='player-score-formation'>Formacja: <strong>" + safe(score.formation) + "</strong></p>" +
+            "<div class='player-score-total'><span>TWÓJ WYNIK</span><strong>" + score.total + " PKT</strong></div>" +
+            "<div class='player-score-breakdown'>" +
+                "<div><span>Ocena zawodników</span><strong>+" + score.playerRating + "</strong></div>" +
+                "<div><span>Ocena końcowa zespołu</span><strong>+" + score.teamOverall + "</strong></div>" +
+                "<div><span>Zdobyte gole (" + score.goalsFor + ")</span><strong>+" + (score.goalsFor * 5) + "</strong></div>" +
+                "<div><span>Stracone gole (" + score.goalsAgainst + ")</span><strong>" + (score.goalsAgainst * -5) + "</strong></div>" +
+                "<div><span>Zdobyte punkty (" + score.points + ")</span><strong>+" + (score.points * 10) + "</strong></div>" +
+                "<div><span>Zwycięstwa (" + score.wins + ")</span><strong>+" + (score.wins * 3) + "</strong></div>" +
+                "<div><span>Miejsce w tabeli (" + score.tablePosition + ".)</span><strong>" + placeBonus + "</strong></div>" +
+            "</div>";
+        modal.classList.remove("hidden");
+    }
+
+    document.getElementById("closePlayerScoreModal")?.addEventListener("click", () => {
+        document.getElementById("playerScoreModal")?.classList.add("hidden");
+        playerScorePending = false;
+    });
 
     // TRAINER DATABASE
     async function loadTrainerDatabase() {
@@ -2032,8 +2138,9 @@ function renderFinalSeason() {
     }
     if (actions) actions.innerHTML = `<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
 
-    // Po podsumowaniu sezonu pokazujemy to samo okno wsparcia,
-    // które jest dostępne z ekranu startowego.
+    // W trybie GRACZ wynik punktowy pojawia się po zamknięciu
+    // okna "Wesprzyj twórcę". Tryb TRENER pozostaje bez punktacji.
+    playerScorePending = window.__widzewGameMode === "player";
     setTimeout(() => {
         window.showSupportCreatorModal?.();
     }, 300);
@@ -2048,6 +2155,7 @@ async function initSeasonMode(mode) {
     seasonGameState.widzewResults=[];
     seasonGameState.scorers={};
     seasonGameState.generatedResults={};
+    playerScorePending = false;
     seasonGameState.widzewFixtures=[];
     const loading=document.getElementById("seasonLoading");
     const content=document.getElementById("seasonBoardContent");
