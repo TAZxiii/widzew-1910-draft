@@ -2102,6 +2102,74 @@ h1 span {
 .final-season{margin-top:2px;font-size:13px;opacity:.75;text-align:center;}
 
 
+/* ===== WYNIK SEZONU – tryb GRACZ ===== */
+.player-score-card {
+    width: min(560px, 92vw);
+    max-height: 88vh;
+    overflow-y: auto;
+}
+
+.player-score-name,
+.player-score-formation {
+    text-align: center;
+    margin: 6px 0;
+}
+
+.player-score-name {
+    font-size: 22px;
+}
+
+.player-score-formation {
+    color: #aaa;
+}
+
+.player-score-total {
+    margin: 22px auto 18px;
+    padding: 16px;
+    border: 1px solid rgba(255,255,255,.14);
+    border-radius: 12px;
+    background: rgba(255,255,255,.04);
+    text-align: center;
+}
+
+.player-score-total span {
+    display: block;
+    color: #aaa;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .08em;
+}
+
+.player-score-total strong {
+    display: block;
+    margin-top: 5px;
+    font-size: 34px;
+    font-weight: 900;
+}
+
+.player-score-breakdown {
+    display: grid;
+    gap: 8px;
+}
+
+.player-score-breakdown > div {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.player-score-breakdown span {
+    color: #aaa;
+}
+
+.player-score-breakdown strong {
+    white-space: nowrap;
+    font-size: 17px;
+}
+
 /* ===== SEZON – ekran startowy rozgrywek ===== */
 .season-screen {
     min-height: 100vh;
