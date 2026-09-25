@@ -2483,4 +2483,33 @@ h1 span {
     .draft-action {
         margin-top: 15px;
     }
+
+    /* Poziom trudności: mniejsze karty/przyciski na mobile */
+    .difficulty-content {
+        padding-top: 40px;
+    }
+
+    .difficulty-grid {
+        margin: 20px auto 16px;
+        gap: 12px;
+    }
+
+    .difficulty-card {
+        min-height: 180px;
+        padding: 20px;
+        gap: 10px;
+    }
+
+    .difficulty-title {
+        font-size: 26px;
+    }
+
+    .difficulty-description {
+        font-size: 14px;
+        line-height: 1.35;
+    }
+
+    .difficulty-selection {
+        margin: 5px auto 14px;
+    }
 }
