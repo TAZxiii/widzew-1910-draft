@@ -2080,6 +2080,7 @@ function checkCoachDismissal() {
     showCoachDismissal(status);
     return true;
 }
+window.checkCoachDismissal = checkCoachDismissal;
 
 document.getElementById("closeCoachDismissalModal")?.addEventListener("click", () => {
     document.getElementById("coachDismissalModal")?.classList.add("hidden");
