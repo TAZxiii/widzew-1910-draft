@@ -2545,3 +2545,27 @@ h1 span {
         box-sizing: border-box;
     }
 }
+
+/* Mobile: pełne wycentrowanie zawartości ekranu sezonu */
+@media (max-width: 600px) {
+    .season-screen {
+        padding-left: 0;
+        padding-right: 0;
+    }
+
+    .season-content {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .season-board,
+    .season-board-grid,
+    .league-table-panel,
+    .round-panel {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
