@@ -2512,4 +2512,36 @@ h1 span {
     .difficulty-selection {
         margin: 5px auto 14px;
     }
+
+    /* Ekran wyboru składu: pełne wycentrowanie na szerokości iframe */
+    #candidateGrid {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    #candidateGrid .final-layout {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+        margin-left: auto;
+        margin-right: auto;
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    #candidateGrid .final-pitch-panel,
+    #candidateGrid .final-list-panel {
+        width: 100%;
+        max-width: none;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    #candidateGrid .final-panel-heading {
+        width: 100%;
+        box-sizing: border-box;
+    }
 }
