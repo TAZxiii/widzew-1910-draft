@@ -2637,3 +2637,34 @@ h1 span {
         box-sizing: border-box;
     }
 }
+
+/* ===== ZWOLNIENIE TRENERA ===== */
+.coach-dismissal-card {
+    width: min(620px, 92vw);
+    max-height: 90vh;
+    overflow-y: auto;
+    text-align: center;
+}
+
+.coach-dismissal-image {
+    display: block;
+    width: min(100%, 560px);
+    max-height: 55vh;
+    object-fit: contain;
+    margin: 0 auto 18px;
+}
+
+.coach-dismissal-card h2 {
+    margin-top: 8px;
+    font-size: 30px;
+}
+
+.coach-dismissal-card p {
+    line-height: 1.5;
+}
+
+.coach-dismissal-end {
+    margin-top: 20px;
+    font-weight: 800;
+    letter-spacing: .04em;
+}
