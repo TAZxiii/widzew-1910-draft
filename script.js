@@ -241,8 +241,8 @@ function formatSquadValue(value) {
     });
     document.getElementById("closeSupportModal").addEventListener("click", () => {
         supportModal.classList.add("hidden");
-        if (playerScorePending) {
-            playerScorePending = false;
+        if (window.__playerScorePending) {
+            window.__playerScorePending = false;
             setTimeout(() => showPlayerSeasonScore(), 100);
         }
     });
@@ -251,8 +251,6 @@ function formatSquadValue(value) {
     window.showSupportCreatorModal = () => {
         supportModal.classList.remove("hidden");
     };
-
-    let playerScorePending = false;
 
     function calculatePlayerSeasonScore() {
         const selectedPlayers = Array.isArray(draft?.selected) ? draft.selected : [];
@@ -356,7 +354,7 @@ function formatSquadValue(value) {
 
     document.getElementById("closePlayerScoreModal")?.addEventListener("click", () => {
         document.getElementById("playerScoreModal")?.classList.add("hidden");
-        playerScorePending = false;
+        window.__playerScorePending = false;
     });
 
     // TRAINER DATABASE
@@ -2145,7 +2143,7 @@ function renderFinalSeason() {
 
     // W trybie GRACZ wynik punktowy pojawia się po zamknięciu
     // okna "Wesprzyj twórcę". Tryb TRENER pozostaje bez punktacji.
-    playerScorePending = window.__widzewGameMode === "player";
+    window.__playerScorePending = window.__widzewGameMode === "player";
     setTimeout(() => {
         window.showSupportCreatorModal?.();
     }, 300);
@@ -2160,7 +2158,7 @@ async function initSeasonMode(mode) {
     seasonGameState.widzewResults=[];
     seasonGameState.scorers={};
     seasonGameState.generatedResults={};
-    playerScorePending = false;
+    window.__playerScorePending = false;
     seasonGameState.widzewFixtures=[];
     const loading=document.getElementById("seasonLoading");
     const content=document.getElementById("seasonBoardContent");
