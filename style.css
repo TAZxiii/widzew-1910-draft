@@ -2424,6 +2424,7 @@ h1 span {
     .player-welcome-card {
         width: 94vw;
         padding: 22px 14px 18px;
+        transform: translateX(-12px);
     }
     .player-welcome-card img {
         max-height: 48vh;
