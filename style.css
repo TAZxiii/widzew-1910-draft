@@ -2664,6 +2664,14 @@ h1 span {
     }
 }
 
+/* Mobile: wycentrowanie okien wsparcia i wyniku sezonu w iframe */
+@media (max-width: 600px) {
+    #supportCreatorModal .modal-card,
+    #playerScoreModal .player-score-card {
+        transform: translateX(-10px);
+    }
+}
+
 /* ===== ZWOLNIENIE TRENERA ===== */
 .coach-dismissal-card {
     width: min(620px, 92vw);
