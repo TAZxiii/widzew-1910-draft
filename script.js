@@ -295,6 +295,10 @@ function formatSquadValue(value) {
             16: -25, 17: -50, 18: -100
         };
 
+        const playedMatchCount = Number(seasonGameState.playedMatchCount || 0);
+        const simulatedMatchCount = Number(seasonGameState.simulatedMatchCount || 0);
+        const matchBonus = playedMatchCount * 5 + simulatedMatchCount * 1;
+
         const components = {
             playerRating,
             teamOverall,
@@ -302,6 +306,7 @@ function formatSquadValue(value) {
             goalsAgainstPoints: goalsAgainst * -5,
             pointsPoints: points * 10,
             winsPoints: wins * 3,
+            matchBonus,
             tablePosition: placePoints[tablePosition] ?? 0
         };
 
@@ -316,12 +321,16 @@ function formatSquadValue(value) {
                 components.goalsAgainstPoints +
                 components.pointsPoints +
                 components.winsPoints +
+                components.matchBonus +
                 components.tablePosition
             ),
             goalsFor,
             goalsAgainst,
             points,
             wins,
+            playedMatchCount,
+            simulatedMatchCount,
+            matchBonus,
             goalsForPoints: components.goalsForPoints,
             goalsAgainstPoints: components.goalsAgainstPoints,
             pointsPoints: components.pointsPoints,
@@ -356,6 +365,7 @@ function formatSquadValue(value) {
                 "<div><span>Miejsce w tabeli (" + score.tablePosition + ".)</span><strong>" + placeBonus + "</strong></div>" +
                 "<div><span>Zdobyte punkty (+10 za każdy zdobyty punkt) (" + score.points + ")</span><strong>+" + score.pointsPoints + "</strong></div>" +
                 "<div><span>Zwycięstwa (+3 za każde zwycięstwo) (" + score.wins + ")</span><strong>+" + score.winsPoints + "</strong></div>" +
+                "<div><span>Premia za rozegrane spotkania (" + score.playedMatchCount + " × 5, " + score.simulatedMatchCount + " × 1)</span><strong>+" + score.matchBonus + "</strong></div>" +
                 "<div><span>Zdobyte gole (+5 za każdą strzeloną bramkę) (" + score.goalsFor + ")</span><strong>+" + score.goalsForPoints + "</strong></div>" +
                 "<div><span>Stracone gole (-5 za każdą straconą bramkę) (" + score.goalsAgainst + ")</span><strong>" + score.goalsAgainstPoints + "</strong></div>" +
             "</div>";
@@ -1531,6 +1541,8 @@ const seasonGameState = {
     teams: [],
     results: [],
     widzewResults: [],
+    playedMatchCount: 0,
+    simulatedMatchCount: 0,
     // Wyniki innych drużyn, które nie są jeszcze wpisane do CSV.
     // Są losowane tylko raz na dany mecz podczas bieżącego sezonu.
     generatedResults: {},
@@ -2297,6 +2309,8 @@ async function initSeasonMode(mode) {
     seasonGameState.mode=mode;
     seasonGameState.currentRound=1;
     seasonGameState.widzewResults=[];
+    seasonGameState.playedMatchCount=0;
+    seasonGameState.simulatedMatchCount=0;
     seasonGameState.scorers={};
     seasonGameState.generatedResults={};
     window.__playerScorePending = false;
