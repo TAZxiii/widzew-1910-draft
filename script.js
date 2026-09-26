@@ -227,6 +227,15 @@ function formatSquadValue(value) {
     document.getElementById("howToPlay").addEventListener("click", () => {
         modal.classList.remove("hidden");
     });
+
+    // CHANGE LOG
+    const changeLogModal = document.getElementById("changeLogModal");
+    document.getElementById("changeLog")?.addEventListener("click", () => {
+        changeLogModal?.classList.remove("hidden");
+    });
+    document.getElementById("closeChangeLog")?.addEventListener("click", () => {
+        changeLogModal?.classList.add("hidden");
+    });
     document.getElementById("closeModal").addEventListener("click", () => {
         modal.classList.add("hidden");
     });
