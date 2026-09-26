@@ -2170,6 +2170,7 @@ function simulateCurrentWidzewMatch() {
     const gf=home?score[0]:score[1], ga=home?score[1]:score[0];
     const match={round:seasonGameState.currentRound, opponent, home, gf, ga, scorers:makeMatchScorers(gf,ga)};
     seasonGameState.widzewResults.push(match);
+    seasonGameState.simulatedMatchCount = Number(seasonGameState.simulatedMatchCount || 0) + 1;
     updateTopScorersFromMatch(match);
 
     if (checkCoachDismissal()) {
