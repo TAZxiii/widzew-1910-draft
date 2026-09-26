@@ -462,9 +462,28 @@
     }
 
     function chooseOfShare(input, rng) {
-        // The exact ETAP A split coefficients were not separately fixed in the design.
-        // Keep a neutral 50/50 split here until the approved coefficients are supplied.
-        return 0.5;
+        // Podział podstawowych sekwencji OF/DEF.
+        // Baza: 50% OF.
+        // Overall Widzewa względem rywala: maks. +/-12 pp.
+        // Siła trenera: coachStrength * 5 pp.
+        // Miejsce meczu: +5 pp u siebie, -5 pp na wyjeździe.
+        // Charakter rywala nie wpływa na OF/DEF — wpływa wyłącznie na liczbę wydarzeń.
+        const widzewOverall = Number(input.widzew?.overall ?? 65);
+        const opponentOverall = Number(input.opponent?.overall ?? 65);
+        const overallDiff = clamp(widzewOverall - opponentOverall, -20, 20);
+
+        const coachStrength = Number(input.coachStrength ?? input.coach?.strength ?? 0);
+        const overallMod = clamp(overallDiff * (12 / 20), -12, 12);
+        const coachMod = coachStrength * 5;
+        const locationMod = input.home ? 5 : -5;
+
+        const ofPercent = clamp(
+            50 + overallMod + coachMod + locationMod,
+            25,
+            75
+        );
+
+        return ofPercent / 100;
     }
 
     function generateEventSides(count, ofShare, rng) {
