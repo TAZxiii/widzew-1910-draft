@@ -2067,16 +2067,6 @@ function checkCoachDismissal() {
     const status = getCoachDismissalStatus();
     if (!status) return false;
 
-    // Czubak 24/25: sprawdzamy dokładnie po trzecim meczu jego kadencji.
-    if (Number(status.coachId) === 5 && status.rule.type === "coachPoints") {
-        const startRound = Math.max(1, Number(selectedTrainer.startRound) || 1);
-        const coachMatches = seasonGameState.widzewResults
-            .filter(match => Number(match.round) >= startRound)
-            .sort((a, b) => Number(a.round) - Number(b.round));
-
-        if (coachMatches.length !== 3) return false;
-    }
-
     showCoachDismissal(status);
     return true;
 }
