@@ -263,9 +263,10 @@ function formatSquadValue(value) {
 
     function calculatePlayerSeasonScore() {
         const selectedPlayers = Array.isArray(draft?.selected) ? draft.selected : [];
-        const playerRating = selectedPlayers.reduce((sum, player) => {
+        const playerRatingBase = selectedPlayers.reduce((sum, player) => {
             return sum + Number(effectiveOverall(player) || 0);
         }, 0);
+        const playerRating = playerRatingBase * (draft?.difficulty === "hard" ? 2 : 1);
 
         const teamScores = getTeamScores();
         const teamOverall = roundScore(teamScores.overall);
