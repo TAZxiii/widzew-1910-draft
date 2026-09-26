@@ -48,11 +48,6 @@
         // Zapisz rozegrany mecz do stabilnej bazy natychmiast, zanim użytkownik przejdzie dalej.
         // Dzięki temu wynik/strzelcy z trybu „Zagraj mecz” nie mogą zostać zastąpieni symulacją.
         if(typeof window.storePlayedMatch==="function") window.storePlayedMatch(result);if(typeof window.recordSeasonMatchScorers==="function") window.recordSeasonMatchScorers(result);
-        const coachDismissed = typeof window.checkCoachDismissal === "function" && window.checkCoachDismissal();
-        if (coachDismissed) {
-          close();
-          return;
-        }
         try{if(typeof window.renderPlayableSeason==='function')window.renderPlayableSeason()}catch(e){console.warn('Nie udało się odświeżyć wyników/tabeli:',e)}try{if(typeof window.renderLeagueTable==='function')window.renderLeagueTable(round,false)}catch(e){console.warn('Nie udało się odświeżyć tabeli:',e)}try{if(typeof window.renderTopScorers==='function')window.renderTopScorers()}catch(e){console.warn('Nie udało się odświeżyć klasyfikacji strzelców:',e)}}}
   function startCurrentEvent(){if(match.planIndex>=match.plan.length){if(match.half===1){runClockTo(match.firstHalfEnd||45,showHalftime)}else if(match.clockMinute<(match.secondHalfEnd||90)){runClockTo(match.secondHalfEnd||90,finishMatch)}else finishMatch();return}const planned=match.plan[match.planIndex];if(match.half===1&&planned.minute>45){runClockTo(match.firstHalfEnd||45,showHalftime);return}if(match.clockMinute<planned.minute){setText('wsm-event','');setText('wsm-meta','');document.getElementById('wsm-actions').innerHTML='';document.getElementById('wsm-player-choice').innerHTML='';runClockTo(planned.minute,()=>startCurrentEvent());return}match.current={...planned};match.minute=planned.minute;match.player=selectActor();match.receiver=null;match.lastActionPlayer=null;match.shotPlayer=null;match.k={eventGroup:null,repeatCount:0,k:0};match.selectedEvent3Player=null;match.selectedEvent4Player=null;match.selectedEvent7Player=null;renderScore();renderActions();feed('Początek sekwencji: '+eventText(match.current),match.minute);setText('wsm-status','Wybierz akcję.')}
   function advance(){match.planIndex++;startCurrentEvent()}
