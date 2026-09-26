@@ -33,7 +33,16 @@
   function regularMinute(){const b=[{a:1,b:15,w:12.70},{a:16,b:30,w:13.90},{a:31,b:45,w:15.89},{a:46,b:60,w:16.20},{a:61,b:75,w:15.13},{a:76,b:90,w:15.89}];let t=b.reduce((s,x)=>s+x.w,0),r=Math.random()*t;for(const x of b){r-=x.w;if(r<0)return x.a+Math.floor(Math.random()*(x.b-x.a+1))}return 90}
   function eventZ(id){const n=Number(id);if([3,7,103,107,10,110].includes(n))return null;const first={1:'1.1',2:'2.1',4:'4.1',5:'5.1',6:'6.1',8:'8.1',101:'101.1',102:'102.1',104:'104.1',105:'105.1',106:'106.1',108:'108.1'}[n];return first?window.WidzewSeasonMatchEngine.chooseZ(n,first,Math.random):null}
   function pickEvent(side){const w=window.WidzewSeasonMatchEngine.constants.EVENT_WEIGHTS[side],items=Object.entries(w).map(([value,weight])=>({value:Number(value),weight}));return window.WidzewSeasonMatchEngine.weightedPick(items,Math.random).value}
-  function buildPlan(input){const probe=window.WidzewSeasonMatchEngine.generateMatch(input),sides=[];for(let i=0;i<probe.totalEvents;i++)sides.push(Math.random()<.5?'OF':'DEF');return sides.map((s,i)=>{const id=pickEvent(s);return{minute:regularMinute(),eventId:id,z:eventZ(id),side:s,index:i}}).sort((a,b)=>a.minute-b.minute)}
+  function buildPlan(input){
+    const probe=window.WidzewSeasonMatchEngine.generateMatch(input);
+    const sides=window.WidzewSeasonMatchEngine.generateEventSides
+      ? window.WidzewSeasonMatchEngine.generateEventSides(probe.totalEvents,probe.ofShare,Math.random)
+      : (()=>{const ofCount=Math.round(probe.totalEvents*probe.ofShare);const a=[];for(let i=0;i<probe.totalEvents;i++)a.push(i<ofCount?'OF':'DEF');for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a})();
+    return sides.map((s,i)=>{
+      const id=pickEvent(s);
+      return{minute:regularMinute(),eventId:id,z:eventZ(id),side:s,index:i};
+    }).sort((a,b)=>a.minute-b.minute);
+  }
   function selectActor(){return randomOutfieldPlayer()}
   function selectReceiver(actor){const p=match.xi.filter(x=>!x.isGoalkeeper&&x!==actor);return p.length?p[Math.floor(Math.random()*p.length)]:actor}
   function chooseActorForAction(id){const type=actionData(id).type;const eventId=Number(match.current.eventId);if([3,4,7].includes(eventId)){const selected=match[`selectedEvent${eventId}Player`];if(selected)return selected;}if(type==='pass'||type==='cross')return match.player||selectActor();return match.player||selectActor()}
