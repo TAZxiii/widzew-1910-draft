@@ -146,6 +146,31 @@ function formatSquadValue(value) {
         return parseCSV(await response.text());
     }
 
+    // LICZNIK URUCHOMIEŃ GRY
+    // Jedno załadowanie strony = jedno uruchomienie.
+    // Licznik działa również wtedy, gdy gra jest osadzona przez iframe.
+    async function registerGameLaunch() {
+        const counter = document.getElementById("gameLaunchCounter");
+        if (!counter || window.__gameLaunchRegistered) return;
+        window.__gameLaunchRegistered = true;
+
+        try {
+            const response = await fetch("https://counterapi.com/api/widzew1910draft/launch/game", {
+                cache: "no-store"
+            });
+            if (!response.ok) throw new Error("HTTP " + response.status);
+            const data = await response.json();
+            const value = Number(data?.value);
+            if (!Number.isFinite(value)) throw new Error("Nieprawidłowa wartość licznika");
+            counter.textContent = "Uruchomienia gry: " + value.toLocaleString("pl-PL");
+        } catch (error) {
+            console.warn("Nie udało się zaktualizować licznika uruchomień:", error);
+            counter.textContent = "";
+        }
+    }
+
+    registerGameLaunch();
+
     // START
     document.getElementById("startGame").addEventListener("click", () => {
         showScreen(modeScreen);
