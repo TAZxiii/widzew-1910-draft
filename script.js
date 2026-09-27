@@ -147,29 +147,21 @@ function formatSquadValue(value) {
     }
 
     // LICZNIK URUCHOMIEŃ GRY
-    // Każde załadowanie strony zapisujemy jako osobne zdarzenie.
-    // Używamy unikalnego klucza, aby CounterAPI nie filtrowało kolejnych
-    // uruchomień jako duplikatów. Następnie odczytujemy sumę wszystkich zdarzeń.
+    // Każde załadowanie strony = jedno uruchomienie.
+    // Używamy prostego licznika zdarzeń bez filtrowania powtórnych wejść.
     async function registerGameLaunch() {
         const counter = document.getElementById("gameLaunchCounter");
         if (!counter || window.__gameLaunchRegistered) return;
         window.__gameLaunchRegistered = true;
 
         try {
-            const launchKey = "game-" + Date.now() + "-" + Math.random().toString(36).slice(2);
-            const incrementResponse = await fetch(
-                "https://counterapi.com/api/widzew1910draft/launch/" + encodeURIComponent(launchKey),
+            const response = await fetch(
+                "https://countapi.mileshilliard.com/api/v1/hit/widzew-1910-draft-launch",
                 { cache: "no-store" }
             );
-            if (!incrementResponse.ok) throw new Error("HTTP " + incrementResponse.status);
+            if (!response.ok) throw new Error("HTTP " + response.status);
 
-            const totalResponse = await fetch(
-                "https://counterapi.com/api/widzew1910draft/launch/any?readOnly=true",
-                { cache: "no-store" }
-            );
-            if (!totalResponse.ok) throw new Error("HTTP " + totalResponse.status);
-
-            const data = await totalResponse.json();
+            const data = await response.json();
             const value = Number(data?.value);
             if (!Number.isFinite(value)) throw new Error("Nieprawidłowa wartość licznika");
 
