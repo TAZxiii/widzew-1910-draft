@@ -2733,3 +2733,12 @@ h1 span {
     font-weight: 800;
     letter-spacing: .04em;
 }
+
+
+.game-launch-counter {
+    margin: -18px auto 26px;
+    color: #888;
+    font-size: 12px;
+    letter-spacing: .4px;
+    min-height: 18px;
+}
