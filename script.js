@@ -147,21 +147,32 @@ function formatSquadValue(value) {
     }
 
     // LICZNIK URUCHOMIEŃ GRY
-    // Jedno załadowanie strony = jedno uruchomienie.
-    // Licznik działa również wtedy, gdy gra jest osadzona przez iframe.
+    // Każde załadowanie strony zapisujemy jako osobne zdarzenie.
+    // Używamy unikalnego klucza, aby CounterAPI nie filtrowało kolejnych
+    // uruchomień jako duplikatów. Następnie odczytujemy sumę wszystkich zdarzeń.
     async function registerGameLaunch() {
         const counter = document.getElementById("gameLaunchCounter");
         if (!counter || window.__gameLaunchRegistered) return;
         window.__gameLaunchRegistered = true;
 
         try {
-            const response = await fetch("https://counterapi.com/api/widzew1910draft/launch/game", {
-                cache: "no-store"
-            });
-            if (!response.ok) throw new Error("HTTP " + response.status);
-            const data = await response.json();
+            const launchKey = "game-" + Date.now() + "-" + Math.random().toString(36).slice(2);
+            const incrementResponse = await fetch(
+                "https://counterapi.com/api/widzew1910draft/launch/" + encodeURIComponent(launchKey),
+                { cache: "no-store" }
+            );
+            if (!incrementResponse.ok) throw new Error("HTTP " + incrementResponse.status);
+
+            const totalResponse = await fetch(
+                "https://counterapi.com/api/widzew1910draft/launch/any?readOnly=true",
+                { cache: "no-store" }
+            );
+            if (!totalResponse.ok) throw new Error("HTTP " + totalResponse.status);
+
+            const data = await totalResponse.json();
             const value = Number(data?.value);
             if (!Number.isFinite(value)) throw new Error("Nieprawidłowa wartość licznika");
+
             counter.textContent = "Uruchomienia gry: " + value.toLocaleString("pl-PL");
         } catch (error) {
             console.warn("Nie udało się zaktualizować licznika uruchomień:", error);
