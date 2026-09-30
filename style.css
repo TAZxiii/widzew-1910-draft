@@ -261,17 +261,23 @@ h1 span {
 }
 
 .mode-title {
-    width: min(300px, 100%);
-    min-height: 64px;
-    padding: 0 28px;
+    width: min(320px, 100%);
+    height: 82px;
+    min-height: 82px;
+    padding: 8px 16px;
     border: 0;
     border-radius: 10px;
     background: var(--red);
     color: var(--white);
-    font-size: clamp(26px, 3vw, 38px);
+    font-size: clamp(24px, 2.7vw, 34px);
+    line-height: 1.15;
     font-weight: 900;
     letter-spacing: 1px;
     cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     transition: transform 0.2s ease, filter 0.2s ease;
 }
 
@@ -2366,7 +2372,9 @@ h1 span {
     height: 190px;
     object-fit: contain;
     z-index: 2;
-    pointer-events: none;
+    pointer-events: auto;
+    cursor: pointer;
+    touch-action: manipulation;
 }
 
 @media (max-width: 600px) {

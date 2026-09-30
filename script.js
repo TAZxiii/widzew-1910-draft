@@ -45,6 +45,470 @@ function parseCSV(text) {
 
 document.addEventListener("DOMContentLoaded", () => {
 
+    // MUZYKA MENU
+    // Natywna redukcja głośności muzyki menu — suwak użytkownika działa dodatkowo.
+    const MENU_MUSIC_NATIVE_VOLUME = 0.1;
+    // Startuje po pierwszej reakcji użytkownika na stronę.
+    // Działa we wszystkich trybach poza interaktywnym „Rozegraj mecz”.
+    const gameMusic = {
+        excluded: false,
+        started: false,
+        audio: null,
+        candidates: Array.from({ length: 5 }, (_, i) => `data/sound/menu/${i + 2}.mp3`),
+        specialTrack: "data/sound/menu/1.mp3",
+        specialUnlocked: false,
+
+        async start() {
+            if (this.excluded || this.started) return;
+            this.started = true;
+
+            const candidates = this.specialUnlocked ? [this.specialTrack] : [...this.candidates];
+            while (candidates.length) {
+                const index = Math.floor(Math.random() * candidates.length);
+                const path = candidates.splice(index, 1)[0];
+                const audio = new Audio(path);
+                audio.loop = true;
+                audio.volume = gameMusic.volume;
+
+                try {
+                    await audio.play();
+                    this.audio = audio;
+                    return;
+                } catch (error) {
+                    audio.pause();
+                }
+            }
+
+            this.started = false;
+        },
+
+        async playSpecial() {
+            if (this.excluded) return;
+            this.stop();
+            this.specialUnlocked = true;
+
+            const audio = new Audio(this.specialTrack);
+            audio.loop = true;
+            audio.volume = this.volume;
+
+            try {
+                await audio.play();
+                this.audio = audio;
+                this.started = true;
+            } catch (error) {
+                audio.pause();
+                this.started = false;
+            }
+        },
+
+        stop() {
+            if (this.audio) {
+                this.audio.pause();
+                this.audio.currentTime = 0;
+                this.audio = null;
+            }
+            this.started = false;
+        },
+
+        setExcluded(value) {
+            this.excluded = Boolean(value);
+            if (this.excluded) this.stop();
+            else if (this.started === false) this.start();
+        }
+    };
+
+    const audioSettings = {
+        musicEnabled: false,
+        musicVolume: Math.min(1, Math.max(0, Number(localStorage.getItem("widzewMusicVolume") ?? "0.35"))),
+        effectsEnabled: false,
+        effectsVolume: Math.min(1, Math.max(0, Number(localStorage.getItem("widzewEffectsVolume") ?? "0.7")))
+    };
+
+    gameMusic.setVolume = value => {
+        this;
+        const volume = Math.min(1, Math.max(0, Number(value) || 0));
+        gameMusic.volume = volume * MENU_MUSIC_NATIVE_VOLUME;
+        if (gameMusic.audio) gameMusic.audio.volume = gameMusic.volume;
+        localStorage.setItem("widzewMusicVolume", String(volume));
+    };
+
+    const originalStart = gameMusic.start.bind(gameMusic);
+    gameMusic.start = async () => {
+        if (!audioSettings.musicEnabled) return;
+        gameMusic.setVolume(audioSettings.musicVolume);
+        return originalStart();
+    };
+
+    const originalSetExcluded = gameMusic.setExcluded.bind(gameMusic);
+    gameMusic.setExcluded = value => originalSetExcluded(value);
+
+    gameMusic.volume = audioSettings.musicVolume * MENU_MUSIC_NATIVE_VOLUME;
+
+    // EASTER EGG: kod 1910 działa wyłącznie na ekranie głównym.
+    const easterEggSequence = ["1", "9", "1", "0"];
+    let easterEggProgress = [];
+    const easterEggModal = document.getElementById("musicEasterEggModal");
+    const closeEasterEggModal = document.getElementById("closeMusicEasterEgg");
+
+    const closeEasterEgg = () => easterEggModal?.classList.add("hidden");
+    closeEasterEggModal?.addEventListener("click", closeEasterEgg);
+    easterEggModal?.addEventListener("click", event => {
+        if (event.target === easterEggModal) closeEasterEgg();
+    });
+
+    document.addEventListener("keydown", event => {
+        const startScreen = document.querySelector(".start-screen");
+        if (!startScreen || startScreen.classList.contains("hidden")) {
+            easterEggProgress = [];
+            return;
+        }
+        if (event.ctrlKey || event.altKey || event.metaKey) return;
+        if (!["1", "9", "0"].includes(event.key)) return;
+
+        easterEggProgress.push(event.key);
+        if (easterEggProgress.length > easterEggSequence.length) {
+            easterEggProgress.shift();
+        }
+
+        if (easterEggProgress.join("") === easterEggSequence.join("")) {
+            easterEggProgress = [];
+            gameMusic.playSpecial();
+            easterEggModal?.classList.remove("hidden");
+        }
+    });
+
+    // MOBILE EASTER EGG: 4 kliknięcia logo WTM otwierają pole wpisania kodu.
+    const wtmLogo = document.querySelector(".wtm-start-logo");
+    const mobileCodeModal = document.getElementById("musicEasterEggCodeModal");
+    const mobileCodeInput = document.getElementById("musicEasterEggCodeInput");
+    const mobileCodeConfirm = document.getElementById("musicEasterEggCodeConfirm");
+    const mobileCodeClose = document.getElementById("closeMusicEasterEggCode");
+    let wtmTapCount = 0;
+    let wtmLastTap = 0;
+
+    const isMobileDevice = () => window.matchMedia("(pointer: coarse)").matches && window.innerWidth <= 900;
+
+    const openMobileCodeModal = () => {
+        if (!isMobileDevice()) return;
+        mobileCodeInput.value = "";
+        mobileCodeModal?.classList.remove("hidden");
+        setTimeout(() => mobileCodeInput?.focus(), 50);
+    };
+
+    const closeMobileCodeModal = () => mobileCodeModal?.classList.add("hidden");
+
+    const submitMobileCode = () => {
+        if (mobileCodeInput.value.trim() !== "1910") {
+            mobileCodeInput.value = "";
+            return;
+        }
+        closeMobileCodeModal();
+        gameMusic.playSpecial();
+        easterEggModal?.classList.remove("hidden");
+    };
+
+    wtmLogo?.addEventListener("click", () => {
+        if (!isMobileDevice()) return;
+        const now = Date.now();
+        if (now - wtmLastTap > 1400) wtmTapCount = 0;
+        wtmLastTap = now;
+        wtmTapCount++;
+        if (wtmTapCount === 4) {
+            wtmTapCount = 0;
+            openMobileCodeModal();
+        }
+    });
+
+    mobileCodeConfirm?.addEventListener("click", submitMobileCode);
+    mobileCodeInput?.addEventListener("keydown", event => {
+        if (event.key === "Enter") submitMobileCode();
+    });
+    mobileCodeClose?.addEventListener("click", closeMobileCodeModal);
+    mobileCodeModal?.addEventListener("click", event => {
+        if (event.target === mobileCodeModal) closeMobileCodeModal();
+    });
+
+    window.__widzewAudioSettings = audioSettings;
+    window.__widzewGameMusic = gameMusic;
+    window.setGameMusicExcluded = value => gameMusic.setExcluded(value);
+
+    // PANEL OPCJI DŹWIĘKU
+    const settingsStyle = document.createElement("style");
+    settingsStyle.textContent = `
+        #gameSettings {
+            position: fixed;
+            top: 18px;
+            left: 18px;
+            z-index: 100001;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        #gameSettingsButton {
+            width: 42px;
+            height: 42px;
+            border: 1px solid #444;
+            border-radius: 50%;
+            background: rgba(15,15,15,.94);
+            color: #fff;
+            font-size: 21px;
+            cursor: pointer;
+            box-shadow: 0 5px 18px rgba(0,0,0,.35);
+            display: grid;
+            place-items: center;
+            transition: transform .15s ease, border-color .15s ease;
+        }
+        #gameSettings:hover #gameSettingsButton,
+        #gameSettings.open #gameSettingsButton {
+            transform: rotate(35deg);
+            border-color: #e30613;
+        }
+        #gameSettingsPanel {
+            position: absolute;
+            top: 50px;
+            left: 0;
+            width: 310px;
+            padding: 20px;
+            border: 1px solid #3d3d3d;
+            border-radius: 14px;
+            background: rgba(18,18,18,.98);
+            box-shadow: 0 18px 50px rgba(0,0,0,.6);
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-6px);
+            transition: opacity .15s ease, transform .15s ease, visibility .15s;
+        }
+        #gameSettings:hover #gameSettingsPanel,
+        #gameSettings.open #gameSettingsPanel {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        #gameSettingsPanel h2 {
+            margin: 0 0 18px;
+            font-size: 21px;
+            color: #fff;
+        }
+        .game-setting-row {
+            padding: 13px 0;
+            border-top: 1px solid #292929;
+        }
+        .game-setting-row:first-of-type { border-top: 0; }
+        .game-setting-label {
+            display: flex;
+            justify-content: space-between;
+            gap: 10px;
+            align-items: center;
+            color: #eee;
+            font-size: 14px;
+            font-weight: 700;
+        }
+        .game-setting-range {
+            width: 100%;
+            margin-top: 10px;
+            accent-color: #e30613;
+            cursor: pointer;
+            touch-action: pan-x;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .game-setting-toggle {
+            width: 46px;
+            height: 24px;
+            border: 0;
+            border-radius: 20px;
+            background: #555;
+            position: relative;
+            cursor: pointer;
+            flex: 0 0 auto;
+        }
+        .game-setting-toggle::after {
+            content: "";
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            top: 3px;
+            left: 3px;
+            border-radius: 50%;
+            background: #fff;
+            transition: transform .15s ease;
+        }
+        .game-setting-toggle.active {
+            background: #e30613;
+        }
+        .game-setting-toggle.active::after {
+            transform: translateX(22px);
+        }
+        .game-setting-value {
+            color: #999;
+            font-size: 12px;
+            min-width: 42px;
+            text-align: right;
+        }
+        @media (max-width: 600px) {
+            #gameSettings { top: 10px; left: 10px; }
+            #gameSettingsPanel { width: min(310px, calc(100vw - 28px)); }
+        }
+    `;
+    document.head.appendChild(settingsStyle);
+
+    const settings = document.createElement("div");
+    settings.id = "gameSettings";
+    settings.innerHTML = `
+        <button id="gameSettingsButton" type="button" aria-label="Opcje dźwięku" title="Opcje dźwięku">⚙</button>
+        <div id="gameSettingsPanel">
+            <h2>Opcje</h2>
+            <div class="game-setting-row">
+                <div class="game-setting-label">
+                    <span>Motyw muzyczny</span>
+                    <button id="musicToggle" class="game-setting-toggle" type="button" aria-label="Włącz lub wyłącz motyw muzyczny"></button>
+                </div>
+            </div>
+            <div class="game-setting-row">
+                <div class="game-setting-label">
+                    <span>Głośność menu</span>
+                    <span id="musicVolumeValue" class="game-setting-value"></span>
+                </div>
+                <input id="musicVolume" class="game-setting-range" type="range" min="0" max="100" step="1">
+            </div>
+            <div class="game-setting-row">
+                <div class="game-setting-label">
+                    <span>Efekty dźwiękowe</span>
+                    <button id="effectsToggle" class="game-setting-toggle" type="button" aria-label="Włącz lub wyłącz efekty dźwiękowe"></button>
+                </div>
+            </div>
+            <div class="game-setting-row">
+                <div class="game-setting-label">
+                    <span>Głośność efektów</span>
+                    <span id="effectsVolumeValue" class="game-setting-value"></span>
+                </div>
+                <input id="effectsVolume" class="game-setting-range" type="range" min="0" max="100" step="1">
+            </div>
+        </div>
+    `;
+    document.body.appendChild(settings);
+
+    const musicToggle = document.getElementById("musicToggle");
+    const effectsToggle = document.getElementById("effectsToggle");
+    const musicVolume = document.getElementById("musicVolume");
+    const effectsVolume = document.getElementById("effectsVolume");
+    const musicVolumeValue = document.getElementById("musicVolumeValue");
+    const effectsVolumeValue = document.getElementById("effectsVolumeValue");
+
+    const refreshAudioSettingsUI = () => {
+        musicToggle.classList.toggle("active", audioSettings.musicEnabled);
+        effectsToggle.classList.toggle("active", audioSettings.effectsEnabled);
+        musicVolume.value = Math.round(audioSettings.musicVolume * 100);
+        effectsVolume.value = Math.round(audioSettings.effectsVolume * 100);
+        musicVolumeValue.textContent = musicVolume.value + "%";
+        effectsVolumeValue.textContent = effectsVolume.value + "%";
+    };
+
+    const toggleMusic = () => {
+        audioSettings.musicEnabled = !audioSettings.musicEnabled;
+        localStorage.setItem("widzewMusicEnabled", String(audioSettings.musicEnabled));
+        if (audioSettings.musicEnabled) gameMusic.start();
+        else gameMusic.stop();
+        refreshAudioSettingsUI();
+    };
+
+    const toggleEffects = () => {
+        audioSettings.effectsEnabled = !audioSettings.effectsEnabled;
+        localStorage.setItem("widzewEffectsEnabled", String(audioSettings.effectsEnabled));
+        if (window.__widzewCrowdAudio) window.__widzewCrowdAudio.setEnabled();
+        if (window.__widzewCrowdIntroAudio) window.__widzewCrowdIntroAudio.applyVolume();
+        if (window.__widzewCrowdGoalAudio) window.__widzewCrowdGoalAudio.applyVolume();
+        if (window.__widzewCrowdGoalFollowAudio) window.__widzewCrowdGoalFollowAudio.applyVolume();
+        if (window.__widzewCrowdFinalAudio) window.__widzewCrowdFinalAudio.applyVolume();
+        if (window.__widzewCrowdActionAudio) window.__widzewCrowdActionAudio.applyVolume();
+        refreshAudioSettingsUI();
+    };
+
+    // Na telefonach część przeglądarek potrafi pominąć/zmienić obsługę
+    // zwykłego clicka przy panelu ustawień. Obsługujemy więc także touchend
+    // i blokujemy następujący po nim syntetyczny click, aby nie przełączyć
+    // ustawienia dwa razy.
+    let suppressMusicClick = false;
+    let suppressEffectsClick = false;
+
+    musicToggle.addEventListener("click", event => {
+        event.stopPropagation();
+        if (suppressMusicClick) {
+            suppressMusicClick = false;
+            return;
+        }
+        toggleMusic();
+    });
+
+    effectsToggle.addEventListener("click", event => {
+        event.stopPropagation();
+        if (suppressEffectsClick) {
+            suppressEffectsClick = false;
+            return;
+        }
+        toggleEffects();
+    });
+
+    musicToggle.addEventListener("touchend", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressMusicClick = true;
+        toggleMusic();
+    }, {passive:false});
+
+    effectsToggle.addEventListener("touchend", event => {
+        event.preventDefault();
+        event.stopPropagation();
+        suppressEffectsClick = true;
+        toggleEffects();
+    }, {passive:false});
+
+    const applyMusicVolumeFromSlider = event => {
+        const value = Math.min(1, Math.max(0, Number(event.target.value) / 100));
+        audioSettings.musicVolume = value;
+        gameMusic.setVolume(value);
+        refreshAudioSettingsUI();
+    };
+
+    const applyEffectsVolumeFromSlider = event => {
+        const value = Math.min(1, Math.max(0, Number(event.target.value) / 100));
+        audioSettings.effectsVolume = value;
+        localStorage.setItem("widzewEffectsVolume", String(value));
+        if (window.__widzewCrowdAudio) window.__widzewCrowdAudio.setVolume();
+        if (window.__widzewCrowdIntroAudio) window.__widzewCrowdIntroAudio.applyVolume();
+        if (window.__widzewCrowdGoalAudio) window.__widzewCrowdGoalAudio.applyVolume();
+        if (window.__widzewCrowdGoalFollowAudio) window.__widzewCrowdGoalFollowAudio.applyVolume();
+        if (window.__widzewCrowdFinalAudio) window.__widzewCrowdFinalAudio.applyVolume();
+        if (window.__widzewCrowdActionAudio) window.__widzewCrowdActionAudio.applyVolume();
+        refreshAudioSettingsUI();
+    };
+
+    // input działa płynnie na komputerze i większości telefonów, a change
+    // zapewnia zastosowanie wartości także w przeglądarkach mobilnych,
+    // które aktualizują suwak dopiero po puszczeniu palca.
+    musicVolume.addEventListener("input", applyMusicVolumeFromSlider);
+    musicVolume.addEventListener("change", applyMusicVolumeFromSlider);
+    effectsVolume.addEventListener("input", applyEffectsVolumeFromSlider);
+    effectsVolume.addEventListener("change", applyEffectsVolumeFromSlider);
+
+    const settingsButton = document.getElementById("gameSettingsButton");
+    settingsButton.addEventListener("click", event => {
+        event.stopPropagation();
+        settings.classList.toggle("open");
+    });
+    document.addEventListener("click", event => {
+        if (!settings.contains(event.target)) settings.classList.remove("open");
+    });
+    refreshAudioSettingsUI();
+
+    const startMusicAfterFirstInteraction = () => {
+        if (!gameMusic.excluded) gameMusic.start();
+        document.removeEventListener("pointerdown", startMusicAfterFirstInteraction, true);
+        document.removeEventListener("keydown", startMusicAfterFirstInteraction, true);
+        document.removeEventListener("touchstart", startMusicAfterFirstInteraction, true);
+    };
+    document.addEventListener("pointerdown", startMusicAfterFirstInteraction, true);
+    document.addEventListener("keydown", startMusicAfterFirstInteraction, true);
+    document.addEventListener("touchstart", startMusicAfterFirstInteraction, true);
+
+
 
 function positionColorClass(position, role) {
     const r = String(role || "");
