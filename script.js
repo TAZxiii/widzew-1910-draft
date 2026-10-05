@@ -946,6 +946,9 @@ function formatSquadValue(value) {
                     strength: Number.isFinite(coachStrength) ? coachStrength : 0,
                     startRound: Math.max(1, Number(season["KolejkaStartowa"]) || 1)
                 };
+                // Udostępniamy wybranego trenera kodowi sezonu znajdującemu się
+                // poza zakresem DOMContentLoaded.
+                window.__widzewSelectedTrainer = selectedTrainer;
                 window.__widzewTrainerStartRound = selectedTrainer.startRound;
                 // Tryb TRENER przekazuje do meczu siłę z dokładnie wybranego rekordu sezonu.
                 window.__widzewGameMode = "coach";
@@ -988,6 +991,7 @@ function formatSquadValue(value) {
 
         document.getElementById("trainerBack").addEventListener("click", () => {
             selectedTrainer = null;
+            window.__widzewSelectedTrainer = null;
             window.__widzewCoachStrength = 0;
 
             const content = coachScreen.querySelector(".coach-content");
@@ -1013,10 +1017,196 @@ function formatSquadValue(value) {
     const wtmWelcomeClose = document.getElementById("wtmWelcomeClose");
     let wtmWelcomeTimer = null;
 
+    // EASTER EGG SOPIĆ — kod jest wpisywany na grafice WTM, ale film pojawia się dopiero po X.
+    const sopicEasterEggModal = document.getElementById("sopicEasterEggModal");
+    const sopicEasterEggVideo = document.getElementById("sopicEasterEggVideo");
+    const closeSopicEasterEgg = document.getElementById("closeSopicEasterEgg");
+    const sopicUnderstandModal = document.getElementById("sopicUnderstandModal");
+    const sopicUnderstandTitle = sopicUnderstandModal?.querySelector("h2");
+    const sopicUnderstandParagraphs = sopicUnderstandModal?.querySelectorAll("p");
+    let sopicCodeBuffer = "";
+    let sopicCodeListener = null;
+    let sopicCodeReady = false;
+    let sopicEggTriggered = false;
+    let sopicUnderstandQuestion = 1;
+
+    const isSopicTrainer = () => {
+        const trainerId = Number(window.__widzewSelectedTrainer?.faceId);
+        return trainerId === 6 || trainerId === 7;
+    };
+
+    const setSopicUnderstandQuestion = question => {
+        sopicUnderstandQuestion = question;
+
+        if (sopicUnderstandTitle) {
+            if (question === 1) {
+                sopicUnderstandTitle.textContent = "Brawo, odkryłeś nową znajdźkę! 🎉";
+            } else if (question === 2) {
+                sopicUnderstandTitle.textContent = "Rzucono na Ciebie znowu zaklęcie „You must understand”.";
+            } else {
+                sopicUnderstandTitle.textContent = "Przestań się zgrywać i w końcu understand! 😐";
+            }
+        }
+
+        if (sopicUnderstandParagraphs?.length >= 2) {
+            if (question === 1) {
+                sopicUnderstandParagraphs[0].innerHTML = "Rzucono na Ciebie zaklęcie <strong>„You must understand”</strong>.";
+                sopicUnderstandParagraphs[1].innerHTML = "<strong>Czy Ty już understand?</strong>";
+            } else if (question === 2) {
+                sopicUnderstandParagraphs[0].innerHTML = "";
+                sopicUnderstandParagraphs[1].innerHTML = "<strong>Czy Ty już understand?</strong>";
+            } else {
+                sopicUnderstandParagraphs[0].innerHTML = "";
+                sopicUnderstandParagraphs[1].innerHTML = "<strong>Czy Ty już understand?</strong>";
+            }
+        }
+    };
+
+    const triggerSopicEasterEgg = () => {
+        if (sopicEggTriggered || !isSopicTrainer()) return;
+        sopicEggTriggered = true;
+        sopicEasterEggModal?.classList.remove("hidden");
+        if (sopicEasterEggVideo) {
+            sopicEasterEggVideo.currentTime = 0;
+            sopicEasterEggVideo.play().catch(() => {});
+        }
+    };
+
+    const closeSopicVideo = () => {
+        if (sopicEasterEggVideo) {
+            sopicEasterEggVideo.pause();
+            sopicEasterEggVideo.currentTime = 0;
+        }
+        sopicEasterEggModal?.classList.add("hidden");
+        setSopicUnderstandQuestion(sopicUnderstandQuestion);
+        sopicUnderstandModal?.classList.remove("hidden");
+    };
+
+    const playSopicVideoAgain = () => {
+        sopicUnderstandModal?.classList.add("hidden");
+        sopicEasterEggModal?.classList.remove("hidden");
+        if (sopicEasterEggVideo) {
+            sopicEasterEggVideo.currentTime = 0;
+            sopicEasterEggVideo.play().catch(() => {});
+        }
+    };
+
+    const activateSopicBonus = value => {
+        if (!isSopicTrainer()) return;
+        window.__sopicBonus = {
+            value: Number(value) || 0,
+            remainingMatches: 3
+        };
+    };
+
+    const finishSopicUnderstand = () => {
+        sopicUnderstandModal?.classList.add("hidden");
+        disarmSopicEasterEgg();
+        const selectedTrainer = window.__widzewSelectedTrainer;
+        showDifficultyScreen(
+            `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
+             Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
+        );
+    };
+
+    const armSopicEasterEgg = () => {
+        sopicCodeBuffer = "";
+        sopicCodeReady = false;
+        sopicEggTriggered = false;
+        sopicUnderstandQuestion = 1;
+        sopicCodeListener?.();
+
+        const onKeyDown = event => {
+            if (!isSopicTrainer() || sopicEggTriggered) return;
+            if (event.ctrlKey || event.altKey || event.metaKey) return;
+            if (!/^[a-zA-Z]$/.test(event.key)) return;
+
+            sopicCodeBuffer = (sopicCodeBuffer + event.key.toLowerCase()).slice(-5);
+
+            if (sopicCodeBuffer === "sopic") {
+                sopicCodeBuffer = "";
+                sopicCodeReady = true;
+            }
+        };
+
+        document.addEventListener("keydown", onKeyDown);
+        sopicCodeListener = () => document.removeEventListener("keydown", onKeyDown);
+    };
+
+    const disarmSopicEasterEgg = () => {
+        sopicCodeBuffer = "";
+        sopicCodeReady = false;
+        sopicCodeListener?.();
+        sopicCodeListener = null;
+    };
+
+    closeSopicEasterEgg?.addEventListener("click", closeSopicVideo);
+
+    document.getElementById("closeSopicUnderstand")?.addEventListener("click", finishSopicUnderstand);
+
+    document.getElementById("sopicUnderstandYes")?.addEventListener("click", () => {
+        if (sopicUnderstandQuestion === 1) {
+            // Pierwsze TAK — dokładnie ustalony komunikat, a następnie wybór trudności.
+            sopicUnderstandTitle.textContent = "BRAWO! Ty już understand!";
+            sopicUnderstandParagraphs[0].innerHTML = "Zaklęcie zadziałało! Maszyna Sopicia ruszyła! Bonus: +1 do ogólnej siły drużyny na 3 najbliższe mecze Widzewa.";
+            sopicUnderstandParagraphs[1].innerHTML = "";
+            document.querySelector(".sopic-understand-actions")?.classList.add("hidden");
+            activateSopicBonus(1);
+            return;
+        }
+
+        if (sopicUnderstandQuestion === 2) {
+            // Drugie TAK — ustalony komunikat. Bonus +2 zostanie podpięty do silnika później.
+            sopicUnderstandTitle.textContent = "BRAWO! W końcu zaczynasz understand!";
+            sopicUnderstandParagraphs[0].innerHTML = "Wiedziałem, że w końcu zrozumiesz! Maszyna Sopicia ruszyła! Bonus: +2 do ogólnej siły drużyny na 3 najbliższe mecze Widzewa.";
+            sopicUnderstandParagraphs[1].innerHTML = "";
+            document.querySelector(".sopic-understand-actions")?.classList.add("hidden");
+            activateSopicBonus(2);
+            return;
+        }
+
+        // Trzecie TAK — ustalony komunikat. Bonus +3 zostanie podpięty do silnika później.
+        sopicUnderstandTitle.textContent = "BRAWO! Przestałeś się zgrywać. Ty już understand!";
+        sopicUnderstandParagraphs[0].innerHTML = "Željko może być z Ciebie dumny! Bonus: +3 do ogólnej siły drużyny na 3 najbliższe mecze Widzewa.";
+        sopicUnderstandParagraphs[1].innerHTML = "";
+        document.querySelector(".sopic-understand-actions")?.classList.add("hidden");
+        activateSopicBonus(3);
+    });
+
+    document.getElementById("sopicUnderstandNo")?.addEventListener("click", () => {
+        if (sopicUnderstandQuestion === 1) {
+            sopicUnderstandQuestion = 2;
+            playSopicVideoAgain();
+            return;
+        }
+
+        if (sopicUnderstandQuestion === 2) {
+            // Drugie NIE — ponownie odtwarzamy film, a dopiero po nim pokazujemy pytanie nr 3.
+            sopicUnderstandQuestion = 3;
+            playSopicVideoAgain();
+            return;
+        }
+
+        // Trzecie NIE — koniec zabawy i powrót do menu.
+        // Ukrywamy przyciski TAK/NIE od razu, żeby po komunikacie nie były już widoczne.
+        document.querySelector(".sopic-understand-actions")?.classList.add("hidden");
+        sopicUnderstandTitle.textContent = "TY NADAL NIE UNDERSTAND?! 😡";
+        sopicUnderstandParagraphs[0].innerHTML = "<strong>Koniec tego.</strong>";
+        sopicUnderstandParagraphs[1].innerHTML = "";
+        setTimeout(() => {
+            sopicUnderstandModal?.classList.add("hidden");
+            window.location.reload();
+        }, 1400);
+    });
+
     function showTrainerWelcome() {
         wtmWelcomeImage.src = `data/wtm/in/${encodeURIComponent(selectedTrainer.faceId)}.PNG?v=2`;
         wtmWelcomeClose.classList.add("hidden");
         wtmWelcomeModal.classList.remove("hidden");
+
+        // Uzbrajamy ukryty kod dokładnie w momencie pokazania grafiki WTM.
+        if (isSopicTrainer()) armSopicEasterEgg();
+        else disarmSopicEasterEgg();
 
         clearTimeout(wtmWelcomeTimer);
         wtmWelcomeTimer = setTimeout(() => {
@@ -1026,12 +1216,54 @@ function formatSquadValue(value) {
 
     wtmWelcomeClose.addEventListener("click", () => {
         clearTimeout(wtmWelcomeTimer);
+        const openSopicEgg = isSopicTrainer() && sopicCodeReady;
+
         wtmWelcomeModal.classList.add("hidden");
+
+        if (openSopicEgg) {
+            disarmSopicEasterEgg();
+            triggerSopicEasterEgg();
+            return;
+        }
+
+        disarmSopicEasterEgg();
         showDifficultyScreen(
             `Wybrany trener: <strong>${selectedTrainer.first} ${selectedTrainer.last}</strong><br>
              Sezon: ${selectedTrainer.season} · Formacja: ${selectedTrainer.formation}`
         );
     });
+
+    const sopicEasterEggStyle = document.createElement("style");
+    sopicEasterEggStyle.textContent = `
+        #sopicEasterEggModal .sopic-easter-egg-card {
+            width: min(900px, calc(100vw - 30px));
+        }
+        #sopicEasterEggVideo {
+            display: block;
+            width: 100%;
+            max-height: 70vh;
+            margin-top: 14px;
+            border-radius: 10px;
+            background: #000;
+        }
+        #sopicUnderstandModal .sopic-understand-card {
+            width: min(650px, calc(100vw - 30px));
+            text-align: center;
+            padding: 30px;
+        }
+        #sopicUnderstandModal .close {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+        }
+        .sopic-understand-actions {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 24px;
+        }
+    `;
+    document.head.appendChild(sopicEasterEggStyle);
 
     // FORMATIONS DATABASE
     async function loadFormationDatabase() {
@@ -1669,6 +1901,131 @@ function facePathForCandidate(card) {
 
     let finalSwapIndex = null;
 
+    function syncSeasonPlayerDatabaseFromDraft() {
+        const db = window.widzewSeasonPlayerDB;
+        if (!db || !Array.isArray(db.players)) return;
+
+        db.players = draft.selected.map((p, order) => {
+            const row = p?.row || {};
+            const role = String(p?.role || "");
+            const starter = !role.startsWith("bench-");
+            const roleLabel = getSwapPosition(p);
+            return {
+                order,
+                first: row["Imię"] || "",
+                last: row["Nazwisko"] || "",
+                slot: starter ? "starter" : "bench",
+                role: roleLabel,
+                position: String(row["Pozycja"] || roleLabel || "").trim(),
+                season: row["Sezon"] || db.season || "",
+                category: p?.faceFolder || "",
+                stats: { ...row },
+                found: true
+            };
+        });
+
+        db.count = db.players.length;
+        try {
+            window.__widzewSeasonOverall = getTeamScores().overall;
+        } catch (e) {
+            console.warn("Nie udało się przeliczyć siły zespołu po zmianie składu:", e);
+        }
+    }
+
+    function openSeasonSquadEditor() {
+        // Zapamiętujemy dokładnie miejsce, z którego otwarto edytor.
+        // Po powrocie nie wolno tworzyć nowego sezonu ani resetować wyników.
+        window.__seasonSquadReturnRound = Number(seasonGameState?.currentRound || 1);
+        window.__seasonSquadReturnResults = Array.isArray(seasonGameState?.widzewResults)
+            ? seasonGameState.widzewResults
+            : [];
+        // Po rozpoczęciu sezonu korzystamy z tego samego składu, który został
+        // wybrany w drafcie. Jeżeli jakaś ścieżka gry chwilowo wyczyściła
+        // draft.selected, przywracamy zachowaną referencję do tego składu.
+        let seasonSelected = Array.isArray(draft.selected) && draft.selected.length === 20
+            ? draft.selected
+            : window.__seasonDraftSelected;
+
+        // Awaryjnie odtwarzamy wybór z tymczasowej bazy sezonowej. Dzięki temu
+        // przycisk SKŁAD nie jest zależny od tego, czy któraś warstwa sezonu
+        // wcześniej zmieniła referencję draft.selected.
+        if ((!Array.isArray(seasonSelected) || seasonSelected.length !== 20)
+            && window.widzewSeasonPlayerDB?.players?.length === 20) {
+            seasonSelected = window.widzewSeasonPlayerDB.players.map(p => {
+                const row = { ...(p.stats || {}) };
+                row["Imię"] = p.first || row["Imię"] || "";
+                row["Nazwisko"] = p.last || row["Nazwisko"] || "";
+                row["Pozycja"] = p.position || row["Pozycja"] || "";
+                row["Sezon"] = p.season || row["Sezon"] || window.__seasonValue || "";
+                const roleLabel = p.role || row["Pozycja"] || "";
+                let role = roleLabel;
+                if (p.slot === "bench") {
+                    const pos = String(row["Pozycja"] || "").toUpperCase().replace(/\s+/g, "");
+                    if (pos === "BR") role = "bench-br";
+                    else if (pos === "N") role = "bench-n";
+                    else if (pos === "ŚO" || pos === "SO") role = "bench-cb";
+                    else if (pos === "LO/PO" || pos === "LOPO") role = "bench-def";
+                    else if (pos.includes("ŚPD") || pos.includes("ŚP") || pos.includes("OP")) role = "bench-mid";
+                    else role = "bench-wing";
+                }
+                return {
+                    row,
+                    role,
+                    faceFolder: p.category || "",
+                    face: p.face || ""
+                };
+            });
+        }
+
+        if (!Array.isArray(seasonSelected) || seasonSelected.length !== 20) {
+            console.warn("[Widzew Draft] Nie można otworzyć edytora składu sezonowego: brak 20 zawodników.", window.widzewSeasonPlayerDB);
+            return;
+        }
+
+        draft.selected = seasonSelected;
+        window.__seasonDraftSelected = draft.selected;
+        window.__seasonSquadEditMode = true;
+        finalSwapIndex = null;
+
+        // Najpierw przechodzimy do ekranu składu, dopiero potem go renderujemy.
+        // Dzięki temu ewentualny błąd w renderowaniu nie zostawi gracza
+        // "uwięzionego" na ekranie sezonu.
+        showScreen(draftScreen);
+        try {
+            finishDraft();
+        } catch (error) {
+            console.error("[Widzew Draft] Błąd renderowania składu sezonowego:", error);
+        }
+    }
+
+    window.__openWidzewSeasonSquadEditor = function() {
+        try {
+            openSeasonSquadEditor();
+        } catch (error) {
+            console.error("[Widzew Draft] Błąd otwierania edytora składu sezonowego:", error);
+        }
+    };
+
+    function closeSeasonSquadEditor() {
+        window.__seasonSquadEditMode = false;
+        finalSwapIndex = null;
+
+        // Wracamy do dokładnie tej kolejki, przed którą otwarto edytor.
+        // Zachowujemy dotychczasowe wyniki i stan sezonu.
+        if (seasonGameState) {
+            const returnRound = Number(window.__seasonSquadReturnRound);
+            if (Number.isFinite(returnRound) && returnRound > 0) {
+                seasonGameState.currentRound = returnRound;
+            }
+            if (Array.isArray(window.__seasonSquadReturnResults)) {
+                seasonGameState.widzewResults = window.__seasonSquadReturnResults;
+            }
+        }
+
+        showScreen(seasonScreen);
+        renderPlayableSeason();
+    }
+
     function setupFinalSwapInteractions() {
         const grid = document.getElementById("candidateGrid");
         if (!grid) return;
@@ -1737,6 +2094,12 @@ function facePathForCandidate(card) {
                         ...starter,
                         role: bench.role
                     };
+
+                    // To nadal jest ta sama, główna tablica draft.selected.
+                    // Synchronizujemy jedynie istniejącą tymczasową bazę sezonową,
+                    // z której korzysta silnik meczu, aby następne spotkanie
+                    // od razu widziało nową jedenastkę.
+                    syncSeasonPlayerDatabaseFromDraft();
 
                     finalSwapIndex = null;
 
@@ -1942,16 +2305,49 @@ function facePathForCandidate(card) {
             </div>
         `;
         const seasonButtonLabel = finalSeason ? `ROZEGRAJ SEZON ${safe(finalSeason)}` : "ROZEGRAJ SEZON";
-        action.innerHTML = `
-            <div class="draft-finished">DRAFT ZAKOŃCZONY</div>
-            <div class="season-launch">
-                <button id="playSeasonButton" class="season-launch-button" type="button">${seasonButtonLabel}</button>
-                <p>Jeśli jesteś gotowy z wyborem swojego składu to pora podbić PKO Ekstraklasę.</p>
-            </div>`;
+        const seasonSquadEditMode = Boolean(window.__seasonSquadEditMode);
+        action.innerHTML = seasonSquadEditMode
+            ? `
+                <div class="draft-finished">EDYCJA SKŁADU SEZONOWEGO</div>
+                <div class="season-launch">
+                    <button id="closeSeasonSquadButton" class="season-launch-button" type="button">← POWRÓT DO SEZONU</button>
+                    <p>Zmiany dotyczą tylko jedenastki i ławki rezerwowych. Twój 20-osobowy skład pozostaje bez zmian.</p>
+                </div>`
+            : `
+                <div class="draft-finished">DRAFT ZAKOŃCZONY</div>
+                <div class="season-launch">
+                    <button id="playSeasonButton" class="season-launch-button" type="button" onclick="window.__openWidzewSeasonScreen(this)">${seasonButtonLabel}</button>
+                    <p>Jeśli jesteś gotowy z wyborem swojego składu to pora podbić PKO Ekstraklasę.</p>
+                </div>`;
 
-        document.getElementById("playSeasonButton")?.addEventListener("click", () => {
-            openSeasonScreen(finalSeason);
-        });
+        if (seasonSquadEditMode) {
+            document.getElementById("closeSeasonSquadButton")?.addEventListener("click", closeSeasonSquadEditor);
+        } else {
+            const playSeasonButton = document.getElementById("playSeasonButton");
+            if (playSeasonButton) {
+                // Ten handler jest przypisany bezpośrednio do przycisku.
+                // Nie polegamy tutaj na delegacji clicków z innych plików.
+                playSeasonButton.onclick = () => {
+                    // Przygotowanie bazy zawodników może działać równolegle.
+                    // Nie może jednak blokować przejścia do wyboru trybu sezonu.
+                    if (typeof window.prepareWidzewSeasonPlayerDB === "function") {
+                        window.prepareWidzewSeasonPlayerDB(playSeasonButton)
+                            .catch(error => {
+                                console.error("[Widzew Draft] Nie udało się przygotować składu sezonowego:", error);
+                            });
+                    }
+
+                    // Bezpośrednio ustawiamy ekran wyboru trybu.
+                    // To jest celowo niezależne od zewnętrznych listenerów.
+                    window.__seasonValue = finalSeason;
+                    const intro = document.getElementById("seasonChoiceIntro");
+                    if (intro) {
+                        intro.textContent = `Sezon ${finalSeason} · wybierz sposób rozegrania rozgrywek.`;
+                    }
+                    showScreen(seasonChoiceScreen);
+                };
+            }
+        }
         if (!window.finalSquadAlertShown) {
             window.finalSquadAlertShown = true;
             alert('W teorii powinni grać najlepsi, jednak każdy trener ma swoich ulubieńców. Możesz na tym etapie rozgrywki wymienić zawodników ze swojej jedenastki. Pamiętaj, że bycie w podstawowej jedenastce wpływa na zaangażowanie i rozwój zawodnika.');
@@ -1995,12 +2391,48 @@ function facePathForCandidate(card) {
 });
 
 function openSeasonScreen(season) {
+    // Zachowujemy dokładnie ten sam 20-osobowy skład wybrany w drafcie,
+    // aby można było wrócić do niego przed każdym kolejnym meczem sezonu.
+    if (Array.isArray(draft.selected) && draft.selected.length === 20) {
+        window.__seasonDraftSelected = draft.selected;
+    }
+
     const seasonValue = season || ((draft.mode === "player" || draft.mode === "gracz") ? "22/23" : draft.gameSeason || "");
     window.__seasonValue = seasonValue;
+
     const intro = document.getElementById("seasonChoiceIntro");
     if (intro) intro.textContent = `Sezon ${seasonValue} · wybierz sposób rozegrania rozgrywek.`;
+
+    // W trybie TRENER oba warianty sezonu mają dodatkowe wyjaśnienie
+    // dotyczące pełnego scenariusza. Tryb GRACZ pozostaje bez zmian.
+    const playDescription = document.querySelector("#playWholeSeason span");
+    const simulateDescription = document.querySelector("#simulateWholeSeason span");
+    const isCoachMode = window.__widzewGameMode === "coach";
+
+    if (playDescription) {
+        playDescription.innerHTML = isCoachMode
+            ? "<strong>Rozegraj pełny tryb scenariusza.</strong> Samodzielnie rozgrywaj mecze Widzewa i podejmuj decyzje podczas spotkań"
+            : "Samodzielnie rozgrywaj kolejne mecze Widzewa i podejmuj decyzje podczas spotkań.";
+    }
+
+    if (simulateDescription) {
+        simulateDescription.innerHTML = isCoachMode
+            ? "<strong>Tryb całkowicie bez trybu scenariusza.</strong> Automatycznie zasymuluj wszystkie mecze Widzewa i przejdź od razu do końcowej tabeli."
+            : "Automatycznie zasymuluj wszystkie mecze Widzewa i przejdź od razu do końcowej tabeli.";
+    }
+
     if (window.__showScreen) window.__showScreen(document.getElementById("seasonChoiceScreen"));
 }
+
+window.__openWidzewSeasonScreen = function(seasonOrButton) {
+    let season = seasonOrButton;
+    if (seasonOrButton && typeof seasonOrButton !== "string") {
+        const text = String(seasonOrButton.textContent || "");
+        const match = text.match(/ROZEGRAJ\s+SEZON\s+(.+)/i);
+        season = match ? match[1].trim() : "";
+    }
+    return openSeasonScreen(season);
+};
 
 function updateFinalSeasonLabel() {
     const root = document.getElementById("candidateGrid");
@@ -2119,6 +2551,22 @@ function seasonOtherResult(fixture) {
     const generated = getNonWidzewResult(fixture);
     return Array.isArray(generated) ? String(generated[0]) + ":" + String(generated[1]) : "—";
 }
+function getSopicBonusOverall() {
+    const bonus = window.__sopicBonus;
+    if (!bonus || Number(bonus.remainingMatches) <= 0 || Number(bonus.value) <= 0) return 0;
+    return Number(bonus.value);
+}
+
+function consumeSopicBonusMatch() {
+    const bonus = window.__sopicBonus;
+    if (!bonus || Number(bonus.remainingMatches) <= 0) return;
+
+    bonus.remainingMatches = Number(bonus.remainingMatches) - 1;
+    if (bonus.remainingMatches <= 0) {
+        window.__sopicBonus = null;
+    }
+}
+
 function generateProvisionalWidzewResult(opponent, home) {
     // Zawsze zwracamy [gole Widzewa, gole przeciwnika].
     // Widzew musi mieć normalną, niezależną od trybu gry szansę na zdobywanie bramek.
@@ -2127,7 +2575,8 @@ function generateProvisionalWidzewResult(opponent, home) {
     );
     const opp = opponentRow ? seasonNum(opponentRow["Ogólna"]) : 65;
     const raw = Number(window.__widzewSeasonOverall);
-    const widzew = Number.isFinite(raw) && raw > 0 ? raw : 65;
+    const baseWidzew = Number.isFinite(raw) && raw > 0 ? raw : 65;
+    const widzew = baseWidzew + getSopicBonusOverall();
     const diff = Math.max(-20, Math.min(20, widzew - opp));
 
     let pGoal = 0.58 + diff * 0.008 + (home ? 0.04 : -0.03);
@@ -2481,6 +2930,109 @@ const COACH_DISMISSAL_RULES = {
     12: { type: "finalTable", minPosition: 16, maxPosition: 18, image: null }
 };
 
+// Podsumowanie kadencji w trybie TRENER.
+// triggerRound = kolejka, po której komunikat ma się pojawić.
+// matches = liczba meczów z kadencji brana do statystyk; null = wszystkie rozegrane przez gracza do tej kolejki.
+const COACH_MILESTONE_RULES = {
+    1:  { triggerRound: 34, targetMatches: 34, actual: { matches: 34, position: 12, wins: 11, draws: 8, losses: 15, goalsFor: 38, goalsAgainst: 47, points: 41 } },
+    2:  { triggerRound: 7,  targetMatches: 7, actual: { matches: 7, position: 12, wins: 2, draws: 3, losses: 4, goalsFor: 8, goalsAgainst: 12, points: 7 } },
+    3:  { triggerRound: 34, targetMatches: 27, actual: { matches: 27, position: 9, wins: 11, draws: 6, losses: 10, goalsFor: 37, goalsAgainst: 34, points: 39 } },
+    4:  { triggerRound: 22, targetMatches: 22, actual: { matches: 22, position: 12, wins: 7, draws: 5, losses: 10, goalsFor: 26, goalsAgainst: 37, points: 26 } },
+    5:  { triggerRound: 25, targetMatches: 3, actual: { matches: 3, position: 13, wins: 1, draws: 1, losses: 1, goalsFor: 2, goalsAgainst: 2, points: 4 } },
+    6:  { triggerRound: 34, targetMatches: 9, actual: { matches: 9, position: 13, wins: 3, draws: 1, losses: 5, goalsFor: 10, goalsAgainst: 10, points: 10 } },
+    7:  { triggerRound: 6,  targetMatches: 6, actual: { matches: 6, position: 12, wins: 2, draws: 1, losses: 3, goalsFor: 8, goalsAgainst: 7, points: 7 } },
+    8:  { triggerRound: 11, targetMatches: 5, actual: { matches: 5, position: 11, wins: 2, draws: 0, losses: 3, goalsFor: 9, goalsAgainst: 8, points: 6 } },
+    9:  { triggerRound: 23, targetMatches: 12, actual: { matches: 12, position: 17, wins: 3, draws: 2, losses: 7, goalsFor: 12, goalsAgainst: 18, points: 11 } },
+    10: { triggerRound: 34, targetMatches: 11, actual: { matches: 11, position: 14, wins: 5, draws: 3, losses: 3, goalsFor: 12, goalsAgainst: 8, points: 18 } },
+    11: { triggerRound: 7,  targetMatches: 7,  actual: { matches: 7, position: 13, wins: 1, draws: 4, losses: 2, goalsFor: 10, goalsAgainst: 10, points: 7 } },
+    12: { triggerRound: 9,  targetMatches: 2, actual: { matches: 2, position: 12, wins: 0, draws: 2, losses: 0, goalsFor: 3, goalsAgainst: 3, points: 2 } }
+};
+
+// Grafiki kończące karierę trenera po kliknięciu „ZAKOŃCZ GRĘ".
+// Docelowe pliki dla poszczególnych trenerów będziemy uzupełniać osobno.
+// Na razie korzystamy z istniejących grafik zwolnienia jako bezpiecznego fallbacku.
+const COACH_FAREWELL_IMAGES = {
+    1: "data/wtm/out/1.PNG",
+    2: "data/wtm/out/1.PNG",
+    3: "data/wtm/out/2.PNG",
+    4: "data/wtm/out/2.PNG",
+    5: "data/wtm/out/3.PNG",
+    6: "data/wtm/out/4.PNG",
+    7: "data/wtm/out/4.PNG",
+    8: "data/wtm/out/5.PNG",
+    9: "data/wtm/out/7.PNG",
+    10: "data/wtm/out/10.PNG",
+    11: "data/wtm/out/10.PNG",
+    12: "data/wtm/out/else.png"
+};
+
+// Warunki decyzji zarządu po podsumowaniu kadencji.
+const COACH_DECISION_RULES = {
+    1: [
+        { when: s => s.position <= 13, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 14, message: "Osiągnąłeś ten sam wynik co prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 15, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener, ale zarząd chce Ci dać kolejną szansę. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position >= 16, message: "Osiągnąłeś wynik znacznie gorszy niż prawdziwy trener. Doprowadziłeś do spadku, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    2: [
+        { when: s => s.points >= 8, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.points <= 7 && s.derbyLost, message: "Zarząd jest niezadowolony z Twoich wyników, a do tego przegrałeś Derby Łodzi. Zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.points <= 7, message: "Zarząd jest niezadowolony z Twoich wyników, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    3: [
+        { when: s => s.position <= 8, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 9, message: "Osiągnąłeś ten sam wynik co prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position >= 10 && s.position <= 11, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener, ale zarząd chce Ci dać kolejną szansę. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position >= 16, message: "Osiągnąłeś wynik znacznie gorszy niż prawdziwy trener. Doprowadziłeś do spadku, zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.position >= 12 && s.position <= 15, message: "Osiągnąłeś wynik znacznie gorszy niż prawdziwy trener. Zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    4: [
+        { when: s => s.position <= 11, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 12, message: "Osiągnąłeś ten sam wynik co prawdziwy trener. Zarząd jest niezadowolony z Twoich wyników. Zostałeś zwolniony. Gra skończona", canContinue: false },
+        { when: s => s.position >= 13, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener. Zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    5: [
+        { when: s => s.points >= 5, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.points <= 4, message: "Zarząd jest niezadowolony z Twoich wyników, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    6: [
+        { when: s => s.position <= 12, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 13, message: "Osiągnąłeś ten sam wynik co prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position >= 14 && s.position <= 15, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener, ale zarząd chce Ci dać kolejną szansę. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position >= 16, message: "Osiągnąłeś wynik znacznie gorszy niż prawdziwy trener. Doprowadziłeś do spadku, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    7: [
+        { when: s => s.points >= 8, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.points <= 7, message: "Zarząd jest niezadowolony z Twoich wyników, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    8: [
+        { when: s => s.points >= 7, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener, ale \"afera grecka\" Cię pogrążyła. Zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.points === 6, message: "Osiągnąłeś ten sam wynik co prawdziwy trener, ale \"afera grecka\" Cię pogrążyła. Zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.points <= 5, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener, a do tego \"afera grecka\" Cię pogrążyła. Zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    9: [
+        { when: s => s.position <= 15, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 16, message: "Osiągnąłeś wynik nie co prawdziwy trener, ale nadal jesteś w strefie spadkowej. Zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.position === 17, message: "Osiągnąłeś wynik ten sam co prawdziwy trener. Zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.position >= 18, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener. Doprowadziłeś do spadku, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    10: [
+        { when: s => s.position <= 13, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 14, message: "Osiągnąłeś ten sam wynik co prawdziwy trener. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position === 15, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener, ale zarząd chce Ci dać kolejną szansę. Możesz prowadzić zespół w kolejnym sezonie lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.position >= 16, message: "Osiągnąłeś wynik znacznie gorszy niż prawdziwy trener. Doprowadziłeś do spadku, zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    11: [
+        { when: s => s.points >= 8, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.points === 7, message: "Osiągnąłeś ten sam wynik co prawdziwy trener. Zarząd jest niezadowolony z Twoich wyników, zostałeś zwolniony. Gra skończona.", canContinue: false },
+        { when: s => s.points <= 6, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener. Zostałeś zwolniony. Gra skończona.", canContinue: false }
+    ],
+    12: [
+        { when: s => s.points >= 3, message: "Brawo osiągnąłeś lepszy wynik niż prawdziwy trener, ale Mateusz Stolarski dalej jest trenerem Widzewa. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.points === 2, message: "Osiągnąłeś wynik ten sam co prawdziwy trener, ale Mateusz Stolarski dalej jest trenerem Widzewa. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true },
+        { when: s => s.points <= 1, message: "Osiągnąłeś wynik gorszy niż prawdziwy trener, ale Mateusz Stolarski dalej jest trenerem Widzewa. Możesz prowadzić zespół w kolejnych meczach lub odejść i zakończyć grę.", canContinue: true }
+    ]
+};
 function coachResultsPoints(results) {
     return results.reduce((sum, match) => {
         const gf = Number(match.gf || 0);
@@ -2489,10 +3041,290 @@ function coachResultsPoints(results) {
     }, 0);
 }
 
-function getCoachDismissalStatus() {
-    if (window.__widzewGameMode !== "coach" || !selectedTrainer || window.__coachDismissed) return null;
+function getCoachMilestoneStatus() {
+    // Komunikat działa poza DOMContentLoaded, dlatego korzysta z globalnego
+    // odnośnika do wybranego trenera zamiast z lokalnego selectedTrainer.
+    const activeTrainer = window.__widzewSelectedTrainer;
+    if (window.__widzewGameMode !== "coach" || !activeTrainer || window.__coachMilestoneShown) return null;
 
-    const coachId = Number(selectedTrainer.faceId);
+    const coachId = Number(activeTrainer.faceId);
+    const rule = COACH_MILESTONE_RULES[coachId];
+    if (!rule) return null;
+
+    const triggerRound = Number(rule.triggerRound);
+    const targetMatches = Number(rule.targetMatches);
+    const startRound = Math.max(1, Number(activeTrainer.startRound) || 1);
+    const currentRound = Number(seasonGameState.currentRound) || 0;
+
+    // Najważniejszy warunek: liczymy WYŁĄCZNIE mecze rozegrane przez gracza
+    // od momentu objęcia zespołu. Nie czekamy na obecność konkretnego numeru
+    // kolejki w bazie wyników, bo wynik może być zapisany inną ścieżką
+    // (symulacja albo interaktywny mecz).
+    const results = (seasonGameState.widzewResults || [])
+        .filter(match => Number(match.round) >= startRound)
+        .sort((a, b) => Number(a.round) - Number(b.round));
+
+    const playedMatches = results.length;
+
+    // Nie pokazujemy komunikatu wcześniej niż po osiągnięciu wymaganej liczby
+    // meczów i nie wcześniej niż po kolejce wskazanej w regule.
+    if (playedMatches < targetMatches || currentRound < triggerRound) return null;
+
+    // Bierzemy dokładnie tyle ostatnio rozegranych meczów, ile przewiduje
+    // licznik dla danego trenera.
+    const periodResults = results.slice(0, targetMatches);
+    if (periodResults.length < targetMatches) return null;
+
+    const points = coachResultsPoints(periodResults);
+    const wins = periodResults.filter(match => Number(match.gf) > Number(match.ga)).length;
+    const draws = periodResults.filter(match => Number(match.gf) === Number(match.ga)).length;
+    const losses = periodResults.filter(match => Number(match.gf) < Number(match.ga)).length;
+    const goalsFor = periodResults.reduce((sum, match) => sum + Number(match.gf || 0), 0);
+    const goalsAgainst = periodResults.reduce((sum, match) => sum + Number(match.ga || 0), 0);
+    const standings = buildStandings(triggerRound);
+    const widzewRow = standings.find(row => row.name === "Widzew Łódź");
+    if (!widzewRow) return null;
+
+    return {
+        coachId,
+        matches: targetMatches,
+        targetMatches,
+        playedMatches,
+        round: triggerRound,
+        points,
+        wins,
+        draws,
+        losses,
+        goalsFor,
+        goalsAgainst,
+        position: standings.indexOf(widzewRow) + 1,
+        actual: rule.actual,
+        periodResults
+    };
+}
+function showCoachMilestone(status) {
+    const activeTrainer = window.__widzewSelectedTrainer;
+    if (!activeTrainer || !status) return false;
+
+    const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;"
+    }[c]));
+
+    const actual = status.actual || {};
+    const actualPosition = actual.position ?? "—";
+    const actualPoints = actual.points ?? "—";
+    const actualWins = actual.wins ?? "—";
+    const actualDraws = actual.draws ?? "—";
+    const actualLosses = actual.losses ?? "—";
+    const actualGoalsFor = actual.goalsFor ?? "—";
+    const actualGoalsAgainst = actual.goalsAgainst ?? "—";
+    const actualMatches = actual.matches ?? status.targetMatches;
+
+    let milestoneModal = document.getElementById("coachMilestoneModal");
+    if (!milestoneModal) {
+        milestoneModal = document.createElement("div");
+        milestoneModal.id = "coachMilestoneModal";
+        milestoneModal.style.cssText =
+            "position:fixed;inset:0;z-index:1000000;display:flex;align-items:center;justify-content:center;" +
+            "background:rgba(0,0,0,.78);padding:20px;box-sizing:border-box;";
+        milestoneModal.innerHTML =
+            '<div style="position:relative;max-width:680px;width:100%;max-height:90vh;overflow:auto;background:#191919;color:#fff;border:2px solid #e30613;border-radius:14px;padding:28px;box-sizing:border-box;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.7);">' +
+            '<button id="coachMilestoneClose" type="button" style="position:absolute;right:12px;top:10px;background:#333;color:#fff;border:0;border-radius:7px;font-size:26px;line-height:1;padding:4px 10px;cursor:pointer;">×</button>' +
+            '<div id="coachMilestoneContent"></div>' +
+            '</div>';
+        document.body.appendChild(milestoneModal);
+        milestoneModal.querySelector("#coachMilestoneClose").addEventListener("click", () => {
+            milestoneModal.remove();
+            showCoachDecision(status);
+        });
+    }
+
+    const milestoneContent = milestoneModal.querySelector("#coachMilestoneContent");
+    if (!milestoneContent) return false;
+
+    milestoneContent.innerHTML =
+        "<h2>📊 PODSUMOWANIE KADENCJI</h2>" +
+        "<p><strong>" + safe(activeTrainer.first) + " " + safe(activeTrainer.last) +
+        "</strong> – osiągnięto okres <strong>" + status.matches +
+        " meczów</strong>, odpowiadający rzeczywistej liczbie spotkań tego trenera.</p>" +
+
+        '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin:20px 0;text-align:left;">' +
+            '<div style="background:#242424;border-radius:10px;padding:16px;">' +
+                '<h3 style="margin:0 0 12px;color:#e30613;">TY</h3>' +
+                "<p style=\"margin:6px 0;\"><strong>Mecze:</strong> " + status.playedMatches + "</p>" +
+                "<p style=\"margin:6px 0;\"><strong>Miejsce:</strong> " + status.position + ".</p>" +
+                "<p style=\"margin:6px 0;\"><strong>Punkty:</strong> " + status.points + "</p>" +
+                "<p style=\"margin:6px 0;\"><strong>W-Z-P:</strong> " + status.wins + "-" + status.draws + "-" + status.losses + "</p>" +
+                "<p style=\"margin:6px 0;\"><strong>Bilans:</strong> " + status.goalsFor + ":" + status.goalsAgainst + "</p>" +
+            "</div>" +
+            '<div style="background:#242424;border-radius:10px;padding:16px;">' +
+                '<h3 style="margin:0 0 12px;color:#fff;">RZECZYWISTOŚĆ</h3>' +
+                "<p style=\"margin:6px 0;\"><strong>Mecze:</strong> " + actualMatches + "</p>" +
+                "<p style=\"margin:6px 0;\"><strong>Miejsce:</strong> " + actualPosition + ".</p>" +
+                "<p style=\"margin:6px 0;\"><strong>Punkty:</strong> " + actualPoints + "</p>" +
+                "<p style=\"margin:6px 0;\"><strong>W-Z-P:</strong> " + actualWins + "-" + actualDraws + "-" + actualLosses + "</p>" +
+                "<p style=\"margin:6px 0;\"><strong>Bilans:</strong> " + actualGoalsFor + ":" + actualGoalsAgainst + "</p>" +
+            "</div>" +
+        "</div>" +
+        "<p>Twoje wyniki są porównane z rzeczywistymi osiągnięciami Widzewa <strong>w dokładnie tym samym okresie</strong>.</p>" +
+        "<p style=\"color:#aaa;margin-top:10px;\">Podsumowanie po " + status.round + ". kolejce.</p>";
+
+    milestoneModal.style.display = "flex";
+    window.__coachMilestoneShown = true;
+    return true;
+}
+function checkCoachMilestone() {
+    const status = getCoachMilestoneStatus();
+    if (!status) return false;
+    return showCoachMilestone(status);
+}
+window.checkCoachMilestone = checkCoachMilestone;
+
+function getCoachDecisionStatus(status) {
+    if (!status) return null;
+
+    const rules = COACH_DECISION_RULES[Number(status.coachId)];
+    if (!rules) return null;
+
+    const periodResults = status.periodResults || [];
+    const derby = periodResults.find(match => {
+        const opponent = String(match.opponent || "").toLowerCase().trim();
+        return opponent === "łks łódź" || opponent === "lks łódź";
+    });
+    const derbyLost = Boolean(derby && Number(derby.gf) < Number(derby.ga));
+    const decisionStatus = { ...status, derbyLost };
+    const decision = rules.find(rule => rule.when(decisionStatus));
+    return decision ? { ...decisionStatus, decision } : null;
+}
+
+function showCoachFarewell() {
+    const activeTrainer = window.__widzewSelectedTrainer;
+    if (!activeTrainer) return false;
+
+    const coachId = Number(activeTrainer.faceId);
+    const imagePath = COACH_FAREWELL_IMAGES[coachId];
+    let overlay = document.getElementById("coachFarewellOverlay");
+
+    if (overlay) overlay.remove();
+
+    overlay = document.createElement("div");
+    overlay.id = "coachFarewellOverlay";
+    overlay.style.cssText =
+        "position:fixed;inset:0;z-index:1000005;background:#000;display:flex;align-items:center;justify-content:center;overflow:hidden;";
+
+    if (imagePath) {
+        const image = document.createElement("img");
+        image.src = imagePath;
+        image.alt = "Podziękowanie dla trenera";
+        image.style.cssText =
+            "width:100%;height:100%;object-fit:contain;display:block;user-select:none;-webkit-user-drag:none;";
+        overlay.appendChild(image);
+    } else {
+        const fallback = document.createElement("div");
+        fallback.style.cssText =
+            "width:100%;height:100%;display:flex;align-items:center;justify-content:center;text-align:center;color:#fff;font-family:Arial,Helvetica,sans-serif;font-size:clamp(42px,8vw,110px);font-weight:900;background:#a90000;";
+        fallback.textContent = "DZIĘKUJEMY!";
+        overlay.appendChild(fallback);
+    }
+
+    const closeButton = document.createElement("button");
+    closeButton.type = "button";
+    closeButton.id = "coachFarewellClose";
+    closeButton.setAttribute("aria-label", "Powrót do menu głównego");
+    closeButton.title = "Powrót do menu głównego";
+    closeButton.textContent = "×";
+    closeButton.style.cssText =
+        "position:absolute;top:18px;right:22px;width:48px;height:48px;border:0;border-radius:50%;background:rgba(0,0,0,.55);color:#fff;font-size:42px;line-height:42px;font-weight:300;cursor:pointer;opacity:0;pointer-events:none;transition:opacity .2s ease,background .2s ease;z-index:2;";
+    closeButton.addEventListener("mouseenter", () => {
+        closeButton.style.background = "rgba(0,0,0,.8)";
+    });
+    closeButton.addEventListener("mouseleave", () => {
+        closeButton.style.background = "rgba(0,0,0,.55)";
+    });
+
+    const returnToMainMenu = () => {
+        clearTimeout(showCloseTimer);
+        overlay.remove();
+
+        // Pełny reset gry: zachowujemy ustawienia zapisane w localStorage,
+        // ale cała sesja gry i wszystkie zmienne JS zostają wyzerowane.
+        window.location.reload();
+    };
+
+    closeButton.addEventListener("click", returnToMainMenu);
+    overlay.appendChild(closeButton);
+    document.body.appendChild(overlay);
+
+    const showCloseTimer = setTimeout(() => {
+        closeButton.style.opacity = "1";
+        closeButton.style.pointerEvents = "auto";
+    }, 5000);
+
+    window.__coachDismissed = true;
+    return true;
+}
+
+function showCoachDecision(status) {
+    const activeTrainer = window.__widzewSelectedTrainer;
+    if (!activeTrainer || !status || window.__coachDecisionShown) return false;
+
+    const decisionStatus = getCoachDecisionStatus(status);
+    if (!decisionStatus) return false;
+
+    const safe = value => String(value ?? "").replace(/[&<>"']/g, c => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    }[c]));
+
+    const canContinue = Boolean(decisionStatus.decision.canContinue);
+    let modal = document.getElementById("coachDecisionModal");
+    if (!modal) {
+        modal = document.createElement("div");
+        modal.id = "coachDecisionModal";
+        modal.style.cssText =
+            "position:fixed;inset:0;z-index:1000001;display:flex;align-items:center;justify-content:center;" +
+            "background:rgba(0,0,0,.82);padding:20px;box-sizing:border-box;";
+        document.body.appendChild(modal);
+    }
+
+    modal.innerHTML =
+        '<div style="position:relative;max-width:680px;width:100%;max-height:90vh;overflow:auto;background:#191919;color:#fff;border:2px solid #e30613;border-radius:14px;padding:30px;box-sizing:border-box;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.7);">' +
+        (canContinue ? '<h2 style="margin:0 0 20px;">DECYZJA ZARZĄDU</h2>' : '<h2 style="margin:0 0 20px;color:#e30613;">ZWOLNIENIE</h2>') +
+        '<p style="font-size:18px;line-height:1.55;margin:0 0 24px;">' + safe(decisionStatus.decision.message) + '</p>' +
+        (canContinue
+            ? '<div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">' +
+              '<button id="coachDecisionContinue" class="season-main-button" type="button">KONTYNUUJ GRĘ</button>' +
+              '<button id="coachDecisionEnd" class="season-main-button" type="button">ZAKOŃCZ GRĘ</button>' +
+              '</div>'
+            : '<button id="coachDecisionEnd" class="season-main-button" type="button">ZAKOŃCZ GRĘ</button>') +
+        '</div>';
+
+    if (canContinue) {
+        modal.querySelector("#coachDecisionContinue")?.addEventListener("click", () => modal.remove());
+        modal.querySelector("#coachDecisionEnd")?.addEventListener("click", () => {
+            modal.remove();
+            showCoachFarewell();
+        });
+    } else {
+        window.__coachDismissed = true;
+        modal.querySelector("#coachDecisionEnd")?.addEventListener("click", () => {
+            modal.remove();
+            showCoachFarewell();
+        });
+    }
+
+    window.__coachDecisionShown = true;
+    return true;
+}
+
+function getCoachDismissalStatus() {
+    const activeTrainer = window.__widzewSelectedTrainer;
+    if (window.__widzewGameMode !== "coach" || !activeTrainer || window.__coachDismissed) return null;
+
+    const coachId = Number(activeTrainer.faceId);
     const rule = COACH_DISMISSAL_RULES[coachId];
     if (!rule) return null;
 
@@ -2523,7 +3355,7 @@ function getCoachDismissalStatus() {
     }
 
     if (rule.type === "coachPoints") {
-        const startRound = Math.max(1, Number(selectedTrainer.startRound) || 1);
+        const startRound = Math.max(1, Number(activeTrainer.startRound) || 1);
         const results = seasonGameState.widzewResults
             .filter(match => Number(match.round) >= startRound)
             .sort((a, b) => Number(a.round) - Number(b.round));
@@ -2542,6 +3374,7 @@ function getCoachDismissalStatus() {
 }
 
 function showCoachDismissal(status) {
+    const activeTrainer = window.__widzewSelectedTrainer;
     const modal = document.getElementById("coachDismissalModal");
     const content = document.getElementById("coachDismissalContent");
     if (!modal || !content || !status) return;
@@ -2568,7 +3401,7 @@ function showCoachDismissal(status) {
             ? '<img class="coach-dismissal-image" src="' + status.rule.image + '" alt="">'
             : "") +
         "<h2>ZWOLNIENIE!</h2>" +
-        "<p><strong>" + safe(selectedTrainer.first) + " " + safe(selectedTrainer.last) +
+        "<p><strong>" + safe(activeTrainer.first) + " " + safe(activeTrainer.last) +
         "</strong> został zwolniony z funkcji pierwszego trenera Widzewa Łódź.</p>" +
         "<p>" + reason + "</p>" +
         "<p class=\"coach-dismissal-end\">KARIERA TRENERA ZAKOŃCZONA</p>";
@@ -2622,12 +3455,19 @@ function renderRound(round) {
     document.getElementById("roundMatches").innerHTML=html;
     const actions=document.getElementById("roundActions");
     const lastRound = seasonGameState.widzewFixtures.length ? Number(seasonGameState.widzewFixtures[seasonGameState.widzewFixtures.length-1].kolejka) : 34;
+    const squadButton = `<button id="seasonSquadButton" class="season-secondary-button" type="button" onclick="window.__openWidzewSeasonSquadEditor()">👥 SKŁAD</button>`;
     if(widzewPlayed) {
-        if(round < lastRound) actions.innerHTML=`<button id="nextRoundButton" class="season-main-button">NASTĘPNA KOLEJKA →</button>`;
-        else actions.innerHTML=`<button id="seasonFinishButton" class="season-main-button">ZAKOŃCZ SEZON</button>`;
+        if(round < lastRound) {
+            actions.innerHTML = `<button id="nextRoundButton" class="season-main-button">NASTĘPNA KOLEJKA →</button>`;
+        } else {
+            actions.innerHTML = `<button id="seasonFinishButton" class="season-main-button">ZAKOŃCZ SEZON</button>`;
+        }
     } else {
-        actions.innerHTML=`<button id="playMatchButton" class="season-main-button">ZAGRAJ MECZ</button>
+        actions.innerHTML = squadButton + `<button id="playMatchButton" class="season-main-button">ZAGRAJ MECZ</button>
                            <button id="simulateMatchButton" class="season-secondary-button">SYMULUJ MECZ</button>`;
+        document.getElementById("seasonSquadButton")?.addEventListener("click", () => {
+            openSeasonSquadEditor();
+        });
     }
     document.getElementById("playMatchButton")?.addEventListener("click",()=>{
         // Do czasu wdrożenia właściwego ekranu meczu przycisk nie może pozostawiać
@@ -2640,6 +3480,13 @@ function renderRound(round) {
     document.getElementById("nextRoundButton")?.addEventListener("click",()=>{
         seasonGameState.currentRound++;
         renderPlayableSeason();
+
+        // Awaryjnie sprawdź komunikat także po przejściu do następnej kolejki.
+        // Dzięki temu jego pojawienie się nie zależy od tego, która ścieżka
+        // zapisała wynik poprzedniego meczu.
+        if (window.__widzewGameMode === "coach") {
+            checkCoachMilestone();
+        }
     });
     document.getElementById("seasonFinishButton")?.addEventListener("click",()=>{
         renderFinalSeason();
@@ -2662,10 +3509,11 @@ function simulateCurrentWidzewMatch() {
     const gf=home?score[0]:score[1], ga=home?score[1]:score[0];
     const match={round:seasonGameState.currentRound, opponent, home, gf, ga, scorers:makeMatchScorers(gf,ga)};
     seasonGameState.widzewResults.push(match);
+    consumeSopicBonusMatch();
     seasonGameState.simulatedMatchCount = Number(seasonGameState.simulatedMatchCount || 0) + 1;
     updateTopScorersFromMatch(match);
 
-    if (checkCoachDismissal()) {
+    if (window.__widzewGameMode === "coach" && checkCoachMilestone()) {
         renderPlayableSeason();
         return;
     }
@@ -2688,7 +3536,7 @@ function simulateWholeSeason() {
         const score = generateProvisionalWidzewResult(opponent, home);
         const gf = Number(home ? score[0] : score[1]);
         const ga = Number(home ? score[1] : score[0]);
-        const match = { round, opponent, home, gf, ga, scorers: [] };
+        const match = { round, opponent, home, gf, ga, scorers: [], sopicBonus: getSopicBonusOverall() };
 
         // Losowanie strzelców nie może zatrzymać całej symulacji.
         try {
@@ -2727,6 +3575,7 @@ function simulateWholeSeason() {
             // się udało. Nigdy nie kasuj całego meczu przez błąd klasyfikacji.
         }
         seasonGameState.widzewResults.push(match);
+        consumeSopicBonusMatch();
     });
 
     // 34 losowania z bardzo małym prawdopodobieństwem dają 0 goli Widzewa.
@@ -2785,8 +3634,6 @@ function renderFinalSeason() {
     }
     if (actions) actions.innerHTML = `<div class="season-finished-note">SEZON ZAKOŃCZONY</div>`;
 
-    if (window.__widzewGameMode === "coach" && checkCoachDismissal()) return;
-
     // W trybie GRACZ wynik punktowy pojawia się po zamknięciu
     // okna "Wesprzyj twórcę". Tryb TRENER pozostaje bez punktacji.
     window.__playerScorePending = window.__widzewGameMode === "player";
@@ -2808,6 +3655,8 @@ async function initSeasonMode(mode) {
     seasonGameState.generatedResults={};
     window.__playerScorePending = false;
     window.__coachDismissed = false;
+    window.__coachMilestoneShown = false;
+    window.__coachDecisionShown = false;
     seasonGameState.widzewFixtures=[];
     const loading=document.getElementById("seasonLoading");
     const content=document.getElementById("seasonBoardContent");
