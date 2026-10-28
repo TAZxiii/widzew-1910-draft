@@ -3005,7 +3005,7 @@ const COACH_MILESTONE_RULES = {
     9:  { triggerRound: 23, targetMatches: 12, actual: { matches: 12, position: 17, wins: 3, draws: 2, losses: 7, goalsFor: 12, goalsAgainst: 18, points: 11 } },
     10: { triggerRound: 34, targetMatches: 11, actual: { matches: 11, position: 14, wins: 5, draws: 3, losses: 3, goalsFor: 12, goalsAgainst: 8, points: 18 } },
     11: { triggerRound: 7,  targetMatches: 7,  actual: { matches: 7, position: 13, wins: 1, draws: 4, losses: 2, goalsFor: 10, goalsAgainst: 10, points: 7 } },
-    12: { triggerRound: 12,  targetMatches: 5, actual: { matches: 5, position: 14, wins: 0, draws: 4, losses: 1, goalsFor: 5, goalsAgainst: 6, points: 5 } }
+    12: { triggerRound: 12,  targetMatches: 5, actual: { matches: 5, position: 14, wins: 0, draws: 4, losses: 1, goalsFor: 5, goalsAgainst: 6, points: 4 } }
 };
 
 // Grafiki kończące karierę trenera po kliknięciu „ZAKOŃCZ GRĘ".
